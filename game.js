@@ -81,7 +81,7 @@ function start(){if(!Progression.owned(selected))selected='asterix';const hero=V
 function menu(){mode='menu';resetInput();['end','paused','levelup','hud','hint','pause','stick','bossbar','heroScreen'].forEach(id=>show(id,false));show('menu',true);buildHeroRoster();renderShop();$('toast').style.opacity=0;updateRecord();}
 function updateRecord(){$('wallet').textContent='ШЛЕМЫ: '+Progression.data.helmets;$('wallet').dataset.count=Progression.data.helmets;const chosen=$('heroRecord'),record=$('record');if(chosen)chosen.textContent='Выбран герой: '+Villagers.defs[selected].name;if(record)record.textContent=best.kills?`РЕКОРД: ${best.kills} врагов · ${clock(best.time)}`:'Легион ещё не знает, что его ждёт.';}updateRecord();buildHeroRoster();portrait('portraitA','asterix');portrait('portraitO','obelix');
 function openHeroSelect(){buildHeroRoster();$('heroRecord').textContent='Выбран герой: '+Villagers.defs[selected].name;show('heroScreen',true);}
-$('openVillage').onclick=openHeroSelect;$('villageNode').addEventListener('click',openHeroSelect);$('villageNode').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openHeroSelect();}});$('heroBack').onclick=()=>show('heroScreen',false);
+$('villageNode').addEventListener('click',openHeroSelect);$('villageNode').addEventListener('keydown',e=>{if(e.key==='Enter'||e.key===' '){e.preventDefault();openHeroSelect();}});$('heroBack').onclick=()=>show('heroScreen',false);
 $('start').onclick=start;$('again').onclick=start;$('back').onclick=menu;$('quit').onclick=menu;
 function renderShop(){
  updateRecord();const root=$('shopHeroes');root.replaceChildren();
@@ -101,7 +101,7 @@ function renderShop(){
  }
  $('shopWallet').textContent='У вас '+Progression.data.helmets+' шлемов · до следующей награды: '+(10-Progression.data.kills%10)+' убийств'+(Progression.persistent?'':' · Не удалось сохранить прогресс. Не закрывай игру.');
 }
-$('shopOpen').onclick=$('mapShop').onclick=$('heroShop').onclick=()=>{renderShop();show('shop',true);};
+$('shopOpen').onclick=$('heroShop').onclick=()=>{renderShop();show('shop',true);};
 $('shopClose').onclick=()=>{show('shop',false);if(mode==='menu')buildHeroRoster();};
 function pause(){if(mode==='play'){mode='pause';resetInput();show('paused',true);}else if(mode==='pause'){mode='play';show('paused',false);}}$('pause').onclick=pause;$('resume').onclick=pause;
 $('sound').onclick=()=>{sound=!sound;$('sound').textContent=`ЗВУК: ${sound?'ВКЛ':'ВЫКЛ'}`;beep(500,.1);};
