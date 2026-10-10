@@ -1,0 +1,1 @@
+globalThis.MenhirBounds=[59,151,1567,706];

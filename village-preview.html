@@ -1,0 +1,14 @@
+<!doctype html><html lang="ru"><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>Галльская деревня · новая карта</title>
+<style>*{box-sizing:border-box}body{margin:0;background:#18251e;color:#f2ead0;font:15px/1.6 Georgia,serif}main{max-width:1220px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{margin:0;font-size:32px}a{color:#f6cb72}p{color:#bcc5af;max-width:880px}canvas{display:block;width:100%;border:1px solid #67784c;background:#89954e}nav{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0}button{font:inherit;color:#f2ead0;background:#304332;border:1px solid #67784c;padding:6px 14px;cursor:pointer}#status{color:#b8cc99;font:12px monospace}footer{margin:14px 0;color:#afbaa4;font-size:13px}</style>
+<main><header><h1>Наша маленькая деревня</h1><a href="index.html">Играть →</a></header>
+<p>Дома, кузница, рыбная лавка и дуб барда. Изучи улицы и проходы перед боем.</p>
+<nav><button id="overview">Вся деревня</button><button id="square">Площадь крупно</button><label><input id="labels" type="checkbox" checked> Названия</label><label><input id="collision" type="checkbox"> Границы препятствий</label><span id="status">Загрузка рисунков…</span></nav>
+<canvas id="map" width="1320" height="1000" aria-label="Карта деревни с рисованными домами, деревом барда, улицами и частоколом"></canvas>
+<footer>Дома, стволы деревьев, камни и частокол непроходимы. Проём ворот открыт.</footer></main>
+<script src="village-art.js"></script><script src="village-collision.js"></script><script src="village.js"></script><script>
+const canvas=document.getElementById('map'),g=canvas.getContext('2d');let close=false;
+document.getElementById('overview').onclick=()=>close=false;document.getElementById('square').onclick=()=>close=true;
+function render(){g.setTransform(1,0,0,1,0,0);g.fillStyle='#89954e';g.fillRect(0,0,1320,1000);const scale=close?.95:.57;g.translate(660,500);g.scale(scale,scale);g.translate(-1100,close?-1070:-1090);Village.draw(g);if(document.getElementById("collision").checked)Village.collision.draw(g);
+if(document.getElementById('labels').checked)for(const h of Village.houses){g.font='bold 19px Georgia';g.textAlign='center';g.lineWidth=5;g.strokeStyle='#24301ee0';g.strokeText(h.name,h.x+h.w/2,h.y+h.h+37);g.fillStyle='#fff0ba';g.fillText(h.name,h.x+h.w/2,h.y+h.h+37);}
+const ready=Object.values(VillageArt.status).filter(s=>s==='ready').length;document.getElementById('status').textContent=ready===10?'Карта готова':Object.values(VillageArt.status).includes('error')?'Не удалось загрузить рисунок':ready+' / 10';requestAnimationFrame(render);}render();
+</script></html>
