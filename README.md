@@ -108,6 +108,7 @@ New villagers use 48 drawn animation frames for walking, attacks and hurt reacti
 
 Animation assets added 10 October: src/rendering/art/villager-art.js loads isolated frames from assets/runtime/characters/heroes/<hero>/animations/ without pixel readback; run the game through the local HTTP server. Cacofonix strums on aura ticks, Panoramix pours on trail pulses, fish/hammer animations follow the attack windup, and player damage triggers hurt reactions. Roman helmets use assets/runtime/ui/roman-helmet-v1.png both on the field and next to the currency counter. Prompts are in assets/source/prompts/new-heroes-animation-prompts.json. Validate with node --experimental-vm-modules tests/test-villager-art.cjs; previews/animation-audit.html checks all 168 cached frames for edge clipping.
 
+<<<<<<< HEAD
 Публикация: `node tools/build-site.cjs` собирает `_site/` для GitHub Pages. Доступны игра, разведданные и карта. `previews/animation-preview.html`, `previews/animation-audit.html`, `previews/art-preview.html` и `previews/hero-preview.html` остаются только в исходниках для локальной разработки.
 
 Состав публикации задаётся в `tools/publication-manifest.cjs`: для каждой группы указаны назначение и страницы-потребители. Сборка копирует только перечисленные файлы, включая резервную графику и отдельные кадры героев. Исходные атласы, референсы, снимки проверок и инструменты в сайт не попадают. При добавлении игрового ресурса обновите манифест; отсутствующий файл останавливает сборку до очистки предыдущего результата.
@@ -124,3 +125,6 @@ Animation assets added 10 October: src/rendering/art/villager-art.js loads isola
 В забеге: 8 общих пассивных усилений (по 5 рангов) и 3 ветки оружия каждого героя (по 3 ранга, число снарядов — 2). Каждый уровень даёт три разных варианта; пока личная ветка доступна, один вариант гарантированно личный. Полностью развитые ветки исключаются, после исчерпания доступны припасы. Ранги сбрасываются при новом забеге.
 Лавка: 8 общих постоянных бонусов и по одной персональной тренировке на 3 ранга. Тренировка недоступна до покупки героя. Старый gaul-progression-v1 сохраняет валюту, героев и прежние покупки. Проверки: node --experimental-vm-modules tests/test-upgrades.cjs, node --experimental-vm-modules tests/test-progression.cjs, node --experimental-vm-modules tests/test.cjs.
 Ориентир разделения оружия и пассивных бонусов: https://vampire-survivors.fandom.com/wiki/Weapons и https://vampire-survivors.fandom.com/wiki/Passive_items . Эволюции и лимиты слотов в этой версии не вводились.
+=======
+Публикация: `node build-site.cjs` собирает `_site/` для GitHub Pages. Доступны игра, разведданные и карта. `animation-preview.html`, `animation-audit.html`, `art-preview.html` и `hero-preview.html` остаются только в исходниках для локальной разработки.
+>>>>>>> parent of 666fb51 (Add hero and permanent upgrades)
