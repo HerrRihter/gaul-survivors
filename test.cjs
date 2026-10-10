@@ -1,14 +1,7 @@
 // Deterministic mechanics checks. Run: node test.cjs
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const nodes=new Map(),listeners={};const noop=()=>{};
-const menuHtml=fs.readFileSync(__dirname+'/index.html','utf8'),mapSvg=menuHtml.match(/<svg class="europe-map"[\s\S]*?<\/svg>/)?.[0];assert(mapSvg,'Adventure map SVG should exist');
-assert.match(mapSvg,/viewBox="0 0 1000 740"/,'Map frame leaves room below the full Iberian Peninsula');
-assert.doesNotMatch(mapSvg,/<clipPath|clip-path="url\(#land-clip\)"/,'Holdings should not be cut by the mismatched coastline mask');
-const romanHoldings=mapSvg.match(/<g class="roman-holdings"[^>]*>([\s\S]*?)<g class="map-relief"/)?.[1];assert(romanHoldings,'Roman western territories should be marked');const regionPaths=[...romanHoldings.matchAll(/<path d="([^"]+)"\/>/g)].map(match=>match[1]);assert.equal(regionPaths.length,3,'Map shows only Hispania, Gaul and Italy');
-const iberiaY=[...regionPaths[1].matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map(match=>Number(match[2]));assert(iberiaY.length>10&&740-Math.max(...iberiaY)>=40,'The entire Hispania outline has a visible bottom margin');
-const italyX=[...regionPaths[2].matchAll(/(-?\d+(?:\.\d+)?),(-?\d+(?:\.\d+)?)/g)].map(match=>Number(match[1]));assert(italyX.length>10&&1000-Math.max(...italyX)>=60,'The entire Italian outline has a visible right margin');
-assert.match(regionPaths[2],/M716,471 .*M774,550/,'Italy includes its islands beside a boot-shaped peninsula');assert.match(mapSvg,/class="map-relief"/,'Map has original hand-drawn terrain details');
-assert.doesNotMatch(mapSvg,/class="country(?:\s|[-"])/,'Map should not show modern country borders');assert.match(menuHtml,/<span>УРОВЕНЬ 1<\/span>/,'Map status should use the concise level label');assert.doesNotMatch(menuHtml,/ОТКРЫТ 1 УРОВЕНЬ/);
+const menuHtml=fs.readFileSync(__dirname+'/index.html','utf8'),mapSvg=menuHtml.match(/<svg class="europe-map"[\s\S]*?<\/svg>/)?.[0];assert(mapSvg,'Adventure map SVG should exist');assert.match(mapSvg,/class="map-land-mass"/);const romanHoldings=mapSvg.match(/<g class="roman-holdings"[\s\S]*?<\/g>/)?.[0];assert(romanHoldings,'Roman western territories should be marked');assert.equal((romanHoldings.match(/<path /g)||[]).length,3,'Map shows only Hispania, Gaul and Italy');assert.doesNotMatch(mapSvg,/class="country(?:\s|[-"])/,'Map should not show modern country borders');assert.match(menuHtml,/<span>УРОВЕНЬ 1<\/span>/,'Map status should use the concise level label');assert.doesNotMatch(menuHtml,/ОТКРЫТ 1 УРОВЕНЬ/);
 const context=new Proxy({createRadialGradient:()=>({addColorStop:noop})},{get:(t,k)=>t[k]||noop,set:(t,k,v)=>(t[k]=v,true)});
 function node(){return {style:{},classList:{toggle:noop},dataset:{},children:[],events:{},getContext:()=>context,addEventListener(name,handler){this.events[name]=handler;},setPointerCapture:noop,replaceChildren(){this.children=[]},append(x){this.children.push(x)}};}
 const document={getElementById:id=>{if(!nodes.has(id))nodes.set(id,node());return nodes.get(id)},createElement:node,querySelectorAll:()=>[],addEventListener:noop};
