@@ -24,13 +24,21 @@ jobs:
       - name: Checkout
         uses: actions/checkout@v4
 
+      - name: Set up Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: '24'
+
+      - name: Test game and publication
+        run: node tools/test-all.cjs
+
       - name: Configure Pages
         uses: actions/configure-pages@v5
         with:
           enablement: true
 
       - name: Build player site
-        run: node build-site.cjs
+        run: node tools/build-site.cjs
 
       - name: Upload site
         uses: actions/upload-pages-artifact@v3

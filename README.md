@@ -4,7 +4,13 @@
 
 ## Запуск
 
-Откройте `index.html` в современном браузере двойным щелчком. Звук включается кнопкой в правом нижнем углу.
+Откройте `index.html` двойным щелчком в современном браузере. Игра и страницы просмотра графики работают без сервера: для открытия из файла предусмотрены готовые обычные скрипты в `runtime/`. Звук включается кнопкой в правом нижнем углу.
+
+При запуске через HTTP используются исходные ES-модули. После изменения исходников обновите готовые скрипты командой `npm run generate`; проверки и сборка обнаруживают устаревшие копии.
+
+Для локальной разработки: `node tools/server.cjs`, затем откройте http://127.0.0.1:8765/ . Проверка публикации: `node tools/build-site.cjs`, затем `node tools/server.cjs --site --prefix /gaul-survivors/` и http://127.0.0.1:8765/gaul-survivors/ . Перед сменой режима остановите предыдущий сервер.
+
+Игровые изображения лежат в `assets/runtime/`, оригиналы, промпты и метаданные — в `assets/source/`; локальные художественные страницы — в `previews/`, проверки — в `tests/`, инструменты — в `tools/`, документация — в `docs/`. Таблица переноса с исходными контрольными суммами: `docs/MIGRATION-PATHS.json`. Опубликованные адреса `index.html`, `legion-preview.html` и `village-preview.html` сохранены. Данные баланса остаются в JS до отдельного этапа разделения модулей.
 
 ## Публикация на GitHub Pages
 
@@ -21,17 +27,19 @@
 - Для победы продержитесь 5 минут и победите центуриона, который появляется на 3:50. Если он ещё жив на 5:00, бой продолжается до победы над ним.
 - Рекорд сохраняется локально в браузере, если доступен localStorage.
 
-Это локальный игровой прототип: деревня, два героя, шесть типов войск легиона, центурион и десять улучшений. Сетевого режима нет. Названия персонажей и мир используются как фанатская интерпретация.
+Это локальный игровой прототип: деревня, шесть героев, шесть типов войск легиона, центурион и ветки общих и личных улучшений. Сетевого режима нет. Названия персонажей и мир используются как фанатская интерпретация.
 
 ## Графика римлян
 
-Римляне используют новый прозрачный атлас roman-atlas-v2.png, созданный встроенным imagegen по кадру из мультфильма «Двенадцать подвигов Астерикса». Три разных легионера и центурион преобразуются в спрайты 96×128. В игре используются новые покадровые анимации из animation-art.js. art-preview.html показывает персонажей крупно. Источник и полный запрос генерации записаны в ART-SOURCES.md. Старый набор сохранён в roman-art-legacy.js как резерв при ошибке загрузки. Пираты и монстры отключены на первой карте; старые резервные спрайты сохранены.
+Римляне используют новый прозрачный атлас assets/runtime/characters/enemies/shared/roman-atlas-v2.png, созданный встроенным imagegen по кадру из мультфильма «Двенадцать подвигов Астерикса». Три разных легионера и центурион преобразуются в спрайты 96×128. В игре используются новые покадровые анимации из src/rendering/art/animation-art.js. previews/art-preview.html показывает персонажей крупно. Источник и полный запрос генерации записаны в docs/ART-SOURCES.md. Старый набор сохранён в src/rendering/art/roman-art-legacy.js как резерв при ошибке загрузки. Пираты и монстры отключены на первой карте; старые резервные спрайты сохранены.
 
-Проверка игровой механики: `node test.cjs`.
+Проверка игровой механики: `node --experimental-vm-modules tests/test.cjs`.
 
 ## Герои
 
-Астерикс и Обеликс обновлены по кадру из того же мультфильма. `hero-atlas-v2.png` содержит прозрачные изображения, `hero-art.js` готовит спрайты 128×128 для арены и экрана выбора. Обеликс заметно выше и шире Астерикса. Увеличенный просмотр вместе с легионером: `hero-preview.html`. Герои используют отдельные фазы шага и атаки. Источник и запрос генерации сохранены в `ART-SOURCES.md`.
+Графика Астерикса и Обеликса разделена: у каждого есть собственные `portrait.png` и `animations.png` в папках `assets/runtime/characters/heroes/asterix/` и `assets/runtime/characters/heroes/obelix/`. Они загружаются независимо. Общие исходные атласы хранятся в `assets/source/atlases/`.
+
+Астерикс и Обеликс обновлены по кадру из того же мультфильма. `assets/source/atlases/hero-atlas-v2.png` содержит прозрачные изображения, `src/rendering/art/hero-art.js` готовит спрайты 128×128 для арены и экрана выбора. Обеликс заметно выше и шире Астерикса. Увеличенный просмотр вместе с легионером: `previews/hero-preview.html`. Герои используют отдельные фазы шага и атаки. Источник и запрос генерации сохранены в `docs/ART-SOURCES.md`.
 
 
 
@@ -39,15 +47,15 @@
 
 48 рисованных кадров: по четыре фазы ходьбы и атаки для двух героев, трёх легионеров и центуриона. Остановка возвращает персонажа в стойку. Атака имеет подготовку, замах, удар и возврат; удар кулаком, выпуск менгира и урон копьём/мечом происходят на третьем кадре. Легионеры останавливаются для атаки, и из зоны выпада можно уйти. При паузе и выборе улучшений анимации останавливаются. Скорость ходьбы соответствует пройденному расстоянию; ускорение атаки сокращает её длительность.
 
-Откройте animation-preview.html, чтобы переключать ходьбу/атаку, менять скорость, разворот и листать отдельные кадры. Проверки: node test.cjs и node test-animation.cjs.
+Откройте previews/animation-preview.html, чтобы переключать ходьбу/атаку, менять скорость, разворот и листать отдельные кадры. Проверки: node --experimental-vm-modules tests/test.cjs и node --experimental-vm-modules tests/test-animation.cjs.
 
 ## Здоровье, реакция на удар и менгир
 
 У легионеров теперь 60 базовых HP вместо 22, без роста HP по времени на первой карте. Несмертельный урон запускает 4 кадра реакции на 0,34 секунды, останавливает ходьбу и прерывает замах. Смертельный урон не запускает эту анимацию.
 
-Летящий менгир использует отдельный рисунок menhir-flight.png с гранитными гранями, сколами и заострённой верхушкой. В полёте камень вращается и имеет тень на земле. Посмотреть можно в animation-preview.html под блоком персонажей. В этой же странице есть кнопка «Получение урона». Всего 60 кадров анимации.
+Летящий менгир использует отдельный рисунок assets/runtime/projectiles/menhir-flight-v2.png с гранитными гранями, сколами и заострённой верхушкой. В полёте камень вращается и имеет тень на земле. Посмотреть можно в previews/animation-preview.html под блоком персонажей. В этой же странице есть кнопка «Получение урона». Всего 60 кадров анимации.
 
-Локальный сервер: node server.cjs, затем http://127.0.0.1:8765/ . Можно также открыть index.html напрямую.
+Локальный сервер: node tools/server.cjs, затем http://127.0.0.1:8765/ . Запуск через file:// больше не поддерживается: используйте локальный сервер.
 
 
 ## Первая локация: деревня и легион
@@ -66,43 +74,53 @@
 
 Не более двух черепах и двух таранов одновременно. Оранжевая область показывает направление готовящегося удара, которое фиксируется в начале замаха. Тяжёлые отряды не прерывают атаку от обычного попадания. Копейщик, метатель, ветеран, черепаха и таран используют отдельные рисованные атласы. Каждый содержит 4 кадра движения, 4 атаки и 4 реакции на урон. Осадные отряды показывают реакцию без прерывания разгона или атаки.
 
-Разведданные со всеми типами и планом карты: legion-preview.html (также кнопка в главном меню). Параметры и отрисовка войск — legion.js, карта и навигация — village.js. Проверки test.cjs покрывают полный забег, состав волн, уклонение, пилумы/укрытия, защиту черепахи, таран и обход дома. test-animation.cjs проверяет 60 кадров.
+Разведданные со всеми типами и планом карты: legion-preview.html (также кнопка в главном меню). Параметры и отрисовка войск — src/entities/legion.js, карта и навигация — src/world/village/village.js. Проверки tests/test.cjs покрывают полный забег, состав волн, уклонение, пилумы/укрытия, защиту черепахи, таран и обход дома. tests/test-animation.cjs проверяет 60 кадров.
 
 
 ## Графика новых войск
 
-Пять прозрачных атласов `unit-spear-v1.png`, `unit-pilum-v1.png`, `unit-veteran-v1.png`, `unit-turtle-v1.png`, `unit-ram-v1.png` созданы встроенным imagegen по существующему `legion-animation.png`. Полные запросы — `unit-art-prompts.json`. `unit-layout.js` хранит измеренные границы 60 кадров; `unit-art.js` кэширует их и выбирает состояние. Масштаб фиксирован внутри каждого атласа, ноги выровнены, отражение соответствует направлению атаки. Старая графика используется только при ошибке загрузки. Общая библиотека игры теперь содержит 120 рисованных кадров.
+Пять прозрачных атласов `assets/runtime/characters/enemies/spear/unit-spear-v1.png`, `assets/runtime/characters/enemies/pilum/unit-pilum-v1.png`, `assets/runtime/characters/enemies/veteran/unit-veteran-v1.png`, `assets/runtime/characters/enemies/turtle/unit-turtle-v1.png`, `assets/runtime/characters/enemies/ram/unit-ram-v1.png` созданы встроенным imagegen по существующему `assets/runtime/characters/enemies/shared/legion-animation.png`. Полные запросы — `assets/source/prompts/unit-art-prompts.json`. `data/animations/unit-layout.js` хранит измеренные границы 60 кадров; `src/rendering/art/unit-art.js` кэширует их и выбирает состояние. Масштаб фиксирован внутри каждого атласа, ноги выровнены, отражение соответствует направлению атаки. Старая графика используется только при ошибке загрузки. Общая библиотека игры теперь содержит 120 рисованных кадров.
 
-Летящие пилум и рыба в `projectile-art.js` нарисованы в том же стиле, что оружие в руках: деревянное древко с металлическим наконечником и пятнистая рыба с жёлтым глазом. Снаряды поворачиваются по направлению полёта; возвращающаяся рыба разворачивается вслед за хозяином. Проверка рисунков и ориентации: `node test-projectile-art.cjs`; траектория рыбы также проверяется в `test.cjs`.
+Летящие пилум и рыба в `src/rendering/art/projectile-art.js` нарисованы в том же стиле, что оружие в руках: деревянное древко с металлическим наконечником и пятнистая рыба с жёлтым глазом. Снаряды поворачиваются по направлению полёта; возвращающаяся рыба разворачивается вслед за хозяином. Проверка рисунков и ориентации: `node --experimental-vm-modules tests/test-projectile-art.cjs`; траектория рыбы также проверяется в `tests/test.cjs`.
 
-В `legion-preview.html` есть выбор движения/атаки/урона/стойки, пауза и разворот. Дополнительная проверка: `node test-unit-art.cjs`.
+В `legion-preview.html` есть выбор движения/атаки/урона/стойки, пауза и разворот. Дополнительная проверка: `node --experimental-vm-modules tests/test-unit-art.cjs`.
 
 ## Тела погибших
 
-Римляне падают за 0,32 секунды, лежат до шестой секунды и плавно исчезают за следующие две. Тела рисуются под живыми персонажами и добычей, не мешают движению, не получают урон и не дают повторных наград. Черепаха оставляет шесть тел, расчёт тарана — четыре. На паузе время исчезновения останавливается. Максимум 180 тел; при переполнении удаляются самые старые. Код — corpses.js, проверки включены в test.cjs.
+Римляне падают за 0,32 секунды, лежат до шестой секунды и плавно исчезают за следующие две. Тела рисуются под живыми персонажами и добычей, не мешают движению, не получают урон и не дают повторных наград. Черепаха оставляет шесть тел, расчёт тарана — четыре. На паузе время исчезновения останавливается. Максимум 180 тел; при переполнении удаляются самые старые. Код — src/systems/corpses.js, проверки включены в tests/test.cjs.
 
 
-Менгир в полёте обновлён по камню из анимации броска: menhir-flight-v2.png, широкий серый силуэт с тёмным контуром и трещинами. Размер 62×36 пикселей соответствует камню в руках при игровом масштабе. Направление падения тел определяется последним смертельным импульсом (для кулака и менгира) либо направлением от источника урона (для круговой волны), включая вертикальные и диагональные попадания.
+Менгир в полёте обновлён по камню из анимации броска: assets/runtime/projectiles/menhir-flight-v2.png, широкий серый силуэт с тёмным контуром и трещинами. Размер 62×36 пикселей соответствует камню в руках при игровом масштабе. Направление падения тел определяется последним смертельным импульсом (для кулака и менгира) либо направлением от источника урона (для круговой волны), включая вертикальные и диагональные попадания.
 
 
 ### Illustrated village
-Open village-preview.html for the complete map or a closer plaza view. New stone/thatch houses, shops, bard tree, palisade and forest use generated raster scenery guided by 1976 film frames; see ART-SOURCES.md and village-art-prompts.json. Building footprints handle movement, cover and navigation; art is sorted with actors by ground depth, fading over the player. Terrain is cached once after loading. Perimeter props have ground collision polygons. Undocumented parts of the film layout are reconstructed for playability.
+Open village-preview.html for the complete map or a closer plaza view. New stone/thatch houses, shops, bard tree, palisade and forest use generated raster scenery guided by 1976 film frames; see docs/ART-SOURCES.md and assets/source/prompts/village-art-prompts.json. Building footprints handle movement, cover and navigation; art is sorted with actors by ground depth, fading over the player. Terrain is cached once after loading. Perimeter props have ground collision polygons. Undocumented parts of the film layout are reconstructed for playability.
 
 ### Ground collision audit
-All scenery objects use normalized ground polygons in village-collision.js (59 polygons), including individual tree trunks/roots, rocks, shop equipment, fence bases and the two sides of the open gate. Roofs/canopies are overhead. Circular actor clearance uses exact segment distances; movement checks the swept path and slides along free axes. Navigation uses a 25px grid with checked edges and separate caches for each actor radius (including the 29px centurion). Wide siege units route around gaps that cannot accommodate them. In village-preview.html enable «Границы препятствий» to inspect the shapes. Run node test-village-collision.cjs for obstacle and route checks, and node test.cjs for full combat regression.
+All scenery objects use normalized ground polygons in src/world/village/collision.js (59 polygons), including individual tree trunks/roots, rocks, shop equipment, fence bases and the two sides of the open gate. Roofs/canopies are overhead. Circular actor clearance uses exact segment distances; movement checks the swept path and slides along free axes. Navigation uses a 25px grid with checked edges and separate caches for each actor radius (including the 29px centurion). Wide siege units route around gaps that cannot accommodate them. In village-preview.html enable «Границы препятствий» to inspect the shapes. Run node --experimental-vm-modules tests/test-village-collision.cjs for obstacle and route checks, and node --experimental-vm-modules tests/test.cjs for full combat regression.
 
-Hero attacks automatically in the direction of the last movement input (including diagonals); facing persists while idle. During windup, attack animation and aim follow movement; the direction at impact determines where Asterix swings, Obelix throws, or a bonus menhir fan fires. Asterix hits a forward 120-degree sector, checking obstacle cover. A small gold ground arrow shows the active direction. Bard song remains the separate radial upgrade.
+Hero attacks automatically in the direction of the last movement input (including diagonals); facing persists while idle. During windup, attack animation and aim follow movement; the direction at impact determines where Asterix swings, Obelix throws, or a bonus menhir fan fires. Asterix hits a forward 90-degree sector, checking obstacle cover. A small gold ground arrow shows the active direction. Bard song remains the separate radial upgrade.
 
 
 ### Helmets and villager prototypes
 Progression is stored locally under gaul-progression-v1: one helmet per 10 lifetime kills (partial milestones survive runs), plus a 5% chance per defeated unit of a ground pickup worth 3 helmets. Physical pickups must be collected; uncollected drops disappear with the run. Rewards already credited survive defeat and quitting. The menu shop unlocks Cacofonix (60), Antisanitarix (75), Automatix (90), Panoramix (100); Asterix/Obelix remain free. Permanent health (+10), power (+5%) and speed (+3%) upgrades each have five levels, costing 30/60/90/120/150 helmets, applied next run. Storage failures are shown in the shop; there is no server/cloud save.
-New villagers use 48 drawn animation frames for walking, attacks and hurt reactions, with code-drawn fallback only while assets are unavailable. Cacofonix: radius 95 music aura, 12 damage per 0.6s. Antisanitarix: directional rotten-fish boomerang, 24 damage once per flight leg, returns to moving owner, stops at obstacles. Automatix: speed 105, 150 HP, 50 damage in a forward 180° swing; Asterix now uses a 90° sector. Panoramix: poison while moving, 3.5s lifetime, radius 30, 8 damage every 0.5s without stacking overlapping pools. Run upgrades affect their damage, rate and range. See test-progression.cjs and test.cjs.
+New villagers use 48 drawn animation frames for walking, attacks and hurt reactions, with code-drawn fallback only while assets are unavailable. Cacofonix: radius 95 music aura, 12 damage per 0.6s. Antisanitarix: directional rotten-fish boomerang, 24 damage once per flight leg, returns to moving owner, stops at obstacles. Automatix: speed 105, 150 HP, 50 damage in a forward 180° swing; Asterix now uses a 90° sector. Panoramix: poison while moving, 3.5s lifetime, radius 30, 8 damage every 0.5s without stacking overlapping pools. Run upgrades affect their damage, rate and range. See tests/test-progression.cjs and tests/test.cjs.
 
-Animation assets added 10 October: villager-art.js loads isolated frames from hero-frames/ without pixel readback, so local file rendering remains supported. Cacofonix strums on aura ticks, Panoramix pours on trail pulses, fish/hammer animations follow the attack windup, and player damage triggers hurt reactions. Roman helmets use roman-helmet-v1.png both on the field and next to the currency counter. Prompts are in new-heroes-animation-prompts.json. Validate with node test-villager-art.cjs; animation-audit.html checks all 168 cached frames for edge clipping.
+Animation assets added 10 October: src/rendering/art/villager-art.js loads isolated frames from assets/runtime/characters/heroes/<hero>/animations/ without pixel readback; run the game through the local HTTP server. Cacofonix strums on aura ticks, Panoramix pours on trail pulses, fish/hammer animations follow the attack windup, and player damage triggers hurt reactions. Roman helmets use assets/runtime/ui/roman-helmet-v1.png both on the field and next to the currency counter. Prompts are in assets/source/prompts/new-heroes-animation-prompts.json. Validate with node --experimental-vm-modules tests/test-villager-art.cjs; previews/animation-audit.html checks all 168 cached frames for edge clipping.
 
-Публикация: `node build-site.cjs` собирает `_site/` для GitHub Pages. Доступны игра, разведданные и карта. `animation-preview.html`, `animation-audit.html`, `art-preview.html` и `hero-preview.html` остаются только в исходниках для локальной разработки.
+Публикация: `node tools/build-site.cjs` собирает `_site/` для GitHub Pages. Доступны игра, разведданные и карта. `previews/animation-preview.html`, `previews/animation-audit.html`, `previews/art-preview.html` и `previews/hero-preview.html` остаются только в исходниках для локальной разработки.
+
+Состав публикации задаётся в `tools/publication-manifest.cjs`: для каждой группы указаны назначение и страницы-потребители. Сборка копирует только перечисленные файлы, включая резервную графику и отдельные кадры героев. Исходные атласы, референсы, снимки проверок и инструменты в сайт не попадают. При добавлении игрового ресурса обновите манифест; отсутствующий файл останавливает сборку до очистки предыдущего результата.
+
+Полная проверка: `node tools/test-all.cjs`. Она запускает 12 наборов проверок: девять игровых и художественных, `tests/test-session.cjs` для создания сессий и управления циклом, затем `tests/test-site.cjs` для состава сборки и HTTP-доступности ссылок трёх опубликованных страниц, включая вычисляемые пути к изображениям, под префиксом `/gaul-survivors/`. Проверка загрузчиков использует заглушки Image/Canvas и не заменяет визуальную проверку в браузере. GitHub Actions запускает все проверки перед публикацией. Для этих команд используйте Node.js 24; установка пакетов не требуется.
+
+Дополнительная `tests/test-rendering.cjs` сравнивает порядок отрисовки с прежним алгоритмом и проверяет однократное событие попадания при пропуске кадров. Первичные границы кадров хранятся в `data/animations/*-layout.json`; `node tools/generate-layouts.cjs` создаёт JS-модули, а `--check` проверяет соответствие. Сборка и CI отклоняют устаревшие производные модули. Измерительные файлы в `assets/source/metadata/` сохранены как исторические материалы; они не являются вторым редактируемым runtime-источником. Характеристики героев и войск находятся в `data/characters/heroes.js` и `data/enemies/units.js`, расписание и вероятности волн — в `data/enemies/waves.js`, общий момент попадания — в `data/animations/action-timing.js`.
+
+Зависимости задаются импортами; порядок списка HTML-скриптов больше не нужен. Стили игры вынесены в `styles/game.css`. `previews/performance.html` измеряет позднюю сцену со 120 врагами; `node tools/profile-depth.cjs` сравнивает алгоритмы сортировки. Результаты и ограничения измерений записаны в `docs/PERFORMANCE.md`.
+
+Браузерный запуск находится в `src/main.js`: он создаёт `GameSession` из `src/app/game-session.js`, передавая DOM, Canvas через DOM-адаптер, хранилище, часы, планировщик и игровые системы. Создание сессии настраивает интерфейс, но не запускает цикл автоматически: `run()` запускает его один раз, `stop()` отменяет запланированный кадр. Для проверок доступно прямое продвижение симуляции через `update(dt)` и чтение `state`/`mode`. Один экземпляр сессии использует собственные DOM-адаптеры; `stop()` останавливает кадры, а не удаляет обработчики интерфейса. Портреты выделены в `src/ui/menu-portraits.js`; тесты загружают полные исходники без строковых замен или вырезания фрагментов.
 
 ## Общие и личные усиления
 В забеге: 8 общих пассивных усилений (по 5 рангов) и 3 ветки оружия каждого героя (по 3 ранга, число снарядов — 2). Каждый уровень даёт три разных варианта; пока личная ветка доступна, один вариант гарантированно личный. Полностью развитые ветки исключаются, после исчерпания доступны припасы. Ранги сбрасываются при новом забеге.
-Лавка: 8 общих постоянных бонусов и по одной персональной тренировке на 3 ранга. Тренировка недоступна до покупки героя. Старый gaul-progression-v1 сохраняет валюту, героев и прежние покупки. Проверки: node test-upgrades.cjs, node test-progression.cjs, node test.cjs.
+Лавка: 8 общих постоянных бонусов и по одной персональной тренировке на 3 ранга. Тренировка недоступна до покупки героя. Старый gaul-progression-v1 сохраняет валюту, героев и прежние покупки. Проверки: node --experimental-vm-modules tests/test-upgrades.cjs, node --experimental-vm-modules tests/test-progression.cjs, node --experimental-vm-modules tests/test.cjs.
 Ориентир разделения оружия и пассивных бонусов: https://vampire-survivors.fandom.com/wiki/Weapons и https://vampire-survivors.fandom.com/wiki/Passive_items . Эволюции и лимиты слотов в этой версии не вводились.

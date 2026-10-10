@@ -1,0 +1,26 @@
+'use strict';
+const assert=require('node:assert/strict');
+async function main(){
+ const {orderActors}=await import('../src/rendering/depth-order.js');
+ const {advanceAction,clampedFrame,loopFrame}=await import('../src/rendering/animation-player.js');
+ const objects=[{y:3,id:'a',scenery:true},{y:3,id:'b',scenery:true},{y:9,id:'c',scenery:true}];
+ const enemies=[{y:9,id:'one'},{y:3,id:'two'},{y:3,id:'three'}],player={y:3,id:'player'};
+ const expected=[...objects,...enemies,{...player,type:'asterix',player:true}].sort((a,b)=>a.y-b.y);
+ assert.deepEqual(orderActors(objects,enemies,player,'asterix'),expected,'Equal depths preserve scenery and actor order');
+ assert.equal(enemies[0].id,'one','Ordering does not reorder simulation arrays');
+ for(const count of [0,1,120])for(let sample=0;sample<25;sample++){
+  const actors=Array.from({length:count},(_,i)=>({y:(i*137+sample*31)%10,id:i}));
+  const old=[...objects,...actors,{...player,type:'obelix',player:true}].sort((a,b)=>a.y-b.y);
+  assert.deepEqual(orderActors(objects,actors,player,'obelix'),old);
+ }
+ let hits=0;const actor={action:{elapsed:0,duration:1,hit:false}};
+ advanceAction(actor,.49,()=>hits++);assert.equal(hits,0);assert.equal(clampedFrame(.49),1);
+ advanceAction(actor,.01,()=>hits++);assert.equal(hits,1);assert.equal(clampedFrame(.5),2);
+ advanceAction(actor,.49,()=>hits++);assert.equal(hits,1);
+ advanceAction(actor,.02,()=>hits++);assert.equal(actor.action,null);assert.equal(hits,1);
+ actor.action={elapsed:0,duration:1,hit:false};advanceAction(actor,2,()=>hits++);assert.equal(hits,2,'Skipped frames dispatch hit once');
+ advanceAction(actor,2,()=>hits++);assert.equal(hits,2,'Interrupted/completed action does not dispatch again');
+ assert.equal(clampedFrame(1),3);assert.equal(loopFrame(1),0);
+ console.log('PASS: identical depth order across 75 scenes, stable ties, untouched actor arrays, third-frame hit once, skipped frames and completed actions.');
+}
+main().catch(e=>{console.error(e);process.exitCode=1;});

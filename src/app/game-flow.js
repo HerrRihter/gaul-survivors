@@ -1,0 +1,136 @@
+import {waves} from '../../data/enemies/waves.js';
+export let GameFlow;
+'use strict';
+GameFlow={create(sessionContext){
+function start(){
+      if(!sessionContext.Progression.owned(sessionContext.selected))sessionContext.selected='asterix';
+      const hero=sessionContext.Villagers.defs[sessionContext.selected],levels=sessionContext.Progression.data.levels;
+      sessionContext.resetInput();
+      sessionContext.state={
+        t:0,
+        kills:0,
+        level:1,
+        xp:0,
+        need:8,
+        spawn:waves.normal.firstDelay,
+        attack:.2,
+        menhir:2,
+        ring:1,
+        enemies:[],
+        corpses:[],
+        enemyShots:[],
+        nextTurtle:waves.siege.turtle.first,
+        nextRam:waves.siege.ram.first,
+        shots:[],
+        fish:[],
+        poison:[],
+        helmets:[],
+        earned:0,
+        music:0,
+        trail:0,
+        poisonTick:0,
+        gems:[],
+        fx:[],
+        texts:[],
+        pickups:[],
+        bossSpawned:false,
+        bossDead:false,
+        shake:0,
+        step:0,
+        stats:{
+          damage:1+levels.power*.05,
+          haste:1,
+          range:1,
+          speed:1+levels.speed*.03,
+          magnet:75,
+          armor:0,
+          regen:0,
+          stones:0,
+          orbit:0
+        },
+        p:{
+          x:sessionContext.WORLD/2,
+          y:sessionContext.WORLD/2,
+          hp:hero.hp+levels.health*10,
+          max:hero.hp+levels.health*10,
+          speed:hero.speed,
+          inv:0,
+          flip:false,
+          facing:{x:1,y:0}
+        }
+      };
+      sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
+      sessionContext.mode='play';
+      ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
+      ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
+      sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
+      sessionContext.toast('ДЕРЕВНЯ · Легион наступает. Дома дают укрытие от пилумов.');
+      sessionContext.beep(450,.14);
+      sessionContext.hud();
+    }
+function menu(){
+      sessionContext.mode='menu';
+      sessionContext.state=null;
+      sessionContext.resetInput();
+      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>sessionContext.show(id,false));
+      sessionContext.show('menu',true);
+      sessionContext.renderShop();
+      sessionContext.$('toast').style.opacity=0;
+      sessionContext.updateRecord();
+    }
+function pause(){
+      if(sessionContext.mode==='play'){
+        sessionContext.mode='pause';
+        sessionContext.resetInput();
+        sessionContext.show('paused',true);
+      }else if(sessionContext.mode==='pause'){
+        sessionContext.mode='play';
+        sessionContext.show('paused',false);
+      }
+    }
+function levelUp(){
+      sessionContext.state.xp-=sessionContext.state.need;
+      sessionContext.state.level++;
+      sessionContext.state.need=sessionContext.Math.floor(sessionContext.state.need*1.23+3);
+      sessionContext.mode='level';
+      sessionContext.resetInput();
+      sessionContext.choice=sessionContext.UpgradeSystem.offer(sessionContext.selected,sessionContext.state);
+      sessionContext.$('cards').replaceChildren();
+      sessionContext.choice.forEach((u,i)=>{
+        const b=sessionContext.document.createElement('button');
+        b.className='upgrade';
+        b.innerHTML=`<em>${u.icon}</em><strong>${u.name}</strong><span>${u.group}${u.max?` · Ранг ${(sessionContext.state.upgradeRanks?.[u.id]||0)+1}/${u.max}`:``}</span><span>${u.desc}</span><span style="margin-top:16px;color:#788e77">[ ${i+1} ]</span>`;
+        b.onclick=()=>pickUpgrade(i);
+        sessionContext.$('cards').append(b);
+      });
+      sessionContext.show('levelup',true);
+      sessionContext.beep(760,.23,'triangle');
+      sessionContext.hud();
+    }
+function pickUpgrade(i){
+      if(sessionContext.mode!=='level'||!sessionContext.choice[i])return;
+      sessionContext.UpgradeSystem.apply(sessionContext.choice[i],sessionContext.state);
+      sessionContext.show('levelup',false);
+      sessionContext.mode='play';
+      sessionContext.beep(580,.12);
+      if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
+    }
+function finish(win){
+      sessionContext.mode='end';
+      sessionContext.resetInput();
+      sessionContext.show('end',true);
+      sessionContext.show('pause',false);
+      sessionContext.show('stick',false);
+      sessionContext.$('endTag').textContent=win?'ДЕРЕВНЯ НЕ СДАЁТСЯ':'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
+      sessionContext.$('endTitle').textContent=win?'Пир начинается!':'Нужен ещё глоток зелья';
+      sessionContext.$('endText').textContent=win?'Римляне отступают. Кабан уже на вертеле. Ты заслужил этот вечер.':'Даже героям нужен привал. Попробуй другую сборку и вернись в драку.';
+      sessionContext.$('endStats').innerHTML=`<div><strong>${sessionContext.clock(sessionContext.state.t)}</strong><span>ПРОДЕРЖАЛСЯ</span></div><div><strong>${sessionContext.state.kills}</strong><span>ВРАГОВ ПОБЕЖДЕНО</span></div><div><strong>${sessionContext.state.level}</strong><span>УРОВЕНЬ</span></div><div><strong>+${sessionContext.state.earned}</strong><span>ШЛЕМОВ</span></div>`;
+      sessionContext.best={kills:sessionContext.Math.max(sessionContext.best.kills||0,sessionContext.state.kills),time:sessionContext.Math.max(sessionContext.best.time||0,sessionContext.state.t)};
+      try{
+        sessionContext.localStorage.setItem('gaul-best',JSON.stringify(sessionContext.best));
+      }catch{
+      }
+      sessionContext.beep(win?660:140,.4,'triangle');
+    }
+return {start,menu,pause,levelUp,pickUpgrade,finish};
+}};
