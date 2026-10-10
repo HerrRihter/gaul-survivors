@@ -110,3 +110,8 @@ console.log('PASS: rare drop and no-drop rolls, no duplicate loot, kill accounti
 context.getImageData=()=>{throw new Error('SecurityError: canvas readback blocked');};
 t.menu();nodes.get('shopOpen').onclick();assert.equal(nodes.get('shopHeroes').children.length,6);assert.equal(nodes.get('shopUpgrades').children.length,3);nodes.get('shopClose').onclick();nodes.get('shopOpen').onclick();assert.equal(nodes.get('shopHeroes').children.length,6);
 console.log('PASS: shop opens and reopens with all heroes/upgrades when canvas pixel readback is blocked.');
+
+assert(nodes.get('menu').classList.contains('hidden'),'Shop replaces the main screen');
+for(const card of nodes.get('shopHeroes').children){const b=card.children[card.children.length-1];assert.equal(b.textContent,'Доступен для забега');assert.equal(b.disabled,true,'Owned heroes are not selected from the shop');}
+listeners.keydown({code:'Escape',repeat:false,preventDefault:noop});assert(nodes.get('shop').classList.contains('hidden'));assert.equal(nodes.get('menu').classList.contains('hidden'),false);
+console.log('PASS: dedicated shop, owned hero labels and Escape returns to main menu.');

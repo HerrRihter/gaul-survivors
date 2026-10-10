@@ -66,7 +66,7 @@ function beep(freq=300,len=.05,type='square',vol=.025){if(!sound)return;try{audi
 function show(id,on){$(id).classList.toggle('hidden',!on);}function toast(text){$('toast').textContent=text;$('toast').style.opacity=1;toastLeft=3;}
 function resetInput(){keys.clear();pointer=null;stick={x:0,y:0};$('knob').style.transform='';$('stick').style.left='';$('stick').style.top='';$('stick').style.bottom='';}
 function start(){if(!Progression.owned(selected))selected='asterix';const hero=Villagers.defs[selected],levels=Progression.data.levels;resetInput();state={t:0,kills:0,level:1,xp:0,need:8,spawn:.5,attack:.2,menhir:2,ring:1,enemies:[],corpses:[],enemyShots:[],nextTurtle:100,nextRam:155,shots:[],fish:[],poison:[],helmets:[],earned:0,music:0,trail:0,poisonTick:0,gems:[],fx:[],texts:[],pickups:[],bossSpawned:false,bossDead:false,shake:0,step:0,stats:{damage:1+levels.power*.05,haste:1,range:1,speed:1+levels.speed*.03,magnet:75,armor:0,regen:0,stones:0,orbit:0},p:{x:WORLD/2,y:WORLD/2,hp:hero.hp+levels.health*10,max:hero.hp+levels.health*10,speed:hero.speed,inv:0,flip:false,facing:{x:1,y:0}}};mode='play';['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>show(id,false));['hud','hint','pause','stick'].forEach(id=>show(id,true));$('heroLabel').textContent=hero.name.toUpperCase();toast('ДЕРЕВНЯ · Легион наступает. Дома дают укрытие от пилумов.');beep(450,.14);hud();}
-function menu(){mode='menu';resetInput();['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect'].forEach(id=>show(id,false));show('menu',true);renderShop();$('toast').style.opacity=0;updateRecord();}
+function menu(){mode='menu';state=null;resetInput();['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>show(id,false));show('menu',true);renderShop();$('toast').style.opacity=0;updateRecord();}
 function updateRecord(){$('wallet').textContent='ШЛЕМЫ: '+Progression.data.helmets;$('record').textContent=best.kills?`РЕКОРД: ${best.kills} врагов · ${clock(best.time)}`:'Легион ещё не знает, что его ждёт.';}updateRecord();
 let pendingRunHero=selected;
 function updateRunHeroStats(){const hero=Villagers.defs[pendingRunHero];$('runHeroStats').textContent=hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`;}
@@ -84,7 +84,7 @@ function renderRunHeroes(){
  }
  updateRunHeroStats();menuPortraitPhase=-1;animateMenu(performance.now());
 }
-function openRunHeroSelect(){renderRunHeroes();show('menu',false);show('runHeroSelect',true);}
+function openRunHeroSelect(){renderRunHeroes();show('shop',false);show('menu',false);show('runHeroSelect',true);}
 $('start').onclick=openRunHeroSelect;$('runHeroBack').onclick=()=>{show('runHeroSelect',false);show('menu',true);};$('runHeroStart').onclick=()=>{selected=pendingRunHero;start();};$('again').onclick=start;$('back').onclick=menu;$('quit').onclick=menu;
 function renderShop(){
  updateRecord();const root=$('shopHeroes');root.replaceChildren();
@@ -94,9 +94,9 @@ function renderShop(){
   const title=document.createElement('h3');title.textContent=hero.name;card.append(title);
   const desc=document.createElement('p');desc.textContent=hero.desc||(id==='asterix'?'Быстрый кулак: 25 урона, сектор 90°.':'Метает менгиры: 52 урона.');card.append(desc);
   const info=document.createElement('small');info.textContent=hero.hp+' HP · скорость '+hero.speed;card.append(info);
-  const button=document.createElement('button'),owned=Progression.owned(id);button.className='small';button.textContent=owned?(selected===id?'Выбран':'Выбрать'):'Открыть · '+Progression.prices[id]+' шлемов';
-  button.disabled=!owned&&Progression.data.helmets<Progression.prices[id];
-  button.onclick=()=>{if(Progression.owned(id)||Progression.buyHero(id)){selected=id;document.querySelectorAll('[data-hero]').forEach(el=>el.classList.toggle('selected',el.dataset.hero===id));renderShop();}};card.append(button);root.append(card);
+  const button=document.createElement('button'),owned=Progression.owned(id);button.className='small';button.textContent=owned?'Доступен для забега':'Купить · '+Progression.prices[id]+' шлемов';
+  button.disabled=owned||Progression.data.helmets<Progression.prices[id];
+  button.onclick=()=>{if(!Progression.owned(id)&&Progression.buyHero(id))renderShop();};card.append(button);root.append(card);
  }
  $('shopUpgrades').replaceChildren();
  for(const [id,u] of Object.entries(Progression.upgrades)){
@@ -104,11 +104,12 @@ function renderShop(){
  }
  $('shopWallet').textContent='У вас '+Progression.data.helmets+' шлемов · до следующей награды: '+(10-Progression.data.kills%10)+' убийств'+(Progression.persistent?'':' · Не удалось сохранить прогресс. Не закрывай игру.');
 }
-$('shopOpen').onclick=()=>{if(mode!=='menu')return;renderShop();show('shop',true);};
-$('shopClose').onclick=()=>show('shop',false);
+$('shopOpen').onclick=()=>{if(mode!=='menu')return;renderShop();show('menu',false);show('shop',true);};
+function closeShop(){show('shop',false);show('menu',true);}
+$('shopClose').onclick=closeShop;
 function pause(){if(mode==='play'){mode='pause';resetInput();show('paused',true);}else if(mode==='pause'){mode='play';show('paused',false);}}$('pause').onclick=pause;$('resume').onclick=pause;
 $('sound').onclick=()=>{sound=!sound;$('sound').textContent=`ЗВУК: ${sound?'ВКЛ':'ВЫКЛ'}`;beep(500,.1);};
-window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='Escape'&&mode==='menu'&&!$('runHeroSelect').classList.contains('hidden')){show('runHeroSelect',false);show('menu',true);return;}if(e.code==='Escape'||e.code==='KeyP')pause();if(mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))pickUpgrade(+e.code.slice(-1)-1);keys.add(e.code);});
+window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='Escape'&&mode==='menu'&&!$('shop').classList.contains('hidden')){closeShop();return;}if(e.code==='Escape'&&mode==='menu'&&!$('runHeroSelect').classList.contains('hidden')){show('runHeroSelect',false);show('menu',true);return;}if(e.code==='Escape'||e.code==='KeyP')pause();if(mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))pickUpgrade(+e.code.slice(-1)-1);keys.add(e.code);});
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{resetInput();if(mode==='play')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause();});
 canvas.style.touchAction='none';canvas.addEventListener('pointerdown',e=>{if(mode!=='play'||e.pointerType==='mouse')return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};const control=$('stick'),size=control.offsetWidth||88;control.style.left=`${e.clientX-size/2}px`;control.style.top=`${e.clientY-size/2}px`;control.style.bottom='auto';canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;let dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,l=Math.hypot(dx,dy);stick={x:dx/Math.max(35,l),y:dy/Math.max(35,l)};$('knob').style.transform=`translate(${stick.x*24}px,${stick.y*24}px)`;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>canvas.addEventListener(ev,resetInput));
 const upgrades=[
@@ -188,7 +189,7 @@ for(const b of s.enemyShots)Legion.projectile(ctx,b);
 Villagers.projectiles(ctx,s);for(const b of s.shots){if(typeof MenhirArt!=='undefined')MenhirArt.draw(ctx,b);}
 for(const f of s.fx){ctx.save();ctx.globalAlpha=f.life/f.max;if(f.kind==='spark'){ctx.fillStyle=f.color;ctx.fillRect(f.x,f.y,3,3);}else{ctx.strokeStyle=f.kind==='slash'?'#f8dfa0':f.kind==='ring'?'#a9c7e0':'#e97451';ctx.lineWidth=f.kind==='slash'?7:3;ctx.beginPath();const r=f.r*(1-(f.life/f.max)*.3);ctx.arc(f.x,f.y,r,f.kind==='slash'?f.angle-(f.half||Math.PI/4):0,f.kind==='slash'?f.angle+(f.half||Math.PI/4):Math.PI*2);ctx.stroke();if(f.kind==='slash'){ctx.lineWidth=2;ctx.beginPath();ctx.arc(f.x,f.y,r-12,f.angle-(f.half||Math.PI/4),f.angle+(f.half||Math.PI/4));ctx.stroke();}}ctx.restore();}
 ctx.font='bold 12px monospace';ctx.textAlign='center';for(const t of s.texts){ctx.globalAlpha=Math.min(1,t.life*3);ctx.fillStyle='#111f18';ctx.fillText(t.v,t.x+1,t.y+1);ctx.fillStyle=typeof t.v==='string'?'#bfe7a3':'#fff1c6';ctx.fillText(t.v,t.x,t.y);}ctx.globalAlpha=1;
-}else{for(const o of [...Village.objects].sort((a,b)=>a.y-b.y))Village.drawObject(ctx,o);for(let i=0;i<14;i++)sprite(ctx,'roman',1300+(i%5)*47,890+Math.floor(i/5)*60,2,i%2===0,Math.sin(performance.now()/300+i));sprite(ctx,'asterix',1180,1100,2);sprite(ctx,'obelix',1230,1120,2);}
+}else{for(const o of [...Village.objects].sort((a,b)=>a.y-b.y))Village.drawObject(ctx,o);for(let i=0;i<14;i++)sprite(ctx,'roman',1300+(i%5)*47,890+Math.floor(i/5)*60,2,i%2===0,Math.sin(performance.now()/300+i));}
 ctx.restore();const vignette=ctx.createRadialGradient(W/2,H/2,150,W/2,H/2,600);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#08171188');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);ctx.restore();}
 function frame(now){const dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play')update(dt);if(mode==='menu')animateMenu(now);if(toastLeft>0){toastLeft-=dt;if(toastLeft<=0)$('toast').style.opacity=0;}draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 })();
