@@ -29,10 +29,13 @@ jobs:
         with:
           enablement: true
 
+      - name: Build player site
+        run: node build-site.cjs
+
       - name: Upload site
         uses: actions/upload-pages-artifact@v3
         with:
-          path: .
+          path: _site
 
       - name: Deploy
         id: deployment
