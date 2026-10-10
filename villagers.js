@@ -34,7 +34,7 @@ globalThis.Villagers=(()=>{
   for(const f of s.fish){
    f.age+=dt;if(!f.back&&f.age>=.65){f.back=true;f.hit.clear();}
    const d=Math.hypot(p.x-f.x,p.y-f.y);if(f.back&&d<20){f.dead=true;continue;}
-   const vx=(f.back?(p.x-f.x)/Math.max(1,d):f.dx)*310,vy=(f.back?(p.y-f.y)/Math.max(1,d):f.dy)*310;
+   const vx=(f.back?(p.x-f.x)/Math.max(1,d):f.dx)*310,vy=(f.back?(p.y-f.y)/Math.max(1,d):f.dy)*310;f.vx=vx;f.vy=vy;
    const n=Math.max(1,Math.ceil(Math.hypot(vx,vy)*dt/6));
    for(let i=0;i<n&&!f.dead;i++){const next={x:f.x+vx*dt/n,y:f.y+vy*dt/n};
     if(!Village.clear(f,next,3)){if(f.back)f.dead=true;else{f.back=true;f.hit.clear();}break;}
@@ -47,7 +47,7 @@ globalThis.Villagers=(()=>{
   for(const q of s.poison){g.fillStyle='#79a74455';g.beginPath();g.ellipse(q.x,q.y,q.r,q.r*.6,0,0,Math.PI*2);g.fill();g.fillStyle='#bfdc7755';g.fillRect(q.x-5,q.y-3,4,3);}
   if(id==='cacofonix'){g.strokeStyle='#e8c67255';g.lineWidth=2;g.beginPath();g.arc(s.p.x,s.p.y,95*s.stats.range,0,Math.PI*2);g.stroke();g.font='18px serif';g.fillStyle='#f4d778';for(let i=0;i<5;i++){const a=s.step*1.3+i*Math.PI*2/5;g.fillText('♫',s.p.x+Math.cos(a)*75,s.p.y+Math.sin(a)*55-15);}}
  }
- function projectiles(g,s){for(const f of s.fish){g.save();g.translate(f.x,f.y-18);g.rotate(f.age*9);g.fillStyle='#79956a';g.beginPath();g.ellipse(0,0,16,7,0,0,Math.PI*2);g.fill();g.beginPath();g.moveTo(-12,0);g.lineTo(-22,-9);g.lineTo(-22,9);g.fill();g.fillStyle='#f1dfad';g.fillRect(8,-3,3,3);g.restore();}}
+ function projectiles(g,s){for(const f of s.fish)ProjectileArt.drawFish(g,f);}
  function helmet(g,x,y,scale=1){if(typeof HelmetArt!=='undefined'&&HelmetArt.draw(g,x,y,scale))return;g.save();g.translate(x,y);g.scale(scale,scale);g.fillStyle='#273b32';g.fillRect(-9,4,19,4);g.fillStyle='#b8c5c7';g.beginPath();g.arc(0,0,8,Math.PI,0);g.lineTo(8,3);g.lineTo(-8,3);g.fill();g.fillStyle='#e1e7de';g.fillRect(-5,-5,3,5);g.fillStyle='#718d95';g.fillRect(-10,2,20,3);g.fillRect(4,4,4,5);g.restore();}
  return {defs,draw,fish,update,ground,projectiles,helmet};
 })();

@@ -16,6 +16,7 @@ globalThis.Legion=(()=>{
  function telegraph(g,e){if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
  }
+ function projectile(g,b){ProjectileArt.drawPilum(g,b);}
  function draw(g,e,sprite){
   const u=units[e.unit];
   if(typeof UnitArt!=='undefined'&&UnitArt.draw(g,e)){
@@ -34,5 +35,5 @@ globalThis.Legion=(()=>{
   }
   if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(e.unit==='ram'?142:e.unit==='turtle'?124:96));}
  }
- return {units,wave,mitigation,telegraph,draw};
+ return {units,wave,mitigation,telegraph,draw,projectile};
 })();
