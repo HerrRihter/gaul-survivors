@@ -50,7 +50,7 @@ for(const [sx,sy,nx,ny]of [[-100,0,1,0],[100,0,-1,0],[0,-100,0,1],[0,100,0,-1],[
 t.start();e=t.spawn('roman');t.damage(e,999,-200,0,{x:e.x-10,y:e.y});assert.equal(t.s.corpses[0].fallX,-1,'Projectile impulse takes precedence over player position');
 console.log('PASS: fatal hit direction from all sides and diagonal, correct visual rotation, last-hit impulse precedence.');
 
-// Directional attacks follow movement input, persist at rest, and lock during windup.
+// Directional attacks follow movement input, persist at rest, and turn during windup.
 const directions=[
  ['KeyD',null,1,0],['KeyA',null,-1,0],['KeyW',null,0,-1],['KeyS',null,0,1],
  ['KeyD','KeyW',Math.SQRT1_2,-Math.SQRT1_2],['KeyD','KeyS',Math.SQRT1_2,Math.SQRT1_2],
@@ -69,12 +69,18 @@ for(const [k1,k2,dx,dy] of directions){
  dummy(t.s.p.x-dx*100,t.s.p.y-dy*100);t.s.attack=0;t.update(.01);for(let i=0;i<10;i++)t.update(.04);
  const shot=t.s.shots[0];assert(shot,'Throws without a target ahead');assert(Math.abs(shot.vx-320*dx)<1e-6&&Math.abs(shot.vy-320*dy)<1e-6,'Menhir follows last movement');
 }
+prepare('asterix');let punchRight=dummy(t.s.p.x+45,t.s.p.y),punchLeft=dummy(t.s.p.x-45,t.s.p.y);
+t.s.attack=0;t.update(.01);assert.equal(t.s.p.action.direction.x,1,'Punch starts toward the current facing');
+t.keys.add('KeyA');t.update(.03);assert.equal(t.s.p.action.direction.x,-1,'Punch turns toward movement during windup');
+assert.equal(t.s.p.action.flip,true,'Attack animation turns during windup');for(let i=0;i<5;i++)t.update(.04);
+assert.equal(punchLeft.hp,35,'Punch hits in the latest facing at impact');assert.equal(punchRight.hp,60,'Punch does not hit in its original direction');
 prepare('obelix');t.s.attack=0;t.update(.01);t.keys.add('KeyA');t.update(.03);t.keys.clear();
-assert.equal(t.s.p.facing.x,-1);assert.equal(t.s.p.action.direction.x,1,'Active throw keeps its initial direction');
-for(let i=0;i<9;i++)t.update(.04);assert(t.s.shots[0].vx>0,'Moving during windup does not bend projectile');
+assert.equal(t.s.p.facing.x,-1);assert.equal(t.s.p.action.direction.x,-1,'Active throw turns toward movement during windup');
+assert.equal(t.s.p.action.flip,true,'Throw animation turns during windup');
+for(let i=0;i<9;i++)t.update(.04);assert(t.s.shots[0].vx<0,'Menhir follows the facing at release');
 t.s.shots=[];t.s.stats.stones=3;t.s.menhir=0;t.update(.01);assert.equal(t.s.shots.length,3);assert(t.s.shots.every(b=>b.vx<0),'Bonus menhir fan follows current facing');
 t.start();assert.equal(t.s.p.facing.x,1);assert.equal(t.s.p.facing.y,0);
-console.log('PASS: eight-direction punches and throws, no rear/side damage, remembered facing, locked windup, bonus menhir fan, reset.');
+console.log('PASS: eight-direction punches and throws, no rear/side damage, remembered facing, turning windup, bonus menhir fan, reset.');
 
 // New villagers: actual combat integration and permanent purchases.
 env.Progression.earn(1000);

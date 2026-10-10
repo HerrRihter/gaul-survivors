@@ -88,7 +88,7 @@ Open village-preview.html for the complete map or a closer plaza view. New stone
 ### Ground collision audit
 All scenery objects use normalized ground polygons in village-collision.js (59 polygons), including individual tree trunks/roots, rocks, shop equipment, fence bases and the two sides of the open gate. Roofs/canopies are overhead. Circular actor clearance uses exact segment distances; movement checks the swept path and slides along free axes. Navigation uses a 25px grid with checked edges and separate caches for each actor radius (including the 29px centurion). Wide siege units route around gaps that cannot accommodate them. In village-preview.html enable «Границы препятствий» to inspect the shapes. Run node test-village-collision.cjs for obstacle and route checks, and node test.cjs for full combat regression.
 
-Hero attacks automatically in the direction of the last movement input (including diagonals); facing persists while idle. Asterix hits a forward 120-degree sector, checking obstacle cover; Obelix and bonus menhirs follow the same direction. Direction locks when windup starts, so movement during the animation affects the next attack. A small gold ground arrow shows the active direction. Bard song remains the separate radial upgrade.
+Hero attacks automatically in the direction of the last movement input (including diagonals); facing persists while idle. During windup, attack animation and aim follow movement; the direction at impact determines where Asterix swings, Obelix throws, or a bonus menhir fan fires. Asterix hits a forward 120-degree sector, checking obstacle cover. A small gold ground arrow shows the active direction. Bard song remains the separate radial upgrade.
 
 
 ### Helmets and villager prototypes

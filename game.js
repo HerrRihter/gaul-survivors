@@ -129,6 +129,7 @@ if(s.t>=s.nextRam){s.nextRam+=80;if(s.enemies.filter(e=>e.unit==='ram').length<2
 if(s.t>=230&&!s.bossSpawned){s.bossSpawned=true;spawn('boss',true);toast('ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ');beep(90,.4,'sawtooth');}
 for(const [time,text] of [[25,'КОПЕЙЩИКИ · Уклоняйся от длинного выпада.'],[50,'ПИЛУМЫ · Дома блокируют вражеские снаряды.'],[85,'ВЕТЕРАНЫ · Медленные, но опасные удары.']])if(s.t>=time&&s.t-dt<time)toast(text);
 if(p.hurt){p.hurt.elapsed+=dt;if(p.hurt.elapsed>=p.hurt.duration)p.hurt=null;}
+if(p.action){p.action.direction={...p.facing};p.action.flip=Math.abs(p.facing.x)>.01?p.facing.x<0:p.flip;}
 advanceAction(p,dt,heroImpact);
 const heroSpec=Villagers.defs[selected];s.attack-=dt;if(!heroSpec.passive&&s.attack<=0&&!p.action){s.attack=Math.max(.22,heroSpec.interval/st.haste);const dir={...p.facing};beginAction(p,Math.max(.18,heroSpec.wind/st.haste),{x:p.x+dir.x,y:p.y+dir.y});p.action.direction=dir;p.action.flip=Math.abs(dir.x)>.01?dir.x<0:p.flip;}
 s.menhir-=dt;if(s.menhir<=0){s.menhir=2/st.haste;if(st.stones)throwStones(st.stones,32);}
@@ -176,8 +177,6 @@ ctx.font='bold 12px monospace';ctx.textAlign='center';for(const t of s.texts){ct
 ctx.restore();const vignette=ctx.createRadialGradient(W/2,H/2,150,W/2,H/2,600);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#08171188');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);ctx.restore();}
 function frame(now){const dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play')update(dt);if(mode==='menu')animateMenu(now);if(toastLeft>0){toastLeft-=dt;if(toastLeft<=0)$('toast').style.opacity=0;}draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 })();
-
-
 
 
 
