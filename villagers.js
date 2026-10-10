@@ -28,7 +28,7 @@ globalThis.Villagers=(()=>{
     for(const e of s.enemies)if(e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<95*st.range+e.r&&Village.clear(p,e,2))hit(e,12*st.damage);
    }
   }
-  if(id==='panoramix'){s.trail-=dt;if(p.moving&&s.trail<=0){s.trail=.22/st.haste;if(!p.visualAction)p.visualAction={elapsed:0,duration:.4/st.haste,flip:p.flip};s.poison.push({x:p.x,y:p.y,r:30*st.range,life:3.5});}}
+  if(id==='panoramix'){s.trail-=dt;p.pourCooldown=Math.max(0,(p.pourCooldown||0)-dt);if(p.moving&&s.trail<=0){s.trail=.22/st.haste;if(!p.visualAction&&!p.pourCooldown){p.visualAction={elapsed:0,duration:.4/st.haste,flip:p.flip};p.pourCooldown=1.6;}s.poison.push({x:p.x,y:p.y,r:30*st.range,life:3.5});}}
   for(const puddle of s.poison)puddle.life-=dt;s.poison=s.poison.filter(q=>q.life>0);
   s.poisonTick-=dt;if(s.poisonTick<=0){s.poisonTick=.5/st.haste;for(const e of s.enemies)if(e.hp>0&&s.poison.some(q=>Math.hypot(e.x-q.x,e.y-q.y)<q.r+e.r&&Village.clear(q,e,2)))hit(e,8*st.damage);}
   for(const f of s.fish){

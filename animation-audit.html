@@ -1,7 +1,7 @@
 <!doctype html><meta charset="utf-8"><title>Animation audit</title>
 <style>body{background:#24382e;color:#eee;font:12px monospace;margin:20px}section{display:grid;grid-template-columns:repeat(12,90px);gap:4px;margin-bottom:12px}canvas{width:90px;height:100px;background:#38503e}h2{font-size:14px}#status{position:sticky;top:0;background:#111;padding:10px}</style>
 <div id="status">Loading</div><main id="frames"></main>
-<script src="villager-layout.js"></script><script src="villager-art.js"></script><script src="animation-layout.js"></script><script src="animation-art.js"></script><script src="unit-layout.js"></script><script src="unit-art.js"></script><script>
+<script src="villager-layout.js"></script><script src="motion-v2-layout.js"></script><script src="villager-art.js"></script><script src="animation-layout.js"></script><script src="animation-art.js"></script><script src="unit-layout.js"></script><script src="unit-art.js"></script><script>
 const specs=[['asterix',0],['obelix',0],['roman',0],['roman',1],['roman',2],['boss',0],...['cacofonix','antisanitarix','automatix','panoramix'].map(n=>[n,0]),...['spear','pilum','veteran','turtle','ram'].map(n=>[n,0])];
 function run(){
  if(Object.values(VillagerArt.status).some(s=>s!=='ready')||Object.values(AnimationArt.status).some(s=>s!=='ready')||Object.values(UnitArt.status).some(s=>s!=='ready'))return;

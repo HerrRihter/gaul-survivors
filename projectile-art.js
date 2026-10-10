@@ -1,7 +1,11 @@
 'use strict';
 globalThis.ProjectileArt=(()=>{
+ const art={};
+ if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src='projectiles-v2.png';}
+ function bitmap(g,kind,x,y,angle){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=kind==='fish'?34:72,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
  function drawFish(g,f){
   const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
+  if(bitmap(g,'fish',f.x,f.y-18,angle+Math.sin(f.age*12)*.055))return;
   g.save();g.translate(f.x,f.y-18);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
   g.lineWidth=1.7;g.lineJoin='round';g.lineCap='round';
   g.fillStyle='#50634c';g.strokeStyle='#202921';
@@ -21,6 +25,7 @@ globalThis.ProjectileArt=(()=>{
   g.restore();
  }
  function drawPilum(g,b){
+  if(bitmap(g,'pilum',b.x,b.y-16,Math.atan2(b.vy,b.vx)))return;
   g.save();g.translate(b.x,b.y-16);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
   g.strokeStyle='#251c16';g.lineWidth=6;g.beginPath();g.moveTo(-31,0);g.lineTo(17,0);g.stroke();
   g.strokeStyle='#80552f';g.lineWidth=3.5;g.beginPath();g.moveTo(-30,0);g.lineTo(17,0);g.stroke();

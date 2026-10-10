@@ -83,3 +83,6 @@ These frames establish architecture, materials and palette, not a complete overh
 
 ## Four villager animations and helmet — 10 October 2026
 Generated with built-in imagegen using heroes-animation.png and legion-animation.png as style references. Original atlases: hero-{cacofonix,antisanitarix,automatix,panoramix}-v1.png; helmet: roman-helmet-v1.png. Exact prompts: new-heroes-animation-prompts.json. Each character has four walk, four attack and four hurt frames. Alpha-connected components were isolated into hero-frames/ so wide hammer/fish poses crossing nominal cell boundaries cannot leak neighbouring figures. One scale and floor baseline per character; originals retained. The helmet is cropped using measured alpha bounds for the ground pickup.
+
+## Walking and projectile revision — 10 October 2026
+Three four-pose walk sheets generated with imagegen from the existing hero atlases. New drawings retain the held equipment. projectiles-v2.png generated with both fishmonger and pilum soldier references. Exact prompts in motion-v2-prompts.json; alpha bounds in motion-v2-layout.json. Original sheets retained. Runtime centers walking silhouettes on a shared floor and uses one scale per cycle.

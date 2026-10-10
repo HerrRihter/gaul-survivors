@@ -1,6 +1,6 @@
 const fs=require('fs'),vm=require('vm'),assert=require('assert/strict'),images=[],draws=[];
 const e={console,Event:class{},document:{dispatchEvent(){},createElement(){return {getContext:()=>({drawImage(...a){draws.push(a);}})};}},Image:class{set src(v){this.path=v;images.push(this);}}};
-vm.createContext(e);for(const f of ['villager-layout.js','villager-art.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),e);
+vm.createContext(e);for(const f of ['villager-layout.js','motion-v2-layout.js','villager-art.js'])vm.runInContext(fs.readFileSync(__dirname+'/'+f,'utf8'),e);
 assert.equal(e.VillagerArt.get('cacofonix'),null);
 images.forEach(i=>i.onload());
 assert.equal(draws.length,49);
@@ -15,3 +15,9 @@ for(const name of ['cacofonix','antisanitarix','automatix','panoramix']){
 }
 assert.equal(e.HelmetArt.status,'ready');
 console.log('PASS: 48 full poses, stable floor, safe portrait margins, distinct states, casting and hurt priorities, mirroring, helmet load.');
+
+const oldWalk=e.VillagerArt.get('automatix','walk',0);
+images.slice(49).forEach(i=>i.onload());
+assert.notEqual(oldWalk,e.VillagerArt.get('automatix','walk',0));
+for(const d of draws.slice(49)){assert(d[5]>=72&&d[5]+d[7]<=184.001);assert(d[6]>=131&&d[6]+d[8]<=236.001);}
+console.log('PASS: replacement walking sheets load and all 12 poses fit the portrait envelope.');
