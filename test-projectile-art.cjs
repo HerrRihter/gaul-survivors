@@ -7,12 +7,13 @@ function canvas(){
  return g;
 }
 const f=canvas();env.ProjectileArt.drawFish(f,{x:120,y:90,age:0,dx:1,dy:0});
-assert(f.calls.some(c=>c[0]==='translate'&&c[1]===120&&c[2]===72),'Fish draws at its flight position');
+assert(f.calls.some(c=>c[0]==='translate'&&c[1]===120&&c[2]===42),'Fish flies at the release hand height');
 assert(Math.abs(f.calls.find(c=>c[0]==='rotate')[1])<1e-9,'Fish points toward its outbound velocity');
 assert(f.calls.some(c=>c[0]==='arc'&&c[3]===3.5),'Fish keeps the visible yellow eye from its handheld design');
 assert(f.calls.some(c=>c[0]==='fill'&&c[1]==='#748568'),'Fish uses the mottled green of the handheld art');
 assert.equal(f.calls.filter(c=>c[0]==='save').length,f.calls.filter(c=>c[0]==='restore').length,'Fish balances canvas state');
 const returning=canvas();env.ProjectileArt.drawFish(returning,{x:40,y:60,age:0,vx:-310,vy:0,dx:1,dy:0});
+assert.equal(returning.calls.find(c=>c[0]==='translate')[2],12,'Returning fish keeps the same hand height');
 assert(Math.abs(returning.calls.find(c=>c[0]==='rotate')[1]-Math.PI)<1e-9,'Returning fish turns around to follow its return trajectory');
 const diagonal=canvas();env.ProjectileArt.drawFish(diagonal,{x:0,y:0,age:0,vx:0,vy:310});
 assert(Math.abs(diagonal.calls.find(c=>c[0]==='rotate')[1]-Math.PI/2)<1e-9,'Fish follows diagonal and vertical flight direction');
@@ -29,5 +30,5 @@ assert(pilumIntegration.calls.some(c=>c[0]==='fill'&&c[1]==='#aeb9c0'),'Legion p
 console.log('PASS: detailed fish and pilum projectiles match their held weapons, follow their flight paths and restore canvas state.');
 
 const loaded=[];const raster={Image:class{set src(v){this.path=v;loaded.push(this);}}};vm.createContext(raster);vm.runInContext(fs.readFileSync(__dirname+'/projectile-art.js','utf8'),raster);loaded[0].onload();
-for(const [kind,shot] of [['drawFish',{x:10,y:30,age:0,vx:-1,vy:0}],['drawPilum',{x:10,y:30,vx:0,vy:-1}]]){const g=canvas();g.drawImage=(...args)=>g.calls.push(['image',...args]);raster.ProjectileArt[kind](g,shot);assert.equal(g.calls.filter(c=>c[0]==='image').length,1);assert.equal(g.calls.filter(c=>c[0]==='fill').length,0);assert(fs.existsSync(__dirname+'/'+loaded[0].path));}
+for(const [kind,shot] of [['drawFish',{x:10,y:30,age:0,vx:-1,vy:0}],['drawPilum',{x:10,y:30,vx:0,vy:-1}]]){const g=canvas();g.drawImage=(...args)=>g.calls.push(['image',...args]);raster.ProjectileArt[kind](g,shot);assert.equal(g.calls.find(c=>c[0]==='translate')[2],kind==='drawFish'?-18:14,'Loaded art uses the same release height as fallback');assert.equal(g.calls.filter(c=>c[0]==='image').length,1);assert.equal(g.calls.filter(c=>c[0]==='fill').length,0);assert(fs.existsSync(__dirname+'/'+loaded[0].path));}
 console.log('PASS: loaded raster projectiles replace fallback drawings in both flight directions.');
