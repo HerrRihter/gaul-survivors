@@ -55,24 +55,37 @@ function fitPortrait(c,name,phase=0){
 let menuPortraitPhase=-1;
 function animateMenu(now){
  const phase=Math.floor(now/190)%8;if(phase===menuPortraitPhase)return;menuPortraitPhase=phase;
- fitPortrait($('portraitA'),'asterix',phase);fitPortrait($('portraitO'),'obelix',phase);
  document.querySelectorAll('[data-portrait]').forEach(c=>fitPortrait(c,c.dataset.portrait,phase));
 }
-function portrait(id,name){fitPortrait($(id),name);}
 document.addEventListener('villager-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
-document.addEventListener('hero-art-ready',()=>{portrait('portraitA','asterix');portrait('portraitO','obelix');});
-document.addEventListener('animation-art-ready',()=>{portrait('portraitA','asterix');portrait('portraitO','obelix');if(mode==='menu')renderShop();});
-portrait('portraitA','asterix');portrait('portraitO','obelix');
+document.addEventListener('hero-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
+document.addEventListener('animation-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
 const decorations=[];let seed=721;function seeded(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}
 for(let i=0;i<650;i++)decorations.push({x:seeded()*WORLD,y:seeded()*WORLD,type:Math.floor(seeded()*8),s:seeded()});
 function beep(freq=300,len=.05,type='square',vol=.025){if(!sound)return;try{audio??=new(window.AudioContext||window.webkitAudioContext)();if(audio.state==='suspended')audio.resume();const o=audio.createOscillator(),g=audio.createGain();o.type=type;o.frequency.setValueAtTime(freq,audio.currentTime);o.frequency.exponentialRampToValueAtTime(freq*.5,audio.currentTime+len);g.gain.setValueAtTime(vol,audio.currentTime);g.gain.exponentialRampToValueAtTime(.001,audio.currentTime+len);o.connect(g);g.connect(audio.destination);o.start();o.stop(audio.currentTime+len);}catch{}}
 function show(id,on){$(id).classList.toggle('hidden',!on);}function toast(text){$('toast').textContent=text;$('toast').style.opacity=1;toastLeft=3;}
 function resetInput(){keys.clear();pointer=null;stick={x:0,y:0};$('knob').style.transform='';$('stick').style.left='';$('stick').style.top='';$('stick').style.bottom='';}
-function start(){if(!Progression.owned(selected))selected='asterix';const hero=Villagers.defs[selected],levels=Progression.data.levels;resetInput();state={t:0,kills:0,level:1,xp:0,need:8,spawn:.5,attack:.2,menhir:2,ring:1,enemies:[],corpses:[],enemyShots:[],nextTurtle:100,nextRam:155,shots:[],fish:[],poison:[],helmets:[],earned:0,music:0,trail:0,poisonTick:0,gems:[],fx:[],texts:[],pickups:[],bossSpawned:false,bossDead:false,shake:0,step:0,stats:{damage:1+levels.power*.05,haste:1,range:1,speed:1+levels.speed*.03,magnet:75,armor:0,regen:0,stones:0,orbit:0},p:{x:WORLD/2,y:WORLD/2,hp:hero.hp+levels.health*10,max:hero.hp+levels.health*10,speed:hero.speed,inv:0,flip:false,facing:{x:1,y:0}}};mode='play';['menu','end','paused','levelup','bossbar'].forEach(id=>show(id,false));['hud','hint','pause','stick'].forEach(id=>show(id,true));$('heroLabel').textContent=hero.name.toUpperCase();toast('ДЕРЕВНЯ · Легион наступает. Дома дают укрытие от пилумов.');beep(450,.14);hud();}
-function menu(){mode='menu';resetInput();['end','paused','levelup','hud','hint','pause','stick','bossbar'].forEach(id=>show(id,false));show('menu',true);renderShop();$('toast').style.opacity=0;updateRecord();}
-function updateRecord(){$('wallet').textContent='ШЛЕМЫ: '+Progression.data.helmets;$('chosen').textContent='Герой: '+Villagers.defs[selected].name;$('record').textContent=best.kills?`РЕКОРД: ${best.kills} врагов · ${clock(best.time)}`:'Легион ещё не знает, что его ждёт.';}updateRecord();
-document.querySelectorAll('[data-hero]').forEach(el=>el.onclick=()=>{selected=el.dataset.hero;updateRecord();document.querySelectorAll('[data-hero]').forEach(x=>x.classList.toggle('selected',x===el));});
-$('start').onclick=start;$('again').onclick=start;$('back').onclick=menu;$('quit').onclick=menu;
+function start(){if(!Progression.owned(selected))selected='asterix';const hero=Villagers.defs[selected],levels=Progression.data.levels;resetInput();state={t:0,kills:0,level:1,xp:0,need:8,spawn:.5,attack:.2,menhir:2,ring:1,enemies:[],corpses:[],enemyShots:[],nextTurtle:100,nextRam:155,shots:[],fish:[],poison:[],helmets:[],earned:0,music:0,trail:0,poisonTick:0,gems:[],fx:[],texts:[],pickups:[],bossSpawned:false,bossDead:false,shake:0,step:0,stats:{damage:1+levels.power*.05,haste:1,range:1,speed:1+levels.speed*.03,magnet:75,armor:0,regen:0,stones:0,orbit:0},p:{x:WORLD/2,y:WORLD/2,hp:hero.hp+levels.health*10,max:hero.hp+levels.health*10,speed:hero.speed,inv:0,flip:false,facing:{x:1,y:0}}};mode='play';['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>show(id,false));['hud','hint','pause','stick'].forEach(id=>show(id,true));$('heroLabel').textContent=hero.name.toUpperCase();toast('ДЕРЕВНЯ · Легион наступает. Дома дают укрытие от пилумов.');beep(450,.14);hud();}
+function menu(){mode='menu';resetInput();['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect'].forEach(id=>show(id,false));show('menu',true);renderShop();$('toast').style.opacity=0;updateRecord();}
+function updateRecord(){$('wallet').textContent='ШЛЕМЫ: '+Progression.data.helmets;$('record').textContent=best.kills?`РЕКОРД: ${best.kills} врагов · ${clock(best.time)}`:'Легион ещё не знает, что его ждёт.';}updateRecord();
+let pendingRunHero=selected;
+function updateRunHeroStats(){const hero=Villagers.defs[pendingRunHero];$('runHeroStats').textContent=hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`;}
+function renderRunHeroes(){
+ const list=$('runHeroes'),heroes=Object.keys(Villagers.defs).filter(id=>Progression.owned(id));
+ if(!heroes.length)throw new Error('Нет доступных героев для нового забега');
+ list.replaceChildren();pendingRunHero=heroes.includes(selected)?selected:heroes[0];
+ for(const id of heroes){
+  const hero=Villagers.defs[id],button=document.createElement('button'),portrait=document.createElement('canvas'),copy=document.createElement('span'),name=document.createElement('strong'),weapon=document.createElement('small');
+  button.type='button';button.className=`run-hero${id===pendingRunHero?' selected':''}`;button.dataset.hero=id;
+  portrait.width=64;portrait.height=80;portrait.dataset.portrait=id;
+  copy.className='run-hero-copy';name.textContent=hero.name;weapon.textContent=hero.weapon;copy.append(name,weapon);button.append(portrait,copy);
+  button.onclick=()=>{pendingRunHero=id;list.querySelectorAll('.run-hero').forEach(card=>card.classList.toggle('selected',card.dataset.hero===id));updateRunHeroStats();};
+  list.append(button);
+ }
+ updateRunHeroStats();menuPortraitPhase=-1;animateMenu(performance.now());
+}
+function openRunHeroSelect(){renderRunHeroes();show('menu',false);show('runHeroSelect',true);}
+$('start').onclick=openRunHeroSelect;$('runHeroBack').onclick=()=>{show('runHeroSelect',false);show('menu',true);};$('runHeroStart').onclick=()=>{selected=pendingRunHero;start();};$('again').onclick=start;$('back').onclick=menu;$('quit').onclick=menu;
 function renderShop(){
  updateRecord();const root=$('shopHeroes');root.replaceChildren();
  for(const [id,hero] of Object.entries(Villagers.defs)){
@@ -95,7 +108,7 @@ $('shopOpen').onclick=()=>{if(mode!=='menu')return;renderShop();show('shop',true
 $('shopClose').onclick=()=>show('shop',false);
 function pause(){if(mode==='play'){mode='pause';resetInput();show('paused',true);}else if(mode==='pause'){mode='play';show('paused',false);}}$('pause').onclick=pause;$('resume').onclick=pause;
 $('sound').onclick=()=>{sound=!sound;$('sound').textContent=`ЗВУК: ${sound?'ВКЛ':'ВЫКЛ'}`;beep(500,.1);};
-window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='Escape'||e.code==='KeyP')pause();if(mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))pickUpgrade(+e.code.slice(-1)-1);keys.add(e.code);});
+window.addEventListener('keydown',e=>{if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();if(e.repeat)return;if(e.code==='Escape'&&mode==='menu'&&!$('runHeroSelect').classList.contains('hidden')){show('runHeroSelect',false);show('menu',true);return;}if(e.code==='Escape'||e.code==='KeyP')pause();if(mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))pickUpgrade(+e.code.slice(-1)-1);keys.add(e.code);});
 window.addEventListener('keyup',e=>keys.delete(e.code));window.addEventListener('blur',()=>{resetInput();if(mode==='play')pause();});document.addEventListener('visibilitychange',()=>{if(document.hidden&&mode==='play')pause();});
 canvas.style.touchAction='none';canvas.addEventListener('pointerdown',e=>{if(mode!=='play'||e.pointerType==='mouse')return;pointer={id:e.pointerId,x:e.clientX,y:e.clientY};const control=$('stick'),size=control.offsetWidth||88;control.style.left=`${e.clientX-size/2}px`;control.style.top=`${e.clientY-size/2}px`;control.style.bottom='auto';canvas.setPointerCapture(e.pointerId);});canvas.addEventListener('pointermove',e=>{if(!pointer||pointer.id!==e.pointerId)return;let dx=e.clientX-pointer.x,dy=e.clientY-pointer.y,l=Math.hypot(dx,dy);stick={x:dx/Math.max(35,l),y:dy/Math.max(35,l)};$('knob').style.transform=`translate(${stick.x*24}px,${stick.y*24}px)`;});['pointerup','pointercancel','lostpointercapture'].forEach(ev=>canvas.addEventListener(ev,resetInput));
 const upgrades=[

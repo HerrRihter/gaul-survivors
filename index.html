@@ -89,6 +89,26 @@
  .touch{display:block}
 }
 </style>
+<style>
+.run-hero-select{width:min(980px,100%);max-height:calc(100vh - 40px);max-height:calc(100dvh - 40px);overflow:auto;padding:clamp(16px,3vw,30px);border:1px solid #697b55;border-radius:12px;background:#17231ff2;box-shadow:0 18px 60px #000a}
+.run-hero-head{display:flex;justify-content:space-between;align-items:flex-start;gap:16px}
+.run-hero-head h2{margin:0 0 8px;font:700 clamp(26px,5vw,42px)/1 Georgia,serif;color:var(--gold)}
+.run-hero-head p{margin:0;color:#b3c1b0;font:14px/1.5 Georgia,serif}
+.run-heroes{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:12px;margin:22px 0}
+.run-hero{min-width:0;display:flex;align-items:center;gap:12px;padding:12px;border:1px solid #53634b;border-radius:8px;background:#243329;text-align:left;transition:transform .15s,border-color .15s,background .15s}
+.run-hero:hover{transform:translateY(-2px);border-color:#a4a96a}
+.run-hero.selected{border:2px solid var(--gold);padding:11px;background:#31412e;box-shadow:inset 0 0 0 1px #f6cb7238}
+.run-hero canvas{width:58px;height:74px;flex:none;image-rendering:pixelated}
+.run-hero-copy{min-width:0}
+.run-hero strong,.run-hero small{display:block}
+.run-hero strong{margin-bottom:6px;font:700 17px Georgia,serif;color:#f7f0d9}
+.run-hero small{color:#b6c0af;font-size:10px;line-height:1.5}
+.run-hero-foot{display:flex;align-items:center;justify-content:space-between;gap:14px;padding-top:16px;border-top:1px solid #455341}
+.run-hero-stats{color:#c0caba;font-size:12px;line-height:1.6}
+.run-hero-actions{display:flex;gap:8px;flex:none}
+@media(max-width:760px){.run-heroes{grid-template-columns:repeat(2,minmax(0,1fr));gap:8px;margin:15px 0}.run-hero{gap:7px;padding:8px}.run-hero.selected{padding:7px}.run-hero canvas{width:44px;height:58px}.run-hero strong{font-size:14px}.run-hero small{font-size:9px}.run-hero-foot{align-items:flex-start;flex-direction:column}.run-hero-actions{width:100%}.run-hero-actions>*{flex:1}}
+@media(max-width:380px){.run-heroes{grid-template-columns:1fr}.run-hero{min-height:72px}.run-hero-head{gap:8px}.run-hero-head .small{padding:8px;font-size:10px}}
+</style>
 </head>
 <body>
 <canvas id="game" aria-label="Игровая арена"></canvas>
@@ -97,7 +117,8 @@
 <div class="actions"><button id="sound" class="small" aria-label="Переключить звук">ЗВУК: ВЫКЛ</button><button id="pause" class="small hidden">Ⅱ ПАУЗА</button></div>
 <div id="toast" style="opacity:0"></div><div id="bossbar" class="hidden">ЦЕНТУРИОН МАКСИМУС<div class="bossfill"><i id="bosshealth"></i></div></div>
 <div id="stick" class="touch hidden"><i id="knob"></i></div>
-<div id="menu" class="overlay"><main class="menu"><div class="eyebrow">МАЛЕНЬКАЯ ДЕРЕВНЯ. БОЛЬШАЯ ДРАКА.</div><h1 class="title">ГАЛЛЫ:<br><span>ПОСЛЕДНИЙ ПИР</span></h1><p class="intro">Римляне снова испортили вечер. Продержись до пира, собирай волшебные кристаллы и объясни легиону, почему эту деревню обходят стороной.</p><div class="rule"><span>ЛОКАЦИЯ 01 · ДЕРЕВНЯ</span><span>6 ГЕРОЕВ</span><span>6 ТИПОВ ВОЙСК + ЦЕНТУРИОН</span></div><div class="heroes"><button class="hero selected" data-hero="asterix"><canvas id="portraitA" width="64" height="80"></canvas><div><div class="tag">СКОРОСТЬ / БЛИЖНИЙ БОЙ</div><h2>Астерикс</h2><p>Удары в направлении движения.<br>Лёгкий на ноги, тяжёлый на кулак.</p></div></button><button class="hero" data-hero="obelix"><canvas id="portraitO" width="64" height="80"></canvas><div><div class="tag">СИЛА / ДАЛЬНИЙ БОЙ</div><h2>Обеликс</h2><p>Метает менгиры сквозь врагов.<br>Больше здоровья. Больше проблем у римлян.</p></div></button></div><p id="chosen" style="color:#f6cb72">Герой: Астерикс</p><div class="startline"><button id="shopOpen" class="small">ГЕРОИ И УСИЛЕНИЯ</button><span id="wallet"></span><button id="start" class="primary">НАЧАТЬ ЗАБЕГ →</button><a class="small" href="legion-preview.html" style="color:#f6cb72;text-decoration:none">РАЗВЕДДАННЫЕ</a><a class="small" href="village-preview.html" style="color:#f6cb72;text-decoration:none">КАРТА</a><div class="record" id="record"></div></div><div class="footer">WASD или стрелки — двигаться · атаки автоматически по направлению последнего шага · на телефоне — веди пальцем</div></main></div>
+<div id="menu" class="overlay"><main class="menu"><div class="eyebrow">МАЛЕНЬКАЯ ДЕРЕВНЯ. БОЛЬШАЯ ДРАКА.</div><h1 class="title">ГАЛЛЫ:<br><span>ПОСЛЕДНИЙ ПИР</span></h1><p class="intro">Римляне снова испортили вечер. Продержись до пира, собирай волшебные кристаллы и объясни легиону, почему эту деревню обходят стороной.</p><div class="rule"><span>ЛОКАЦИЯ 01 · ДЕРЕВНЯ</span><span>6 ГЕРОЕВ</span><span>6 ТИПОВ ВОЙСК + ЦЕНТУРИОН</span></div><div class="startline"><button id="shopOpen" class="small">ГЕРОИ И УСИЛЕНИЯ</button><span id="wallet"></span><button id="start" class="primary">НАЧАТЬ ЗАБЕГ →</button><a class="small" href="legion-preview.html" style="color:#f6cb72;text-decoration:none">РАЗВЕДДАННЫЕ</a><a class="small" href="village-preview.html" style="color:#f6cb72;text-decoration:none">КАРТА</a><div class="record" id="record"></div></div><div class="footer">WASD или стрелки — двигаться · атаки автоматически по направлению последнего шага · на телефоне — веди пальцем</div></main></div>
+<div id="runHeroSelect" class="overlay hidden" style="z-index:4"><section class="run-hero-select" role="dialog" aria-modal="true" aria-labelledby="runHeroTitle"><header class="run-hero-head"><div><h2 id="runHeroTitle">Выбери героя</h2><p>Кто отправится защищать деревню?</p></div><button id="runHeroBack" class="small">← НАЗАД</button></header><div id="runHeroes" class="run-heroes"></div><footer class="run-hero-foot"><div id="runHeroStats" class="run-hero-stats"></div><div class="run-hero-actions"><button id="runHeroStart" class="primary">В БОЙ →</button></div></footer></section></div>
 <div id="levelup" class="overlay hidden"><div class="modal"><div class="eyebrow">СИЛА ДЕРЕВНИ</div><h2>Ещё глоток волшебства</h2><p>Выбери улучшение. Римляне подождут.</p><div id="cards" class="cards"></div><div class="footer">Нажми 1, 2 или 3 для выбора</div></div></div>
 <div id="paused" class="overlay hidden"><div class="modal"><div class="eyebrow">ЛЕГИОН НА ПЕРЕКУРЕ</div><h2>Небольшой привал</h2><p>Драка продолжится, когда ты будешь готов.</p><button id="resume" class="primary">ПРОДОЛЖИТЬ →</button><button id="quit" class="small">В МЕНЮ</button></div></div>
 <div id="end" class="overlay hidden"><div class="modal"><div id="endTag" class="eyebrow"></div><h2 id="endTitle"></h2><p id="endText"></p><div id="endStats" class="stats"></div><button id="again" class="primary">ЕЩЁ ОДИН ЗАБЕГ →</button><button id="back" class="small">ВЫБРАТЬ ГЕРОЯ</button></div></div>
