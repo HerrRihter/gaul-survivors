@@ -1,7 +1,9 @@
 'use strict';
 (() => {
 const $=id=>document.getElementById(id), canvas=$('game'), ctx=canvas.getContext('2d');
-const W=960,H=540,WORLD=2200,DURATION=300;canvas.width=W;canvas.height=H;ctx.imageSmoothingEnabled=false;
+let W=960,H=540;const WORLD=2200,DURATION=300;
+function resizeCanvas(){const zoom=window.innerWidth<window.innerHeight?1.35:1,ratio=Math.min(window.devicePixelRatio||1,2)*zoom;W=Math.max(1,(window.innerWidth||960)/zoom);H=Math.max(1,(window.innerHeight||540)/zoom);canvas.width=Math.round(W*ratio);canvas.height=Math.round(H*ratio);ctx.setTransform(ratio,0,0,ratio,0,0);ctx.imageSmoothingEnabled=false;}
+resizeCanvas();window.addEventListener('resize',resizeCanvas);
 let selected='asterix',mode='menu',state=null,last=0,keys=new Set(),audio=null,sound=false,toastLeft=0,choice=[];
 let pointer=null,stick={x:0,y:0},best={kills:0,time:0};try{best=JSON.parse(localStorage.getItem('gaul-best'))||best;}catch{}
 const rand=(a,b)=>a+Math.random()*(b-a),clamp=(n,a,b)=>Math.max(a,Math.min(b,n)),dist=(a,b)=>Math.hypot(a.x-b.x,a.y-b.y),clock=t=>`${Math.floor(t/60).toString().padStart(2,'0')}:${Math.floor(t%60).toString().padStart(2,'0')}`;
@@ -177,5 +179,3 @@ ctx.font='bold 12px monospace';ctx.textAlign='center';for(const t of s.texts){ct
 ctx.restore();const vignette=ctx.createRadialGradient(W/2,H/2,150,W/2,H/2,600);vignette.addColorStop(0,'transparent');vignette.addColorStop(1,'#08171188');ctx.fillStyle=vignette;ctx.fillRect(0,0,W,H);ctx.restore();}
 function frame(now){const dt=Math.min((now-last)/1000||0,.05);last=now;if(mode==='play')update(dt);if(mode==='menu')animateMenu(now);if(toastLeft>0){toastLeft-=dt;if(toastLeft<=0)$('toast').style.opacity=0;}draw();requestAnimationFrame(frame);}requestAnimationFrame(frame);
 })();
-
-
