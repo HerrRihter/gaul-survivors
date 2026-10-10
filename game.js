@@ -57,7 +57,7 @@ function animateMenu(now){
  const phase=Math.floor(now/190)%8;if(phase===menuPortraitPhase)return;menuPortraitPhase=phase;
  document.querySelectorAll('[data-portrait]').forEach(c=>fitPortrait(c,c.dataset.portrait,phase));
 }
-document.addEventListener('villager-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
+document.addEventListener('villager-art-ready',()=>{portraitFrames.clear();menuPortraitPhase=-1;if(mode==='menu')renderShop();});
 document.addEventListener('hero-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
 document.addEventListener('animation-art-ready',()=>{menuPortraitPhase=-1;if(mode==='menu')renderShop();});
 const decorations=[];let seed=721;function seeded(){seed=(seed*1664525+1013904223)>>>0;return seed/4294967296;}

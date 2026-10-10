@@ -5,7 +5,7 @@
 <nav><button id="overview">Вся деревня</button><button id="square">Площадь крупно</button><label><input id="labels" type="checkbox" checked> Названия</label><label><input id="collision" type="checkbox"> Границы препятствий</label><span id="status">Загрузка рисунков…</span></nav>
 <canvas id="map" width="1320" height="1000" aria-label="Карта деревни с рисованными домами, деревом барда, улицами и частоколом"></canvas>
 <footer>Дома, стволы деревьев, камни и частокол непроходимы. Проём ворот открыт.</footer></main>
-<script src="village-art.js"></script><script src="village-collision.js"></script><script src="village.js"></script><script>
+<script src="village-art.js?v=motion-3"></script><script src="village-collision.js?v=motion-3"></script><script src="village.js?v=motion-3"></script><script>
 const canvas=document.getElementById('map'),g=canvas.getContext('2d');let close=false;
 document.getElementById('overview').onclick=()=>close=false;document.getElementById('square').onclick=()=>close=true;
 function render(){g.setTransform(1,0,0,1,0,0);g.fillStyle='#89954e';g.fillRect(0,0,1320,1000);const scale=close?.95:.57;g.translate(660,500);g.scale(scale,scale);g.translate(-1100,close?-1070:-1090);Village.draw(g);if(document.getElementById("collision").checked)Village.collision.draw(g);
