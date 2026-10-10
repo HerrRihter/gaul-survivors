@@ -3,11 +3,11 @@ globalThis.ProjectileArt=(()=>{
  // The release hand is 48 logical pixels above the foot anchor.
  const FISH_HEIGHT=48,art={};
  if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src='projectiles-v2.png';}
- function bitmap(g,kind,x,y,angle){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=kind==='fish'?34:72,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
+ function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=(kind==='fish'?34:72)*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
  function drawFish(g,f){
   const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
-  if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055))return;
-  g.save();g.translate(f.x,f.y-FISH_HEIGHT);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
+  if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055,(f.r||12)/12))return;
+  g.save();g.translate(f.x,f.y-FISH_HEIGHT);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15*(f.r||12)/12,1.15*(f.r||12)/12);
   g.lineWidth=1.7;g.lineJoin='round';g.lineCap='round';
   g.fillStyle='#50634c';g.strokeStyle='#202921';
   g.beginPath();g.moveTo(-22,0);g.lineTo(-34,-10);g.quadraticCurveTo(-31,-3,-30,0);g.quadraticCurveTo(-32,4,-35,9);g.lineTo(-21,5);g.closePath();g.fill();g.stroke();

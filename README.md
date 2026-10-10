@@ -101,3 +101,8 @@ New villagers use 48 drawn animation frames for walking, attacks and hurt reacti
 Animation assets added 10 October: villager-art.js loads isolated frames from hero-frames/ without pixel readback, so local file rendering remains supported. Cacofonix strums on aura ticks, Panoramix pours on trail pulses, fish/hammer animations follow the attack windup, and player damage triggers hurt reactions. Roman helmets use roman-helmet-v1.png both on the field and next to the currency counter. Prompts are in new-heroes-animation-prompts.json. Validate with node test-villager-art.cjs; animation-audit.html checks all 168 cached frames for edge clipping.
 
 Публикация: `node build-site.cjs` собирает `_site/` для GitHub Pages. Доступны игра, разведданные и карта. `animation-preview.html`, `animation-audit.html`, `art-preview.html` и `hero-preview.html` остаются только в исходниках для локальной разработки.
+
+## Общие и личные усиления
+В забеге: 8 общих пассивных усилений (по 5 рангов) и 3 ветки оружия каждого героя (по 3 ранга, число снарядов — 2). Каждый уровень даёт три разных варианта; пока личная ветка доступна, один вариант гарантированно личный. Полностью развитые ветки исключаются, после исчерпания доступны припасы. Ранги сбрасываются при новом забеге.
+Лавка: 8 общих постоянных бонусов и по одной персональной тренировке на 3 ранга. Тренировка недоступна до покупки героя. Старый gaul-progression-v1 сохраняет валюту, героев и прежние покупки. Проверки: node test-upgrades.cjs, node test-progression.cjs, node test.cjs.
+Ориентир разделения оружия и пассивных бонусов: https://vampire-survivors.fandom.com/wiki/Weapons и https://vampire-survivors.fandom.com/wiki/Passive_items . Эволюции и лимиты слотов в этой версии не вводились.
