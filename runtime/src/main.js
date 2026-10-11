@@ -1196,7 +1196,8 @@ function updateHazards(c,dt){
 function updateExpansion(e,c,dt){
   const u=expansionUnits[e.unit];if(!u)return false;
   const s=c.state,p=s.p,d=c.dist(e,p);e.moving=false;
-  const move=(x,y,speed)=>{const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;e.walk=(e.walk||0)+travel/50;return travel;};
+  const advanceWalk=travel=>{if(travel>.01)e.walk=(e.walk||0)+(e.unit==='cavalry'?dt*2:travel/50);};
+  const move=(x,y,speed)=>{const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
   if(e.unit==='caius'){
     const angle=s.t*.22+e.phase;e.heading=angle;move(Math.cos(angle),Math.sin(angle),e.speed);return true;
   }
@@ -1213,7 +1214,7 @@ function updateExpansion(e,c,dt){
       const ox=e.x,oy=e.y;c.Village.move(e,q.x*speed*dt/steps,q.y*speed*dt/steps,e.r);travel+=Math.hypot(e.x-ox,e.y-oy);
       if(c.dist(e,p)<e.r+14)c.hurtPlayer(e);
     }
-    e.moving=travel>.01;e.walk=(e.walk||0)+travel/50;q.left-=dt;
+    e.moving=travel>.01;advanceWalk(travel);q.left-=dt;
     if(q.left<=0||travel<speed*dt*.7){e.charge=null;e.action=null;e.cd=2.5;if(e.unit==='stoneSquad')e.crush=.65;if(e.unit==='cavalry')e.hp=0;}
     return true;
   }
