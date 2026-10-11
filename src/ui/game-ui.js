@@ -124,7 +124,7 @@ function hud(){
       sessionContext.$('levelText').textContent=`УР. ${s.level}  ·  ${sessionContext.Math.ceil(s.p.hp)} / ${s.p.max} HP`;
       sessionContext.$('time').textContent=sessionContext.clock(s.t);
       sessionContext.$('kills').textContent=`${s.kills} ПОБЕЖДЕНО`;
-      sessionContext.$('weapon').textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon;
+      sessionContext.$('weapon').textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon+' · '+sessionContext.arenaDefinitions[s.map].name;
       sessionContext.$('helmets').textContent='ШЛЕМЫ: '+sessionContext.Progression.data.helmets+' (+'+s.earned+')';
       const boss=s.enemies.find(e=>e.boss);
       show('bossbar',!!boss);

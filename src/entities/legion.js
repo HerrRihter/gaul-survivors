@@ -1,3 +1,4 @@
+import {drawExpansion,expansionTelegraph} from '../rendering/art/expansion-art.js';
 import {waves} from '../../data/enemies/waves.js';
 import {unitDefinitions} from '../../data/enemies/units.js';
 import {ProjectileArt} from '../rendering/art/projectile-art.js';
@@ -10,13 +11,33 @@ Legion=(()=>{
   for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
  }
  function mitigation(e,p){if(e.unit!=='turtle')return 1;const a=Math.atan2(p.y-e.y,p.x-e.x);return Math.cos(a-(e.heading||0))>.15?.35:1;}
- function telegraph(g,e){if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
+ function telegraph(g,e){if(expansionTelegraph(g,e))return;if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
  }
- function projectile(g,b){ProjectileArt.drawPilum(g,b);}
+ function projectile(g,b){
+  // Reuse the actual release pose: no independently drawn imitation of the net
+  // or arrow. Crops contain only the airborne equipment, excluding hands/bows.
+  if(b.kind==='net'||b.kind==='arrow'){
+   const net=b.kind==='net',frame=UnitArt.get(net?'netter':'tower','attack',.5);
+   if(frame){
+    const crop=net?[183,172,64,44]:[185,109,33,10];
+    const progress=Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5));
+    const height=net?44:122+(40-122)*progress;
+    g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
+    g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return;
+   }
+  }
+  if(b.kind==='net'){
+    g.save();g.translate(b.x,b.y-44);g.rotate(Math.atan2(b.vy,b.vx));g.strokeStyle='#eee1a8';g.lineWidth=2;
+    for(let i=-12;i<=12;i+=6){g.beginPath();g.moveTo(i,-12);g.lineTo(i,12);g.moveTo(-12,i);g.lineTo(12,i);g.stroke();}g.restore();
+  }else if(b.kind==='arrow'){
+    g.save();g.translate(b.x,b.y-(122-82*Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5))));g.rotate(Math.atan2(b.vy,b.vx));g.fillStyle='#d7b784';g.fillRect(-17,-1,29,2);g.fillStyle='#e9ead6';g.fillRect(9,-3,6,6);g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();
+  }else ProjectileArt.drawPilum(g,b);
+ }
  function draw(g,e,sprite){
   const u=units[e.unit];
   if(typeof UnitArt!=='undefined'&&UnitArt.draw(g,e)){
+  }else if(drawExpansion(g,e)){
    // Illustrated specialist atlas; old drawings below remain load-failure fallbacks.
   }else if(e.unit==='turtle'){
    for(let row=0;row<2;row++)for(let col=0;col<3;col++)sprite(g,'roman',e.x+(col-1)*25,e.y+row*23-15,2,Math.cos(e.heading)<0,0,e.hit>0,col+row,{...e,action:null});
@@ -30,7 +51,7 @@ Legion=(()=>{
    sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
    if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
   }
-  if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(e.unit==='ram'?142:e.unit==='turtle'?124:96));}
+  if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
  }
  return {units,wave,mitigation,telegraph,draw,projectile};
 })();

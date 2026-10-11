@@ -4,7 +4,7 @@ const {frameHarness}=require('./helpers/frame-harness.cjs');
 (async()=>{
  const h=await frameHarness('src/rendering/art/unit-art.js'),U=h.env.UnitArt;
  assert.equal(U.get('spear'),null);h.images.forEach(i=>i.onload());
- assert.equal(h.images.length,60);assert.equal(h.draws.length,0,'No runtime atlas splitting');
+ assert.equal(h.images.length,Object.values(require('../data/animations/character-frames.json').characters).filter(c=>c.renderer==='unit').reduce((n,c)=>n+new Set(Object.values(c.actions).flat()).size,0));assert.equal(h.draws.length,0,'No runtime atlas splitting');
  for(const name of ['spear','pilum','veteran','turtle','ram']){
   assert.equal(U.status[name],'ready');
   for(const action of ['walk','attack','hurt']){

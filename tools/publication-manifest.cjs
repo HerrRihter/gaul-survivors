@@ -33,6 +33,7 @@ module.exports={
         "src/ui/menu-portraits.js",
         "src/ui/character-preview.js",
         "data/animations/character-bounds.js",
+        "assets/runtime/world/expansion/command-v1.png", "assets/runtime/world/expansion/supplies-v1.png", "assets/runtime/world/expansion/fire-v1.png", "assets/runtime/world/expansion/standard-v1.png", "assets/runtime/world/expansion/tent-round-v1.png", "assets/runtime/world/expansion/weapons-v1.png", "assets/runtime/world/expansion/tent-v1.png", "assets/runtime/world/expansion/rocks-v1.png", "src/rendering/art/scenery-art.js", "src/world/arenas.js", "data/enemies/expansion.js", "src/systems/expansion.js", "src/rendering/art/expansion-art.js",
         "src/app/game-session.js",
         "src/main.js", "src/core/math.js", "src/rendering/depth-order.js", "src/rendering/animation-player.js", "data/animations/action-timing.js",
         "src/world/village/village-data.js",

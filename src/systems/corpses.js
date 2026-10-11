@@ -1,3 +1,4 @@
+import {drawExpansion} from '../rendering/art/expansion-art.js';
 import {UnitArt} from '../rendering/art/unit-art.js';
 import {AnimationArt} from '../rendering/art/animation-art.js';
 export let Corpses;
@@ -12,6 +13,7 @@ Corpses=(()=>{
   if(cache.has(key))return cache.get(key);
   const c=document.createElement('canvas');c.width=256;c.height=256;const g=c.getContext('2d');g.imageSmoothingEnabled=false;
   if(art)g.drawImage(art,0,0);
+  else if(drawExpansion(g,{...e,x:128,y:236,heading:0,hit:0,moving:false})){}
   else sprite(g,e.type,128,236,e.boss?3.5:2.5,false,0,false,e.phase||0,{hurt:e.boss?null:{elapsed:.1,duration:.34,flip:false}});
   cache.set(key,c);return c;
  }

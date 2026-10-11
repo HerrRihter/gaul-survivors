@@ -104,3 +104,5 @@
 @media(max-width:380px){.run-heroes{grid-template-columns:1fr}.run-hero{min-height:72px}.run-hero-head{gap:8px}.run-hero-head .small{padding:8px;font-size:10px}}
 
 #shopUpgrades{grid-template-columns:repeat(2,minmax(0,1fr))}#shopUpgrades h4{grid-column:1/-1;margin:16px 0 4px;color:var(--gold)}#shopUpgrades button{text-align:left;line-height:1.7;white-space:normal;min-height:70px}#shopUpgrades button:disabled{opacity:.7}@media(max-width:650px){#shopUpgrades{grid-template-columns:1fr}}
+
+.map-select{margin-top:20px;padding:16px;background:#101e18;border:1px solid #53634b}.map-select label{display:block;color:var(--gold);font-size:11px;letter-spacing:2px;margin-bottom:10px}.map-select select{width:100%;padding:12px;background:#293c2c;color:#f7f0d9;border:1px solid #7e9167;font:inherit}.map-select p{color:#b6c0af;font-size:12px;line-height:1.6;margin:10px 0 0}

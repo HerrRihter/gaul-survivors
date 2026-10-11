@@ -1,3 +1,5 @@
+import {expansionUnits} from '../../data/enemies/expansion.js';
+import {expansionDrop} from './expansion.js';
 import {advanceAction} from '../rendering/animation-player.js';
 export let CombatSystem;
 'use strict';
@@ -5,9 +7,10 @@ CombatSystem={create(sessionContext){
 function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       if(e.hp<=0||n<=0)return;
       n*=sessionContext.Legion.mitigation(e,source);
+      expansionDrop(e,n,sessionContext.state);
       e.hp-=n;
       e.hit=.12;
-      if(e.hp>0&&(e.unit==='turtle'||e.unit==='ram'))e.visualHurt={elapsed:0,duration:.34,flip:sessionContext.Math.cos(e.heading)<0};
+      if(e.hp>0&&(e.unit==='turtle'||e.unit==='ram'||expansionUnits[e.unit]))e.visualHurt={elapsed:0,duration:.34,flip:sessionContext.Math.cos(e.heading)<0};
       if(e.hp>0&&e.type==='roman'){
         e.hurt={elapsed:0,duration:.34,flip:e.action?e.action.flip:e.x>sessionContext.state.p.x};
         e.action=null;

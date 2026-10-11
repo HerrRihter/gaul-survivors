@@ -17,9 +17,11 @@ VillageCollision=(()=>{
  function create(objects,size){
   const polygons=[],buckets=new Map(),bucketSize=100;
   for(const o of objects){
-   const [w,h]=dimensions[o.art],height=o.width*h/w;
-   for(const shape of shapes[o.art]){
-    const points=shape.map(([x,y])=>({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
+   const [w,h]=dimensions[o.art]||[1,1],height=o.width*h/w;
+   const [fx,fy,fw,fh]=o.footprint||[0,0,0,0];
+   const outlines=o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art];
+   for(const shape of outlines){
+    const points=shape.map(([x,y])=>o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
     const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))};polygons.push(p);
     for(let y=Math.floor(p.minY/bucketSize);y<=Math.floor(p.maxY/bucketSize);y++)for(let x=Math.floor(p.minX/bucketSize);x<=Math.floor(p.maxX/bucketSize);x++){const key=x+','+y;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(p);}
    }

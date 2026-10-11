@@ -3,7 +3,7 @@
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '..');
-const tests = ['test.cjs', 'test-animation.cjs', 'test-progression.cjs',
+const tests = ['test.cjs', 'test-expansion.cjs', 'test-expansion-art.cjs', 'test-animation.cjs', 'test-progression.cjs',
   'test-upgrades.cjs', 'test-projectile-art.cjs', 'test-unit-art.cjs',
   'test-villager-art.cjs', 'test-hero-art.cjs', 'test-menu-portraits.cjs', 'test-village-collision.cjs',
   'test-session.cjs', 'test-rendering.cjs', 'test-character-frames.cjs', 'test-character-preview.cjs', 'test-file-launch.cjs', 'test-site.cjs'];

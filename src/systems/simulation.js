@@ -1,3 +1,4 @@
+import {updateExpansion,updateHazards} from './expansion.js';
 export let Simulation;
 'use strict';
 Simulation={create(sessionContext){
@@ -10,6 +11,8 @@ function update(dt){
       p.inv=sessionContext.Math.max(0,p.inv-dt);
       p.hp=sessionContext.Math.min(p.max,p.hp+st.regen*dt);
       let mx=(sessionContext.keys.has('KeyD')||sessionContext.keys.has('ArrowRight')?1:0)-(sessionContext.keys.has('KeyA')||sessionContext.keys.has('ArrowLeft')?1:0)+sessionContext.stick.x,my=(sessionContext.keys.has('KeyS')||sessionContext.keys.has('ArrowDown')?1:0)-(sessionContext.keys.has('KeyW')||sessionContext.keys.has('ArrowUp')?1:0)+sessionContext.stick.y;
+      updateHazards(sessionContext,dt);
+      if(p.stun>0){mx=0;my=0;}
       const ml=sessionContext.Math.hypot(mx,my);
       if(ml>1){
         mx/=ml;
@@ -38,7 +41,7 @@ function update(dt){
       sessionContext.advanceAction(p,dt,sessionContext.heroImpact);
       const heroSpec=sessionContext.Villagers.defs[sessionContext.selected];
       s.attack-=dt;
-      if(!heroSpec.passive&&s.attack<=0&&!p.action){
+      if(!heroSpec.passive&&s.attack<=0&&!p.action&&!(p.stun>0)){
         s.attack=sessionContext.Math.max(.22,heroSpec.interval/(st.haste*(1+(st.punchTempo||0))));
         const dir={...p.facing};
         sessionContext.beginAction(p,sessionContext.Math.max(.18,heroSpec.wind/(st.haste*(1+(st.punchTempo||0)))),{x:p.x+dir.x,y:p.y+dir.y});
@@ -46,12 +49,12 @@ function update(dt){
         p.action.flip=sessionContext.Math.abs(dir.x)>.01?dir.x<0:p.flip;
       }
       s.menhir-=dt;
-      if(s.menhir<=0){
+      if(s.menhir<=0&&!(p.stun>0)){
         s.menhir=2/st.haste;
         if(st.stones)sessionContext.throwStones(st.stones,32);
       }
       s.ring-=dt;
-      if(s.ring<=0){
+      if(s.ring<=0&&!(p.stun>0)){
         s.ring=1.25/st.haste;
         if(st.orbit){
           const r=100+st.orbit*10;
@@ -60,7 +63,7 @@ function update(dt){
           sessionContext.beep(440,.09,'sine');
         }
       }
-      sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage);
+      sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage,sessionContext.Village);
       for(const e of s.enemies){
         if(e.hp<=0)continue;
         const u=sessionContext.Legion.units[e.unit],d=sessionContext.dist(e,p);
@@ -76,6 +79,7 @@ function update(dt){
         }
         e.vx*=sessionContext.Math.exp(-9*dt);
         e.vy*=sessionContext.Math.exp(-9*dt);
+        if(updateExpansion(e,sessionContext,dt))continue;
         if(!e.action&&!e.charge){
           const target=sessionContext.Math.atan2(p.y-e.y,p.x-e.x),delta=sessionContext.Math.atan2(sessionContext.Math.sin(target-e.heading),sessionContext.Math.cos(target-e.heading));
           e.heading+=sessionContext.clamp(delta,-dt*(e.r>30?.8:6),dt*(e.r>30?.8:6));
@@ -122,11 +126,13 @@ function update(dt){
         e.walk=(e.walk||e.phase/6)+travel/50;
       }
       for(const b of s.enemyShots){
+        b.age=(b.age||0)+dt;
         const n=sessionContext.Math.max(1,sessionContext.Math.ceil(sessionContext.Math.hypot(b.vx,b.vy)*dt/8));
         for(let i=0;i<n&&b.life>0;i++){
           b.x+=b.vx*dt/n;
           b.y+=b.vy*dt/n;
           if(sessionContext.Village.blocked(b.x,b.y,2))b.life=0;else if(sessionContext.dist(b,p)<17){
+            if(b.kind==='net'&&!(p.netGrace>0)&&p.inv<=0){p.stun=1.25;p.netGrace=4;p.action=null;}
             sessionContext.hurtPlayer(b);
             b.life=0;
           }

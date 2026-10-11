@@ -1,3 +1,4 @@
+import {createArenas,arenaDefinitions} from '../world/arenas.js';
 import {createMath} from '../core/math.js';
 import {CanvasSystem} from '../rendering/canvas.js';
 import {SpriteRenderer} from '../rendering/sprite-renderer.js';
@@ -18,7 +19,11 @@ GameSession = {
     Math, Villagers, Progression, UpgradeSystem, RomanArt, Village, Legion, Corpses,
     VillagerArt, AnimationArt, HeroArt, MenhirArt, MenuPortraits,
   }) {
+const arenas=createArenas(Village);
+let selectedMap='village';
 const sessionContext={
+get selectedMap(){return selectedMap},
+get arenaDefinitions(){return arenaDefinitions},
 get document(){return document},
 get window(){return window},
 get localStorage(){return localStorage},
@@ -30,7 +35,7 @@ get Villagers(){return Villagers},
 get Progression(){return Progression},
 get UpgradeSystem(){return UpgradeSystem},
 get RomanArt(){return RomanArt},
-get Village(){return Village},
+get Village(){return arenas.get(selectedMap)},
 get Legion(){return Legion},
 get Corpses(){return Corpses},
 get VillagerArt(){return VillagerArt},
@@ -146,6 +151,8 @@ get stop(){return stop}
     updateRecord();
     let pendingRunHero=selected;
 
+    const mapSelect=$('runMap');
+    if(mapSelect)mapSelect.onchange=()=>{selectedMap=arenaDefinitions[mapSelect.value]?mapSelect.value:'village';$('mapDescription').textContent=arenaDefinitions[selectedMap].description;};
     $('start').onclick=openRunHeroSelect;
     $('runHeroBack').onclick=()=>{
       show('runHeroSelect',false);
@@ -209,6 +216,7 @@ get stop(){return stop}
       get running() {
         return loop.running;
       },
+      selectMap(id) {if(!arenaDefinitions[id])throw new Error('Unknown map: '+id);selectedMap=id;if(mapSelect)mapSelect.value=id;},
       select(hero) {
         selected = hero;
       },

@@ -1,3 +1,4 @@
+import {drawHazards} from './art/expansion-art.js';
 import {orderActors} from './depth-order.js';
 export let SceneRenderer;
 'use strict';
@@ -18,6 +19,7 @@ function draw(){
       sessionContext.ctx.save();
       sessionContext.ctx.translate(-cx,-cy);
       if(s){
+        drawHazards(sessionContext.ctx,s);
         sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
         for(const h of s.helmets)sessionContext.Villagers.helmet(sessionContext.ctx,h.x,h.y);
@@ -73,9 +75,9 @@ function draw(){
             sessionContext.ctx.fillRect(e.x-3,e.y-(typeof sessionContext.HeroArt!=='undefined'&&sessionContext.HeroArt.get(e.type)?(e.type==='obelix'?94:67):15*size+6),6,2);
           }else if(e.hp<e.max&&!e.boss){
             sessionContext.ctx.fillStyle='#233429';
-            sessionContext.ctx.fillRect(e.x-12,e.y-(e.unit==='ram'?132:e.unit==='turtle'?116:84),24,3);
+            sessionContext.ctx.fillRect(e.x-12,e.y-(sessionContext.Legion.units[e.unit].labelHeight?sessionContext.Legion.units[e.unit].labelHeight-12:e.unit==='ram'?132:e.unit==='turtle'?116:84),24,3);
             sessionContext.ctx.fillStyle='#c4956d';
-            sessionContext.ctx.fillRect(e.x-12,e.y-(e.unit==='ram'?132:e.unit==='turtle'?116:84),24*e.hp/e.max,3);
+            sessionContext.ctx.fillRect(e.x-12,e.y-(sessionContext.Legion.units[e.unit].labelHeight?sessionContext.Legion.units[e.unit].labelHeight-12:e.unit==='ram'?132:e.unit==='turtle'?116:84),24*e.hp/e.max,3);
           }
         }
         for(const b of s.enemyShots)sessionContext.Legion.projectile(sessionContext.ctx,b);

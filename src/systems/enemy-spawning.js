@@ -1,3 +1,5 @@
+import {prepareExpansion,scheduleExpansion} from './expansion.js';
+import {expansionUnits} from '../../data/enemies/expansion.js';
 import {waves} from '../../data/enemies/waves.js';
 export let EnemySpawning;
 'use strict';
@@ -17,7 +19,7 @@ function spawn(unit,boss=false){
         x,
         y,
         unit,
-        type:boss?'boss':unit==='turtle'||unit==='ram'?unit:'roman',
+        type:boss?'boss':expansionUnits[unit]?unit:unit==='turtle'||unit==='ram'?unit:'roman',
         hp:u.hp,
         max:u.hp,
         r:u.r,
@@ -31,11 +33,13 @@ function spawn(unit,boss=false){
         vy:0,
         heading:sessionContext.Math.atan2(p.y-y,p.x-x)
       };
+      prepareExpansion(e,sessionContext);
       s.enemies.push(e);
       return e;
     }
 function updateSpawning(dt){
   const s=sessionContext.state,n=waves.normal;
+  scheduleExpansion(sessionContext);
   s.spawn-=dt;
   if(s.spawn<=0){
     s.spawn=sessionContext.Math.max(n.minInterval,n.interval-s.t*n.timeFactor);

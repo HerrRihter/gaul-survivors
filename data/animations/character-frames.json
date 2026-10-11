@@ -395,6 +395,195 @@
         "index": 1
       },
       "renderer": "unit"
+    },
+    "boar": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/boar/walk/0.png",
+          "characters/frames/boar/walk/1.png",
+          "characters/frames/boar/walk/2.png",
+          "characters/frames/boar/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/boar/attack/0.png",
+          "characters/frames/boar/attack/1.png",
+          "characters/frames/boar/attack/2.png",
+          "characters/frames/boar/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/boar/hurt/0.png",
+          "characters/frames/boar/hurt/1.png",
+          "characters/frames/boar/hurt/2.png",
+          "characters/frames/boar/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "stoneSquad": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/stone-squad/walk/0.png",
+          "characters/frames/stone-squad/walk/1.png",
+          "characters/frames/stone-squad/walk/2.png",
+          "characters/frames/stone-squad/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/stone-squad/attack/0.png",
+          "characters/frames/stone-squad/attack/1.png",
+          "characters/frames/stone-squad/attack/2.png",
+          "characters/frames/stone-squad/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/stone-squad/hurt/0.png",
+          "characters/frames/stone-squad/hurt/1.png",
+          "characters/frames/stone-squad/hurt/2.png",
+          "characters/frames/stone-squad/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "netter": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/netter/walk/0.png",
+          "characters/frames/netter/walk/1.png",
+          "characters/frames/netter/walk/2.png",
+          "characters/frames/netter/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/netter/attack/0.png",
+          "characters/frames/netter/attack/1.png",
+          "characters/frames/netter/attack/2.png",
+          "characters/frames/netter/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/netter/hurt/0.png",
+          "characters/frames/netter/hurt/1.png",
+          "characters/frames/netter/hurt/2.png",
+          "characters/frames/netter/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "tower": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/tower/walk/0.png",
+          "characters/frames/tower/walk/1.png",
+          "characters/frames/tower/walk/2.png",
+          "characters/frames/tower/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/tower/attack/0.png",
+          "characters/frames/tower/attack/1.png",
+          "characters/frames/tower/attack/2.png",
+          "characters/frames/tower/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/tower/hurt/0.png",
+          "characters/frames/tower/hurt/1.png",
+          "characters/frames/tower/hurt/2.png",
+          "characters/frames/tower/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "cavalry": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/cavalry/walk/0.png",
+          "characters/frames/cavalry/walk/1.png",
+          "characters/frames/cavalry/walk/2.png",
+          "characters/frames/cavalry/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/cavalry/attack/0.png",
+          "characters/frames/cavalry/attack/1.png",
+          "characters/frames/cavalry/attack/2.png",
+          "characters/frames/cavalry/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/cavalry/hurt/0.png",
+          "characters/frames/cavalry/hurt/1.png",
+          "characters/frames/cavalry/hurt/2.png",
+          "characters/frames/cavalry/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "caius": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/caius/walk/0.png",
+          "characters/frames/caius/walk/1.png",
+          "characters/frames/caius/walk/2.png",
+          "characters/frames/caius/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/caius/attack/0.png",
+          "characters/frames/caius/attack/1.png",
+          "characters/frames/caius/attack/2.png",
+          "characters/frames/caius/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/caius/hurt/0.png",
+          "characters/frames/caius/hurt/1.png",
+          "characters/frames/caius/hurt/2.png",
+          "characters/frames/caius/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "wine": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/wine/walk/0.png",
+          "characters/frames/wine/walk/1.png",
+          "characters/frames/wine/walk/2.png",
+          "characters/frames/wine/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/wine/attack/0.png",
+          "characters/frames/wine/attack/1.png",
+          "characters/frames/wine/attack/2.png",
+          "characters/frames/wine/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/wine/hurt/0.png",
+          "characters/frames/wine/hurt/1.png",
+          "characters/frames/wine/hurt/2.png",
+          "characters/frames/wine/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
     }
   }
 }

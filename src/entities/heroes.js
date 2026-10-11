@@ -19,23 +19,23 @@ Villagers=(()=>{
   g.restore();return true;
  }
  function fish(s,dir){const count=1+(s.stats.fishCount||0),angle=Math.atan2(dir.y,dir.x);for(let i=0;i<count;i++){const a=angle+(i-(count-1)/2)*.22;s.fish.push({x:s.p.x,y:s.p.y,dx:Math.cos(a),dy:Math.sin(a),age:0,back:false,hit:new Set(),r:12*s.stats.range});}}
- function update(s,id,dt,hit){
+ function update(s,id,dt,hit,world=Village){
   const p=s.p,st=s.stats;if(p.visualAction){p.visualAction.elapsed+=dt;if(p.visualAction.elapsed>=p.visualAction.duration)p.visualAction=null;}
-  if(id==='cacofonix'){
+  if(id==='cacofonix'&&!(p.stun>0)){
    s.music-=dt;if(s.music<=0){s.music=.6/st.haste;p.visualAction={elapsed:0,duration:.5/st.haste,flip:p.flip};s.fx.push({kind:'ring',x:p.x,y:p.y,r:95*st.range*(1+(st.musicRange||0)),life:.45,max:.45});
-    for(const e of s.enemies)if(e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<95*st.range*(1+(st.musicRange||0))+e.r&&Village.clear(p,e,2)){const d=Math.max(1,Math.hypot(e.x-p.x,e.y-p.y)),push=st.musicPush||0;hit(e,12*st.damage*(1+(st.musicDamage||0)),(e.x-p.x)/d*push,(e.y-p.y)/d*push,p);}
+    for(const e of s.enemies)if(e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<95*st.range*(1+(st.musicRange||0))+e.r&&world.clear(p,e,2)){const d=Math.max(1,Math.hypot(e.x-p.x,e.y-p.y)),push=st.musicPush||0;hit(e,12*st.damage*(1+(st.musicDamage||0)),(e.x-p.x)/d*push,(e.y-p.y)/d*push,p);}
    }
   }
   if(id==='panoramix'){s.trail-=dt;p.pourCooldown=Math.max(0,(p.pourCooldown||0)-dt);if(p.moving&&s.trail<=0){s.trail=.22/st.haste;if(!p.visualAction&&!p.pourCooldown){p.visualAction={elapsed:0,duration:.4/st.haste,flip:p.flip};p.pourCooldown=1.6;}s.poison.push({x:p.x,y:p.y,r:30*st.range*(1+(st.poisonRange||0)),life:3.5+(st.poisonDuration||0)});}}
   for(const puddle of s.poison)puddle.life-=dt;s.poison=s.poison.filter(q=>q.life>0);
-  s.poisonTick-=dt;if(s.poisonTick<=0){s.poisonTick=.5/st.haste;for(const e of s.enemies)if(e.hp>0&&s.poison.some(q=>Math.hypot(e.x-q.x,e.y-q.y)<q.r+e.r&&Village.clear(q,e,2)))hit(e,8*st.damage*(1+(st.poisonDamage||0)));}
+  s.poisonTick-=dt;if(s.poisonTick<=0){s.poisonTick=.5/st.haste;for(const e of s.enemies)if(e.hp>0&&s.poison.some(q=>Math.hypot(e.x-q.x,e.y-q.y)<q.r+e.r&&world.clear(q,e,2)))hit(e,8*st.damage*(1+(st.poisonDamage||0)));}
   for(const f of s.fish){
    f.age+=dt;if(!f.back&&f.age>=.65){f.back=true;f.hit.clear();}
    const d=Math.hypot(p.x-f.x,p.y-f.y);if(f.back&&d<20){f.dead=true;continue;}
    const vx=(f.back?(p.x-f.x)/Math.max(1,d):f.dx)*(310*(1+(st.fishSpeed||0))),vy=(f.back?(p.y-f.y)/Math.max(1,d):f.dy)*(310*(1+(st.fishSpeed||0)));f.vx=vx;f.vy=vy;
    const n=Math.max(1,Math.ceil(Math.hypot(vx,vy)*dt/6));
    for(let i=0;i<n&&!f.dead;i++){const next={x:f.x+vx*dt/n,y:f.y+vy*dt/n};
-    if(!Village.clear(f,next,3)){if(f.back)f.dead=true;else{f.back=true;f.hit.clear();}break;}
+    if(!world.clear(f,next,3)){if(f.back)f.dead=true;else{f.back=true;f.hit.clear();}break;}
     f.x=next.x;f.y=next.y;
     for(const e of s.enemies)if(e.hp>0&&!f.hit.has(e)&&Math.hypot(e.x-f.x,e.y-f.y)<e.r+f.r){f.hit.add(e);hit(e,24*st.damage*(f.back?1+(st.fishReturn||0):1),vx*.12,vy*.12,f);}
    }if(f.age>3)f.dead=true;

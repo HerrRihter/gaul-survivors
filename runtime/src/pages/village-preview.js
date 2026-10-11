@@ -4,12 +4,13 @@ const rootURL = new URL("../../../", document.currentScript.src);
 const factories = {
 "src/pages/village-preview.js": function(require, exports){
 const {Village} = require("src/world/village/village.js");
-const {VillageArt} = require("src/rendering/art/village-art.js");
+const {createArenas} = require("src/world/arenas.js");
+const arenas=createArenas(Village);
 const canvas=document.getElementById('map'),g=canvas.getContext('2d');let close=false;
 document.getElementById('overview').onclick=()=>close=false;document.getElementById('square').onclick=()=>close=true;
-function render(){g.setTransform(1,0,0,1,0,0);g.fillStyle='#89954e';g.fillRect(0,0,1320,1000);const scale=close?.95:.57;g.translate(660,500);g.scale(scale,scale);g.translate(-1100,close?-1070:-1090);Village.draw(g);if(document.getElementById("collision").checked)Village.collision.draw(g);
-if(document.getElementById('labels').checked)for(const h of Village.houses){g.font='bold 19px Georgia';g.textAlign='center';g.lineWidth=5;g.strokeStyle='#24301ee0';g.strokeText(h.name,h.x+h.w/2,h.y+h.h+37);g.fillStyle='#fff0ba';g.fillText(h.name,h.x+h.w/2,h.y+h.h+37);}
-const ready=Object.values(VillageArt.status).filter(s=>s==='ready').length;document.getElementById('status').textContent=ready===10?'Карта готова':Object.values(VillageArt.status).includes('error')?'Не удалось загрузить рисунок':ready+' / 10';requestAnimationFrame(render);}render();
+function render(){const id=document.getElementById("arena").value,world=arenas.get(id);g.setTransform(1,0,0,1,0,0);g.fillStyle='#89954e';g.fillRect(0,0,1320,1000);const scale=close?.95:.43;g.translate(660,500);g.scale(scale,scale);g.translate(-1100,close?-1070:-1090);world.draw(g);
+if(document.getElementById('labels').checked)for(const h of world.houses){g.font='bold 19px Georgia';g.textAlign='center';g.lineWidth=5;g.strokeStyle='#24301ee0';g.strokeText(h.name,h.x+h.w/2,h.y+h.h+37);g.fillStyle='#fff0ba';g.fillText(h.name,h.x+h.w/2,h.y+h.h+37);}
+requestAnimationFrame(render);}render();
 
 
 },
@@ -82,9 +83,11 @@ VillageCollision=(()=>{
  function create(objects,size){
   const polygons=[],buckets=new Map(),bucketSize=100;
   for(const o of objects){
-   const [w,h]=dimensions[o.art],height=o.width*h/w;
-   for(const shape of shapes[o.art]){
-    const points=shape.map(([x,y])=>({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
+   const [w,h]=dimensions[o.art]||[1,1],height=o.width*h/w;
+   const [fx,fy,fw,fh]=o.footprint||[0,0,0,0];
+   const outlines=o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art];
+   for(const shape of outlines){
+    const points=shape.map(([x,y])=>o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
     const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))};polygons.push(p);
     for(let y=Math.floor(p.minY/bucketSize);y<=Math.floor(p.maxY/bucketSize);y++)for(let x=Math.floor(p.minX/bucketSize);x<=Math.floor(p.maxX/bucketSize);x++){const key=x+','+y;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(p);}
    }
@@ -171,8 +174,23 @@ Object.defineProperty(exports, "VillageNavigation", {get: () => VillageNavigatio
 },
 "src/world/village/village-renderer.js": function(require, exports){
 let VillageRenderer;
-VillageRenderer={create({document,VillageArt,size,objects,roads}){
+VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,roughRoads=false}){
  let groundCache=null; const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
+ const lanes=roughRoads?roads.map(([x,y,a,b,c,d,e,f,w],index)=>{
+  const points=[];
+  for(let i=0;i<=80;i++){
+   const t=i/80,u=1-t,dx=3*u*u*(a-x)+6*u*t*(c-a)+3*t*t*(e-c),dy=3*u*u*(b-y)+6*u*t*(d-b)+3*t*t*(f-d),len=Math.hypot(dx,dy)||1;
+   const nx=-dy/len,ny=dx/len,jitter=Math.sin(i*.21+index)*7+Math.sin(i*.63+index)*3;
+   points.push({x:u*u*u*x+3*u*u*t*a+3*u*t*t*c+t*t*t*e+nx*jitter,y:u*u*u*y+3*u*u*t*b+3*u*t*t*d+t*t*t*f+ny*jitter,nx,ny,r:w/2+Math.sin(i*.73+index)*6+Math.sin(i*1.91)*3});
+  }
+  return points;
+ }):[];
+ function roadOutline(g,points,extra){
+  for(let side=0;side<2;side++)for(let j=0;j<points.length;j++){
+   const p=points[side?points.length-1-j:j],sign=side?-1:1,x=p.x+p.nx*(p.r+extra)*sign,y=p.y+p.ny*(p.r+extra)*sign;
+   if(!side&&!j)g.moveTo(x,y);else g.lineTo(x,y);
+  }g.closePath();
+ }
  function paintGround(g){
   g.fillStyle='#89954e';g.fillRect(0,0,size,size);
   if(VillageArt&&VillageArt.status['ground-v1']==='ready'){
@@ -189,11 +207,25 @@ VillageRenderer={create({document,VillageArt,size,objects,roads}){
   }
   g.lineCap='round';g.lineJoin='round';
   for(const [extra,color] of [[18,'#8f8d55'],[8,'#b1a46e'],[0,dirt]]){
+   if(roughRoads){g.fillStyle=color;g.beginPath();for(const points of lanes)roadOutline(g,points,extra/2);g.fill();continue;}
    for(const [x,y,a,b,c,d,e,f,w] of roads){
     g.strokeStyle=color;g.lineWidth=w+extra;g.beginPath();g.moveTo(x,y);g.bezierCurveTo(a,b,c,d,e,f);g.stroke();
    }
   }
-  g.fillStyle=dirt;g.beginPath();g.ellipse(1120,1170,255,175,-.1,0,Math.PI*2);g.fill();
+  if(roughRoads){
+   g.save();g.beginPath();for(const points of lanes)roadOutline(g,points,0);g.clip();
+   // Cached, deterministic dirt mottling, stones and broken wheel ruts.
+   for(let i=0;i<15000;i++){
+    const x=i*397.31%size,y=i*673.73%size;
+    g.fillStyle=i%3?'#6f573526':'#fff0c436';g.beginPath();g.ellipse(x,y,2+i%13,1+i%5,i*.7,0,Math.PI*2);g.fill();
+   }
+   for(const points of lanes)for(const side of [-1,1])for(let i=1;i<points.length;i++){
+    if(i%7<2)continue;const p=points[i],q=points[i-1],offset=side*25;
+    g.strokeStyle='#71593730';g.lineWidth=2+i%3;g.beginPath();g.moveTo(q.x+q.nx*offset,q.y+q.ny*offset);g.lineTo(p.x+p.nx*offset,p.y+p.ny*offset);g.stroke();
+   }
+   g.restore();
+  }
+  if(plaza){g.fillStyle=dirt;g.beginPath();g.ellipse(1120,1170,255,175,-.1,0,Math.PI*2);g.fill();}
   // Deterministic, quiet flecks soften the lanes without adding visual collision.
   for(let i=0;i<1800;i++){const x=(i*397.31)%size,y=(i*673.73)%size;g.fillStyle=i%2?'#78674918':'#f3dcac25';g.fillRect(x,y,2+i%5,1+i%2);}
  }
@@ -247,6 +279,107 @@ AssetPaths = (() => {
 })();
 
 Object.defineProperty(exports, "AssetPaths", {get: () => AssetPaths});
+},
+"src/world/arenas.js": function(require, exports){
+const {VillageCollision} = require("src/world/village/collision.js");
+const {VillageNavigation} = require("src/world/village/navigation.js");
+const {VillageRenderer} = require("src/world/village/village-renderer.js");
+const {VillageArt} = require("src/rendering/art/village-art.js");
+const {SceneryArt} = require("src/rendering/art/scenery-art.js");
+const arenaDefinitions={
+ village:{name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
+ forest:{name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
+ camp:{name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'}
+};
+const campLanes=[180,640,1100,1560,2020];
+const scenery=SceneryArt;
+function createArenas(village){
+ const cache={village};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=createArena(id));}};
+}
+function createArena(id){
+ const size=2200,objects=[],roads=[];let seed=id==='forest'?731:192;
+ const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
+ const add=(x,y,art,width,footprint)=>objects.push({x,y,kind:art,art,width,...(footprint?{footprint}:{})});
+ if(id==='forest'){
+  // Three exits follow the supplied sketch: upper left, right, and lower right.
+  roads.push([-80,110,760,-40,360,360,390,670,185],
+   [390,670,340,980,610,1150,1040,1170,185],
+   [1040,1170,1260,1430,1170,1560,1530,1640,190],
+   [1530,1640,1870,1580,1770,2010,1800,2300,190],
+   [1040,1170,1430,1170,1550,1090,2300,1160,185]);
+  const samples=[];
+  for(const [x,y,a,b,c,d,e,f] of roads)for(let i=0;i<=70;i++){
+   const t=i/70,u=1-t;samples.push([u*u*u*x+3*u*u*t*a+3*u*t*t*c+t*t*t*e,u*u*u*y+3*u*u*t*b+3*u*t*t*d+t*t*t*f]);
+  }
+  // Seeded scatter is identical for previews, collision and every new run.
+  for(let y=120;y<2200;y+=125)for(let x=80;x<2200;x+=125){
+   const px=x+(random()-.5)*85,py=y+(random()-.5)*85;
+   if(Math.hypot(px-1100,py-1100)<340||samples.some(([sx,sy])=>Math.hypot(px-sx,py-55-sy)<185))continue;
+   if(random()<.18)add(px,py,'rocks',85+random()*45,[-32,-29,64,29]);
+   else add(px,py,'trees',175+random()*65);
+  }
+ }else{
+  for(const lane of campLanes){const width=lane===1100?180:128;roads.push([0,lane,700,lane,1500,lane,size,lane,width],[lane,0,lane,700,lane,1500,lane,size,width]);}
+  let block=0;
+  for(const y of [410,870,1330,1790])for(const x of [410,870,1330,1790]){
+   const i=block++;
+   if(i===2||i===13){
+    add(x,y+65,'command',330,[-118,-105,236,105]);
+    add(x-112,y+115,'standard',80,[-10,-12,20,12]);
+    add(x+105,y+126,'supplies',100,[-35,-25,70,25]);
+   }else if(i===4||i===10||i===15){
+    add(x+10,y+65,'fire',170,[-48,-40,96,40]);
+    add(x-100,y-40,'supplies',120,[-40,-30,80,30]);
+    if(i===10)add(x+112,y+100,'standard',85,[-10,-12,20,12]);
+   }else if(i===7||i===12){
+    add(x-48,y+15,'supplies',175,[-60,-42,120,42]);
+    add(x+70,y+100,'supplies',145,[-50,-35,100,35]);
+    add(x,y-95,'fence',265);
+   }else{
+    add(x+(random()-.5)*55,y+35,i%2?'tent-round':'tent',230+random()*55,[-100,-85,200,85]);
+    add(x+(i%2?100:-100),y+118,'supplies',90,[-30,-23,60,23]);
+    if(i%3===0)add(x,y-100,'fence',280);
+    if(i%3===1)add(x-105,y+115,'standard',76,[-10,-12,20,12]);
+   }
+   if([0,3,5,7,8,12,14].includes(i))add(x+(i%2?100:-100),y-70,'weapons',105,[-36,-20,72,20]);
+  }
+  // Leave every cavalry exit open; upright short sections form the side walls.
+  const gaps=[0,...campLanes.flatMap(n=>[n-95,n+95]),size];
+  for(let i=0;i<gaps.length;i+=2){
+   const lo=gaps[i],hi=gaps[i+1],width=hi-lo;
+   for(const y of [82,2190])add((lo+hi)/2,y,'fence',width);
+   for(let y=lo+20;y<=hi;y+=20)for(const x of [35,2165])add(x,y,'fence',65);
+  }
+ }
+ const collision=VillageCollision.create(objects,size);
+ const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
+ const renderer=VillageRenderer.create({size,objects,roads,plaza:false,roughRoads:id==='camp',VillageArt,document:typeof document==='undefined'?null:document});
+ const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
+ function drawObject(g,o,p){
+  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p);return;}
+  const sprite=scenery[o.art];g.save();
+  if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.48)g.globalAlpha=.48;
+  if(sprite?.ready){const h=o.width*sprite.image.naturalHeight/sprite.image.naturalWidth;g.imageSmoothingEnabled=true;g.drawImage(sprite.image,o.x-o.width/2,o.y+12-h,o.width,h);}
+  else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}
+  g.restore();
+ }
+ return {size,objects,roads,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
+}
+
+Object.defineProperty(exports, "arenaDefinitions", {get: () => arenaDefinitions});
+Object.defineProperty(exports, "campLanes", {get: () => campLanes});
+Object.defineProperty(exports, "createArenas", {get: () => createArenas});
+},
+"src/rendering/art/scenery-art.js": function(require, exports){
+const {AssetPaths} = require("src/rendering/asset-paths.js");
+const SceneryArt={};
+if(typeof Image!=='undefined')for(const name of ['tent','tent-round','weapons','rocks','command','supplies','fire','standard']){
+ const image=new Image();SceneryArt[name]={image,ready:false};
+ image.onload=()=>SceneryArt[name].ready=true;
+ image.src=AssetPaths.url('world/expansion/'+name+'-v1.png');
+}
+
+Object.defineProperty(exports, "SceneryArt", {get: () => SceneryArt});
 }
 };
 const cache = Object.create(null);

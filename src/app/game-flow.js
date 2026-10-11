@@ -8,6 +8,9 @@ function start(){
       sessionContext.resetInput();
       sessionContext.state={
         t:0,
+        map:sessionContext.selectedMap,
+        winePools:[],
+        specialNext:{},
         kills:0,
         level:1,
         xp:0,
@@ -64,7 +67,7 @@ function start(){
       ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
       ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
-      sessionContext.toast('ДЕРЕВНЯ · Легион наступает. Дома дают укрытие от пилумов.');
+      sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
       sessionContext.beep(450,.14);
       sessionContext.hud();
     }
@@ -121,7 +124,7 @@ function finish(win){
       sessionContext.show('end',true);
       sessionContext.show('pause',false);
       sessionContext.show('stick',false);
-      sessionContext.$('endTag').textContent=win?'ДЕРЕВНЯ НЕ СДАЁТСЯ':'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
+      sessionContext.$('endTag').textContent=win?(sessionContext.selectedMap==='village'?'ДЕРЕВНЯ НЕ СДАЁТСЯ':'ГАЛЛЫ ПОБЕЖДАЮТ'):'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
       sessionContext.$('endTitle').textContent=win?'Пир начинается!':'Нужен ещё глоток зелья';
       sessionContext.$('endText').textContent=win?'Римляне отступают. Кабан уже на вертеле. Ты заслужил этот вечер.':'Даже героям нужен привал. Попробуй другую сборку и вернись в драку.';
       sessionContext.$('endStats').innerHTML=`<div><strong>${sessionContext.clock(sessionContext.state.t)}</strong><span>ПРОДЕРЖАЛСЯ</span></div><div><strong>${sessionContext.state.kills}</strong><span>ВРАГОВ ПОБЕЖДЕНО</span></div><div><strong>${sessionContext.state.level}</strong><span>УРОВЕНЬ</span></div><div><strong>+${sessionContext.state.earned}</strong><span>ШЛЕМОВ</span></div>`;
