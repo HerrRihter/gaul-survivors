@@ -5,6 +5,29 @@ const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/st
 const env={};env.AssetPaths={url:relative=>'assets/runtime/'+relative};vm.createContext(env);
 for(const file of ['src/world/village/collision.js','src/world/village/village-data.js','src/world/village/navigation.js','src/world/village/village-renderer.js','src/world/village/village.js'])await loadModule(env,projectRoot+'/'+file,{fresh:false});
 const V=env.Village;
+const view={minX:100,maxX:300,minY:100,maxY:300};
+assert(env.sceneryVisible({x:200,y:450,width:100},200,view),'Tall roof remains visible when its feet are offscreen');
+assert(!env.sceneryVisible({x:400,y:200,width:100},200,view),'Offscreen scenery is culled horizontally');
+assert(!env.sceneryVisible({x:200,y:450,width:100},100,view),'Scenery entirely below the viewport is culled');
+assert(env.sceneryVisible({x:200,y:450,width:100},100),'Previews without a viewport keep drawing everything');
+// Preparing static grids is idempotent and routing does not rebuild geometry.
+let blockedChecks=0;
+const nav=env.VillageNavigation.create({size:100,cell:25,cols:4,
+ blocked:()=>{blockedChecks++;return false;},clear:(a,b)=>Math.hypot(a.x-b.x,a.y-b.y)<40});
+nav.prepare([12,16,12]);assert.equal(blockedChecks,32);
+nav.prepare([12,16]);assert.equal(blockedChecks,32);
+nav.direction({x:12,y:12},{x:87,y:87},12);assert.equal(blockedChecks,32,'Combat uses the prepared grid');
+// A hero in an inaccessible pocket used to trigger a seed scan per enemy.
+const pocket={x:87,y:87};let targetChecks=0;
+const unreachable=env.VillageNavigation.create({size:100,cell:25,cols:4,blocked:()=>false,
+ clear:(a,b)=>{if(b===pocket){targetChecks++;return false;}return true;}});
+unreachable.prepare([12]);
+unreachable.direction({x:12,y:12},pocket,12);const initialChecks=targetChecks;
+assert(initialChecks>1,'First query searches for a reachable approach');
+for(let i=0;i<120;i++)unreachable.direction({x:12,y:12},pocket,12);
+assert.equal(targetChecks,initialChecks+120,'Unreachable target search is shared across the horde');
+pocket.x++;unreachable.direction({x:12,y:12},pocket,12);
+assert(targetChecks>initialChecks+121,'Moving the target invalidates the cached result');
 for(const o of V.objects){
  const polys=V.collision.polygons.filter(p=>p.object===o);assert(polys.length,'Every scenery object has physical geometry');
  for(const p of polys){

@@ -15,5 +15,24 @@ storage.set('gaul-progression-v1','broken');assert.equal((await load()).data.hel
 const e={localStorage:{getItem:()=>null,setItem:()=>{throw Error('quota');}}};e.AssetPaths={url:relative=>'assets/runtime/'+relative};vm.createContext(e);await loadModule(e,projectRoot+'/src/systems/persistence.js',{fresh:false});e.Progression.earn(3);assert.equal(e.Progression.data.helmets,3);assert.equal(e.Progression.persistent,false);
 console.log('PASS: kill milestones, exact prices, insufficient funds, duplicate purchase protection, save/reload, upgrade caps, corrupt storage and write failure.');
 
+const timers=new Map(),idleJobs=new Map(),events={},docEvents={};let next=0,writes=0,snapshot,fail=false;
+const batched={localStorage:{getItem:()=>null,setItem:(k,v)=>{writes++;if(fail)throw Error('quota');snapshot=JSON.parse(v);}},
+ setTimeout:fn=>{const id=++next;timers.set(id,fn);return id;},clearTimeout:id=>timers.delete(id),
+ requestIdleCallback:fn=>{const id=++next;idleJobs.set(id,fn);return id;},cancelIdleCallback:id=>idleJobs.delete(id),
+ addEventListener:(name,fn)=>events[name]=fn,document:{hidden:false,addEventListener:(name,fn)=>docEvents[name]=fn}};
+await loadModule(batched,projectRoot+'/src/systems/persistence.js');const rewards=batched.Progression;
+for(let i=0;i<100;i++)rewards.kill();rewards.earn(30);
+assert.equal(writes,0,'Mass kills must not write storage in the combat frame');assert.equal(timers.size,1);
+assert.equal(rewards.data.kills,100);assert.equal(rewards.data.helmets,40);
+const timer=timers.values().next().value;timers.clear();timer();assert.equal(writes,0);assert.equal(idleJobs.size,1);
+const idleJob=idleJobs.values().next().value;idleJobs.clear();idleJob();assert.equal(writes,1);assert.equal(snapshot.kills,100);assert.equal(snapshot.helmets,40);
+rewards.kill();events.pagehide();assert.equal(snapshot.kills,101);assert.equal(timers.size,0);
+rewards.earn(3);batched.document.hidden=true;docEvents.visibilitychange();assert.equal(snapshot.helmets,43);
+rewards.earn(100);assert(rewards.buyHero('cacofonix'));assert.equal(snapshot.helmets,83);assert.equal(timers.size,0);
+rewards.kill();timers.values().next().value();timers.clear();assert.equal(idleJobs.size,1);rewards.flush();assert.equal(idleJobs.size,0);
+rewards.kill();fail=true;rewards.flush();assert.equal(rewards.persistent,false);fail=false;rewards.flush();assert.equal(snapshot.kills,103);assert.equal(rewards.persistent,true);
+const savedWrites=writes;rewards.flush();assert.equal(writes,savedWrites,'Clean flush does not write');
+console.log('PASS: combat rewards coalesce into idle saves; lifecycle and purchases flush; failed saves can retry.');
+
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

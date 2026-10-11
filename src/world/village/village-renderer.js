@@ -1,4 +1,7 @@
 export let VillageRenderer;
+export function sceneryVisible(o,height,view){
+ return !view||(o.x+o.width/2>=view.minX&&o.x-o.width/2<=view.maxX&&o.y+12>=view.minY&&o.y+12-height<=view.maxY);
+}
 VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,roughRoads=false}){
  let groundCache=null; const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
  const lanes=roughRoads?roads.map(([x,y,a,b,c,d,e,f,w],index)=>{
@@ -68,7 +71,9 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   ensureGroundCache();
   if(groundCache)g.drawImage(groundCache,0,0);else paintGround(g);
  }
- function drawObject(g,o,player){
+ function drawObject(g,o,player,view){
+  const image=VillageArt?.images?.[o.art];
+  if(image?.naturalWidth&&!sceneryVisible(o,o.width*image.naturalHeight/image.naturalWidth,view))return;
   g.save();
   // Keep the hero visible when a roof or the bard's canopy overlaps them.
   if(player&&player.y<o.y&&player.y>o.y-o.width&&Math.abs(player.x-o.x)<o.width*.48)g.globalAlpha=.48;

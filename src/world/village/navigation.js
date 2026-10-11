@@ -2,6 +2,7 @@ export let VillageNavigation;
 VillageNavigation={create({size,cell,cols,blocked,clear}){
  const moveNext={x:0,y:0},moveNextX={x:0,y:0},moveNextY={x:0,y:0};
  function move(a,dx,dy,r=14){
+  if(dx===0&&dy===0)return;
   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/5));
   const sx=dx/n,sy=dy/n;
   for(let i=0;i<n;i++){
@@ -13,7 +14,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(clear(a,moveNextY,r))a.y=moveNext.y;
   }
  }
- const grids=new Map(),maps=new Map();
+ const grids=new Map(),maps=new Map(),queries=new Map();
  const centers=Array.from({length:cols*cols},(_,k)=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell}));
  const center=k=>centers[k];
  const sharedQueue=new Int32Array(cols*cols);
@@ -29,6 +30,15 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const out={free,edges};grids.set(r,out);return out;
  }
  function field(p,r){
+  // Every enemy of this radius shares the same target. Cache even an
+  // unreachable target: otherwise each enemy repeats the full seed search.
+  const query=queries.get(r);
+  if(query&&query.x===p.x&&query.y===p.y)return query.flow;
+  const flow=computeField(p,r);
+  queries.set(r,{x:p.x,y:p.y,flow});
+  return flow;
+ }
+ function computeField(p,r){
   const {free,edges}=grid(r),tx=Math.floor(p.x/cell),ty=Math.floor(p.y/cell),target=tx+ty*cols;
   const cached=maps.get(r);if(cached&&cached.target===target&&clear(center(cached.seed),p,2))return cached;
   // A hero can stand in a gap that siege units cannot enter: route to the nearest reachable approach.
@@ -38,7 +48,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(d<best&&clear(c,p,2)){best=d;seed=k;}
   }
   if(seed<0)return null;
-  const old=maps.get(r);if(old&&old.seed===seed)return old;
+  const old=maps.get(r);if(old&&old.seed===seed){old.target=target;return old;}
   const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
   for(let q=0;q<n;q++){
    const k=sharedQueue[q],edge=edges[k],c=costs[k]+1;
@@ -63,5 +73,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   if(!best)return {x:0,y:0};const n=Math.hypot(best.x-a.x,best.y-a.y);return {x:(best.x-a.x)/Math.max(1,n),y:(best.y-a.y)/Math.max(1,n)};
  }
 
-return {move,direction};
+// Geometry stays fixed for this arena; build each body-size grid before combat.
+function prepare(radii,target){for(const r of new Set(radii)){grid(r);if(target)field(target,r);}}
+return {move,direction,prepare};
 }};

@@ -60,7 +60,7 @@ function update(dt){
           const r=100+st.orbit*10;
           s.fx.push({kind:'ring',x:p.x,y:p.y-8,r,life:.45,max:.45});
           for(const e of s.enemies)if(sessionContext.dist(e,p)<r+e.r)sessionContext.damage(e,12*st.orbit*st.damage);
-          sessionContext.beep(440,.09,'sine');
+          sessionContext.soundEffect('magic');
         }
       }
       sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage,sessionContext.Village);
@@ -88,7 +88,7 @@ function update(dt){
           const angle=sessionContext.Math.atan2(a.aim.y-e.y,a.aim.x-e.x),ax=sessionContext.Math.cos(angle),ay=sessionContext.Math.sin(angle),px=p.x-e.x,py=p.y-e.y,along=px*ax+py*ay,across=sessionContext.Math.abs(px*ay-py*ax);
           if(e.unit==='pilum'){
             s.enemyShots.push({x:e.x,y:e.y,vx:ax*235,vy:ay*235,life:2,damage:e.damage});
-            sessionContext.beep(250,.04);
+            sessionContext.soundEffect('throw');
           }
   else if(e.unit==='ram'){
             e.charge={x:ax,y:ay,left:1.3};
@@ -119,7 +119,7 @@ function update(dt){
           e.cd=u.cooldown;
           e.heading=sessionContext.Math.atan2(p.y-e.y,p.x-e.x);
         }
-        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800),dir=sessionContext.Village.direction(e,p,e.r),ox=e.x,oy=e.y;
+        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
         sessionContext.Village.move(e,(moving?dir.x*speed*dt:0)+e.vx*dt,(moving?dir.y*speed*dt:0)+e.vy*dt,e.r);
         const travel=sessionContext.Math.hypot(e.x-ox,e.y-oy);
         e.moving=travel>.01;
@@ -183,7 +183,7 @@ function update(dt){
         if(d<19){
           s.xp+=gem.v;
           gem.dead=true;
-          sessionContext.beep(700+sessionContext.Math.random()*200,.025,'sine',.01);
+          sessionContext.soundEffect('pickup');
         }
       }
       s.gems=s.gems.filter(g=>!g.dead);
@@ -201,7 +201,7 @@ function update(dt){
         p.hp=sessionContext.Math.min(p.max,p.hp+25);
         item.dead=true;
         s.texts.push({x:p.x,y:p.y-30,v:'+25 ♥',life:1});
-        sessionContext.beep(530,.1,'triangle');
+        sessionContext.soundEffect('heal');
       }
       s.pickups=s.pickups.filter(i=>!i.dead);
       s.enemies=s.enemies.filter(e=>e.hp>0);

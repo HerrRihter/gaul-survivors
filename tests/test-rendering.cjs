@@ -3,6 +3,16 @@ const assert=require('node:assert/strict');
 async function main(){
  const {orderActors}=await import('../src/rendering/depth-order.js');
  const {advanceAction,clampedFrame,loopFrame}=await import('../src/rendering/animation-player.js');
+ const {CanvasSystem}=await import('../src/rendering/canvas.js');
+ const canvas={};
+ const context={window:{innerWidth:390,innerHeight:844,devicePixelRatio:2},Math,canvas,ctx:{setTransform(){}}};
+ CanvasSystem.create(context).resizeCanvas();
+ assert.equal(context.W,390/.9,'Portrait view is scaled down by one third');
+ assert.equal(context.H,844/.9,'Portrait view height follows the reduced scale');
+ context.window.innerWidth=844;context.window.innerHeight=390;
+ CanvasSystem.create(context).resizeCanvas();
+ assert.equal(context.W,844,'Landscape scale remains unchanged');
+ assert.equal(context.H,390,'Landscape height remains unchanged');
  const objects=[{y:3,id:'a',scenery:true},{y:3,id:'b',scenery:true},{y:9,id:'c',scenery:true}];
  const enemies=[{y:9,id:'one'},{y:3,id:'two'},{y:3,id:'three'}],player={y:3,id:'player'};
  const expected=[...objects,...enemies,{...player,type:'asterix',player:true}].sort((a,b)=>a.y-b.y);

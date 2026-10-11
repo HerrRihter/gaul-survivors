@@ -1,6 +1,6 @@
 import {VillageCollision} from './village/collision.js';
 import {VillageNavigation} from './village/navigation.js';
-import {VillageRenderer} from './village/village-renderer.js';
+import {VillageRenderer,sceneryVisible} from './village/village-renderer.js';
 import {VillageArt} from '../rendering/art/village-art.js';
 import {SceneryArt} from '../rendering/art/scenery-art.js';
 
@@ -73,9 +73,12 @@ function createArena(id){
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
  const renderer=VillageRenderer.create({size,objects,roads,plaza:false,roughRoads:id==='camp',VillageArt,document:typeof document==='undefined'?null:document});
  const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
- function drawObject(g,o,p){
-  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p);return;}
-  const sprite=scenery[o.art];g.save();
+ function drawObject(g,o,p,view){
+  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p,view);return;}
+  const sprite=scenery[o.art];
+  const height=sprite?.ready?o.width*sprite.image.naturalHeight/sprite.image.naturalWidth:72;
+  if(!sceneryVisible(o,height,view))return;
+  g.save();
   if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.48)g.globalAlpha=.48;
   if(sprite?.ready){const h=o.width*sprite.image.naturalHeight/sprite.image.naturalWidth;g.imageSmoothingEnabled=true;g.drawImage(sprite.image,o.x-o.width/2,o.y+12-h,o.width,h);}
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}

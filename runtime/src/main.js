@@ -58,6 +58,7 @@ GameSession = {
   }) {
 const arenas=createArenas(Village);
 let selectedMap='village';
+let audioController=null;
 const sessionContext={
 get selectedMap(){return selectedMap},
 get arenaDefinitions(){return arenaDefinitions},
@@ -89,11 +90,9 @@ get WORLD(){return WORLD},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
-get mode(){return mode},set mode(value){mode=value},
+get mode(){return mode},set mode(value){mode=value;audioController?.sync()},
 get state(){return state},set state(value){state=value},
 get keys(){return keys},set keys(value){keys=value},
-get audio(){return audio},set audio(value){audio=value},
-get sound(){return sound},set sound(value){sound=value},
 get toastLeft(){return toastLeft},set toastLeft(value){toastLeft=value},
 get choice(){return choice},set choice(value){choice=value},
 get pointer(){return pointer},set pointer(value){pointer=value},
@@ -108,7 +107,10 @@ get portraits(){return portraits},
 get fitPortrait(){return fitPortrait},
 get menuPortraitPhase(){return menuPortraitPhase},set menuPortraitPhase(value){menuPortraitPhase=value},
 get animateMenu(){return animateMenu},
-get beep(){return beep},
+get soundEffect(){return audioController.effect},
+get finishAudio(){return audioController.finish},
+get stopAudio(){return audioController.stop},
+get resumeAudio(){return audioController.resume},
 get show(){return show},
 get toast(){return toast},
 get resetInput(){return resetInput},
@@ -146,7 +148,7 @@ get stop(){return stop}
     const {resizeCanvas}=CanvasSystem.create(sessionContext);
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
-    let selected='asterix',mode='menu',state=null,keys=new Set(),audio=null,sound=false,toastLeft=0,choice=[];
+    let selected='asterix',mode='menu',state=null,keys=new Set(),toastLeft=0,choice=[];
     let pointer=null,stick={x:0,y:0},best={kills:0,time:0};
     try{
       best=JSON.parse(localStorage.getItem('gaul-best'))||best;
@@ -180,7 +182,7 @@ get stop(){return stop}
       if(mode==='menu')renderShop();
     });
 
-    const {beep}=AudioSystem.create(sessionContext);
+    audioController=AudioSystem.create(sessionContext);
 
     const {resetInput,bind:bindInput}=InputSystem.create(sessionContext);
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
@@ -214,11 +216,6 @@ get stop(){return stop}
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;
-    $('sound').onclick=()=>{
-      sound=!sound;
-      $('sound').textContent=`ЗВУК: ${sound?'ВКЛ':'ВЫКЛ'}`;
-      beep(500,.1);
-    };
     bindInput();
 
     const {spawn,updateSpawning}=EnemySpawning.create(sessionContext);
@@ -266,7 +263,7 @@ Object.defineProperty(exports, "GameSession", {get: () => GameSession});
 "src/world/arenas.js": function(require, exports){
 const {VillageCollision} = require("src/world/village/collision.js");
 const {VillageNavigation} = require("src/world/village/navigation.js");
-const {VillageRenderer} = require("src/world/village/village-renderer.js");
+const {VillageRenderer,sceneryVisible} = require("src/world/village/village-renderer.js");
 const {VillageArt} = require("src/rendering/art/village-art.js");
 const {SceneryArt} = require("src/rendering/art/scenery-art.js");
 const arenaDefinitions={
@@ -338,9 +335,12 @@ function createArena(id){
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
  const renderer=VillageRenderer.create({size,objects,roads,plaza:false,roughRoads:id==='camp',VillageArt,document:typeof document==='undefined'?null:document});
  const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
- function drawObject(g,o,p){
-  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p);return;}
-  const sprite=scenery[o.art];g.save();
+ function drawObject(g,o,p,view){
+  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p,view);return;}
+  const sprite=scenery[o.art];
+  const height=sprite?.ready?o.width*sprite.image.naturalHeight/sprite.image.naturalWidth:72;
+  if(!sceneryVisible(o,height,view))return;
+  g.save();
   if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.48)g.globalAlpha=.48;
   if(sprite?.ready){const h=o.width*sprite.image.naturalHeight/sprite.image.naturalWidth;g.imageSmoothingEnabled=true;g.drawImage(sprite.image,o.x-o.width/2,o.y+12-h,o.width,h);}
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}
@@ -411,9 +411,13 @@ VillageCollision=(()=>{
   function intersects(a,b,c,d){return Math.max(a.x,b.x)>=Math.min(c.x,d.x)&&Math.max(c.x,d.x)>=Math.min(a.x,b.x)&&Math.max(a.y,b.y)>=Math.min(c.y,d.y)&&Math.max(c.y,d.y)>=Math.min(a.y,b.y)&&cross(a,b,c)*cross(a,b,d)<=0&&cross(c,d,a)*cross(c,d,b)<=0;}
   function clear(a,b,r=14){
    if(Math.min(a.x,b.x)<r||Math.min(a.y,b.y)<r||Math.max(a.x,b.x)>size-r||Math.max(a.y,b.y)>size-r)return false;
-   const cand=candidates(Math.min(a.x,b.x)-r,Math.min(a.y,b.y)-r,Math.max(a.x,b.x)+r,Math.max(a.y,b.y)+r);
+   const minX=Math.min(a.x,b.x)-r,minY=Math.min(a.y,b.y)-r,maxX=Math.max(a.x,b.x)+r,maxY=Math.max(a.y,b.y)+r;
+   const cand=candidates(minX,minY,maxX,maxY);
    for(let k=0;k<cand.length;k++){
     const p=cand[k];
+    // Buckets deliberately over-select; reject non-overlapping bounds before
+    // the expensive polygon/segment distance tests.
+    if(p.maxX<minX||p.minX>maxX||p.maxY<minY||p.minY>maxY)continue;
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;
@@ -435,6 +439,7 @@ let VillageNavigation;
 VillageNavigation={create({size,cell,cols,blocked,clear}){
  const moveNext={x:0,y:0},moveNextX={x:0,y:0},moveNextY={x:0,y:0};
  function move(a,dx,dy,r=14){
+  if(dx===0&&dy===0)return;
   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/5));
   const sx=dx/n,sy=dy/n;
   for(let i=0;i<n;i++){
@@ -446,7 +451,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(clear(a,moveNextY,r))a.y=moveNext.y;
   }
  }
- const grids=new Map(),maps=new Map();
+ const grids=new Map(),maps=new Map(),queries=new Map();
  const centers=Array.from({length:cols*cols},(_,k)=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell}));
  const center=k=>centers[k];
  const sharedQueue=new Int32Array(cols*cols);
@@ -462,6 +467,15 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const out={free,edges};grids.set(r,out);return out;
  }
  function field(p,r){
+  // Every enemy of this radius shares the same target. Cache even an
+  // unreachable target: otherwise each enemy repeats the full seed search.
+  const query=queries.get(r);
+  if(query&&query.x===p.x&&query.y===p.y)return query.flow;
+  const flow=computeField(p,r);
+  queries.set(r,{x:p.x,y:p.y,flow});
+  return flow;
+ }
+ function computeField(p,r){
   const {free,edges}=grid(r),tx=Math.floor(p.x/cell),ty=Math.floor(p.y/cell),target=tx+ty*cols;
   const cached=maps.get(r);if(cached&&cached.target===target&&clear(center(cached.seed),p,2))return cached;
   // A hero can stand in a gap that siege units cannot enter: route to the nearest reachable approach.
@@ -471,7 +485,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(d<best&&clear(c,p,2)){best=d;seed=k;}
   }
   if(seed<0)return null;
-  const old=maps.get(r);if(old&&old.seed===seed)return old;
+  const old=maps.get(r);if(old&&old.seed===seed){old.target=target;return old;}
   const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
   for(let q=0;q<n;q++){
    const k=sharedQueue[q],edge=edges[k],c=costs[k]+1;
@@ -496,13 +510,18 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   if(!best)return {x:0,y:0};const n=Math.hypot(best.x-a.x,best.y-a.y);return {x:(best.x-a.x)/Math.max(1,n),y:(best.y-a.y)/Math.max(1,n)};
  }
 
-return {move,direction};
+// Geometry stays fixed for this arena; build each body-size grid before combat.
+function prepare(radii,target){for(const r of new Set(radii)){grid(r);if(target)field(target,r);}}
+return {move,direction,prepare};
 }};
 
 Object.defineProperty(exports, "VillageNavigation", {get: () => VillageNavigation});
 },
 "src/world/village/village-renderer.js": function(require, exports){
 let VillageRenderer;
+function sceneryVisible(o,height,view){
+ return !view||(o.x+o.width/2>=view.minX&&o.x-o.width/2<=view.maxX&&o.y+12>=view.minY&&o.y+12-height<=view.maxY);
+}
 VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,roughRoads=false}){
  let groundCache=null; const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
  const lanes=roughRoads?roads.map(([x,y,a,b,c,d,e,f,w],index)=>{
@@ -572,7 +591,9 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   ensureGroundCache();
   if(groundCache)g.drawImage(groundCache,0,0);else paintGround(g);
  }
- function drawObject(g,o,player){
+ function drawObject(g,o,player,view){
+  const image=VillageArt?.images?.[o.art];
+  if(image?.naturalWidth&&!sceneryVisible(o,o.width*image.naturalHeight/image.naturalWidth,view))return;
   g.save();
   // Keep the hero visible when a roof or the bard's canopy overlaps them.
   if(player&&player.y<o.y&&player.y>o.y-o.width&&Math.abs(player.x-o.x)<o.width*.48)g.globalAlpha=.48;
@@ -585,6 +606,7 @@ return {draw,drawGround,drawObject,depthObjects};
 }};
 
 Object.defineProperty(exports, "VillageRenderer", {get: () => VillageRenderer});
+Object.defineProperty(exports, "sceneryVisible", {get: () => sceneryVisible});
 },
 "src/rendering/art/village-art.js": function(require, exports){
 const {AssetPaths} = require("src/rendering/asset-paths.js");
@@ -646,7 +668,7 @@ let CanvasSystem;
 'use strict';
 CanvasSystem={create(sessionContext){
 function resizeCanvas(){
-      const zoom=sessionContext.window.innerWidth<sessionContext.window.innerHeight?1.35:1,ratio=sessionContext.Math.min(sessionContext.window.devicePixelRatio||1,2)*zoom;
+      const zoom=sessionContext.window.innerWidth<sessionContext.window.innerHeight?0.9:1,ratio=sessionContext.Math.min(sessionContext.window.devicePixelRatio||1,2)*zoom;
       sessionContext.W=sessionContext.Math.max(1,(sessionContext.window.innerWidth||960)/zoom);
       sessionContext.H=sessionContext.Math.max(1,(sessionContext.window.innerHeight||540)/zoom);
       sessionContext.canvas.width=sessionContext.Math.round(sessionContext.W*ratio);
@@ -926,28 +948,106 @@ return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,o
 Object.defineProperty(exports, "GameUI", {get: () => GameUI});
 },
 "src/core/audio.js": function(require, exports){
-let AudioSystem;
-'use strict';
-AudioSystem={create(sessionContext){
-function beep(freq=300,len=.05,type='square',vol=.025){
-      if(!sessionContext.sound)return;
-      try{
-        sessionContext.audio??=new(sessionContext.window.AudioContext||sessionContext.window.webkitAudioContext)();
-        if(sessionContext.audio.state==='suspended')sessionContext.audio.resume();
-        const o=sessionContext.audio.createOscillator(),g=sessionContext.audio.createGain();
-        o.type=type;
-        o.frequency.setValueAtTime(freq,sessionContext.audio.currentTime);
-        o.frequency.exponentialRampToValueAtTime(freq*.5,sessionContext.audio.currentTime+len);
-        g.gain.setValueAtTime(vol,sessionContext.audio.currentTime);
-        g.gain.exponentialRampToValueAtTime(.001,sessionContext.audio.currentTime+len);
-        o.connect(g);
-        g.connect(sessionContext.audio.destination);
-        o.start();
-        o.stop(sessionContext.audio.currentTime+len);
-      }catch{
-      }
+const AudioSystem = {create(c) {
+  const root = new URL('../../assets/audio/', new URL("src/core/audio.js", rootURL).href);
+  const settings = {enabled: true, music: .3, effects: .65};
+  try {
+    const saved = JSON.parse(c.localStorage.getItem('gaul-audio'));
+    if (saved) {
+      if (typeof saved.enabled === 'boolean') settings.enabled = saved.enabled;
+      for (const key of ['music', 'effects']) if (Number.isFinite(saved[key])) settings[key] = Math.max(0, Math.min(1, saved[key]));
     }
-return {beep};
+  } catch {}
+  const clips = {
+    hit: ['hit-1.mp3', 'hit-2.mp3'], hurt: ['hurt.mp3'], throw: ['throw.ogg'],
+    stone: ['stone.ogg'], pickup: ['pickup.ogg'], heal: ['heal.ogg'],
+    level: ['level.ogg'], ui: ['ui.ogg'], boss: ['boss.ogg'], magic: ['magic.ogg'],
+    death: ['death-1.ogg', 'death-2.ogg', 'death-3.ogg'], punchSwing: ['punch.mp3'],
+  };
+  const pools = new Map(), cooldowns = new Map(), tracks = new Map();
+  let unlocked = false, stopped = false, result = 'defeat', current = null;
+  function make(file) {
+    if (!c.window.Audio) return null;
+    const audio = new c.window.Audio(new URL(file, root).href);
+    audio.preload = 'auto';
+    // Short impacts vary in pitch with their speed. Pitch-preserving time
+    // stretching adds metallic artifacts and unnecessary audio processing.
+    audio.preservesPitch = false;
+    return audio;
+  }
+  function play(audio) { try { audio.play()?.catch(() => {}); } catch {} }
+  function quiet() { return !unlocked || stopped || !settings.enabled || c.document.hidden; }
+  function silenceEffects() { for (const pool of pools.values()) for (const audio of pool) audio.pause(); }
+  function sync() {
+    const mode = c.mode;
+    const wanted = mode === 'menu' ? 'tavern' : mode === 'end' ? result : 'battle';
+    if (current?.name !== wanted) {
+      current?.audio.pause();
+      let audio = tracks.get(wanted);
+      if (!audio && unlocked) {
+        audio = make('music/' + wanted + '.mp3');
+        if (audio) { audio.loop = wanted === 'tavern' || wanted === 'battle'; tracks.set(wanted, audio); }
+      }
+      current = audio ? {name: wanted, audio} : null;
+      if (audio) audio.currentTime = 0;
+    }
+    if (quiet() || mode === 'pause') silenceEffects();
+    if (!current) return;
+    current.audio.volume = settings.music * (mode === 'level' ? .45 : 1);
+    if (quiet() || mode === 'pause' || settings.music === 0) current.audio.pause();
+    else if (current.audio.paused && !(current.audio.ended && !current.audio.loop)) play(current.audio);
+  }
+  function effect(name) {
+    if (quiet() || !settings.effects || c.mode === 'pause') return;
+    const files = clips[name];
+    if (!files) return;
+    const now = c.performance.now();
+    if (now - (cooldowns.get(name) ?? -Infinity) < (name === 'death' ? 180 : name === 'pickup' ? 100 : 65)) return;
+    cooldowns.set(name, now);
+    const file = files[Math.floor(c.Math.random() * files.length)];
+    let pool = pools.get(file);
+    if (!pool) { pool = []; pools.set(file, pool); }
+    let audio = pool.find(item => item.paused || item.ended);
+    if (!audio && pool.length < 3) { audio = make('sfx/' + file); if (audio) pool.push(audio); }
+    if (!audio) return;
+    audio.currentTime = 0;
+    audio.volume = settings.effects * (name === 'pickup' ? .35 : name === 'death' ? .55 : .65);
+    audio.playbackRate = ['hit', 'throw', 'stone', 'punchSwing'].includes(name) ? .94 + c.Math.random() * .12 : 1;
+    play(audio);
+  }
+  function save() { try { c.localStorage.setItem('gaul-audio', JSON.stringify(settings)); } catch {} }
+  function refreshControls() {
+    const button = c.$('sound');
+    button.textContent = `ЗВУК: ${settings.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
+    button.setAttribute?.('aria-pressed', String(settings.enabled));
+  }
+  function unlock(event) {
+    const panel = c.document.querySelector?.('.audio-settings');
+    if (event?.target && panel && !panel.contains(event.target)) panel.open = false;
+    unlocked = true; sync();
+  }
+  c.document.addEventListener('pointerdown', unlock);
+  c.document.addEventListener('keydown', unlock);
+  c.document.addEventListener('visibilitychange', sync);
+  c.$('sound').onclick = () => {
+    settings.enabled = !settings.enabled;
+    unlock(); save(); refreshControls(); effect('ui');
+  };
+  for (const [id, key] of [['musicVolume', 'music'], ['effectsVolume', 'effects']]) {
+    const control = c.$(id);
+    if (!control) continue;
+    control.value = Math.round(settings[key] * 100);
+    control.oninput = () => {
+      settings[key] = Math.max(0, Math.min(1, Number(control.value) / 100));
+      if (key === 'effects') silenceEffects();
+      unlock(); save();
+    };
+    control.onchange = () => effect('ui');
+  }
+  refreshControls();
+  return {effect, sync, finish(win) {result = win ? 'victory' : 'defeat'; silenceEffects(); sync();},
+    stop() {stopped = true; current?.audio.pause(); silenceEffects();},
+    resume() {stopped = false; sync();}};
 }};
 
 Object.defineProperty(exports, "AudioSystem", {get: () => AudioSystem});
@@ -1078,15 +1178,17 @@ function start(){
         }
       };
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
+      sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
       ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
-      sessionContext.beep(450,.14);
+      sessionContext.soundEffect('ui');
       sessionContext.hud();
     }
 function menu(){
+      sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.state=null;
       sessionContext.resetInput();
@@ -1098,6 +1200,7 @@ function menu(){
     }
 function pause(){
       if(sessionContext.mode==='play'){
+        sessionContext.Progression.flush();
         sessionContext.mode='pause';
         sessionContext.resetInput();
         sessionContext.show('paused',true);
@@ -1122,7 +1225,7 @@ function levelUp(){
         sessionContext.$('cards').append(b);
       });
       sessionContext.show('levelup',true);
-      sessionContext.beep(760,.23,'triangle');
+      sessionContext.soundEffect('level');
       sessionContext.hud();
     }
 function pickUpgrade(i){
@@ -1130,10 +1233,12 @@ function pickUpgrade(i){
       sessionContext.UpgradeSystem.apply(sessionContext.choice[i],sessionContext.state);
       sessionContext.show('levelup',false);
       sessionContext.mode='play';
-      sessionContext.beep(580,.12);
+      sessionContext.soundEffect('ui');
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
+      sessionContext.Progression.flush();
+      sessionContext.finishAudio(win);
       sessionContext.mode='end';
       sessionContext.resetInput();
       sessionContext.show('end',true);
@@ -1148,7 +1253,6 @@ function finish(win){
         sessionContext.localStorage.setItem('gaul-best',JSON.stringify(sessionContext.best));
       }catch{
       }
-      sessionContext.beep(win?660:140,.4,'triangle');
     }
 return {start,menu,pause,levelUp,pickUpgrade,finish};
 }};
@@ -1242,7 +1346,7 @@ function updateSpawning(dt){
     }
   }
   if(s.t>=waves.boss.time&&!s.bossSpawned){
-    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.beep(90,.4,'sawtooth');
+    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.soundEffect('boss');
   }
   for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
 }
@@ -1404,6 +1508,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       n*=sessionContext.Legion.mitigation(e,source);
       expansionDrop(e,n,sessionContext.state);
       e.hp-=n;
+      sessionContext.soundEffect('hit');
       e.hit=.12;
       if(e.hp>0&&(e.unit==='turtle'||e.unit==='ram'||expansionUnits[e.unit]))e.visualHurt={elapsed:0,duration:.34,flip:sessionContext.Math.cos(e.heading)<0};
       if(e.hp>0&&e.type==='roman'){
@@ -1420,6 +1525,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       e.vy+=dy*weight;
       if(sessionContext.state.texts.length<45)sessionContext.state.texts.push({x:e.x,y:e.y-25,v:sessionContext.Math.round(n),life:.55});
       if(e.hp<=0){
+        sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
         sessionContext.state.kills++;
         sessionContext.state.earned+=sessionContext.Progression.kill();
@@ -1439,7 +1545,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
         if(e.boss){
           sessionContext.state.bossDead=true;
           sessionContext.toast('Центурион повержен! Продержись до пира.');
-          sessionContext.beep(160,.5,'sawtooth');
+          sessionContext.soundEffect('boss');
         }
       }
     }
@@ -1460,10 +1566,11 @@ function throwStones(count,baseDamage,direction=null){
           angle:a+sessionContext.Math.PI
         });
       }
-      sessionContext.beep(110,.06,'triangle');
+      sessionContext.soundEffect('stone');
     }
 function beginAction(actor,duration,target){
       actor.action={elapsed:0,duration,hit:false,flip:target.x<actor.x,aim:{x:target.x,y:target.y}};
+      if(actor===sessionContext.state.p&&sessionContext.selected==='asterix')sessionContext.soundEffect('punchSwing');
     }
 function hurtPlayer(e){
       const p=sessionContext.state.p;
@@ -1472,7 +1579,7 @@ function hurtPlayer(e){
       p.inv=.7;
       p.hurt={elapsed:0,duration:.34,flip:p.flip};
       sessionContext.state.shake=4;
-      sessionContext.beep(75,.12,'sawtooth');
+      sessionContext.soundEffect('hurt');
       sessionContext.state.fx.push({kind:'hurt',x:p.x,y:p.y,r:25,life:.25,max:.25});
     }
 function heroImpact(a){
@@ -1493,7 +1600,7 @@ function heroImpact(a){
         const delta=sessionContext.Math.abs(sessionContext.Math.atan2(dx*dir.y-dy*dir.x,along));
         if(e.hp>0&&d<r+e.r&&along>=0&&delta<=spec.half+sessionContext.Math.asin(sessionContext.Math.min(1,e.r/sessionContext.Math.max(1,d)))&&sessionContext.Village.clear(p,e,2))damage(e,spec.damage*s.stats.damage*(sessionContext.selected==='automatix'?1+(s.stats.hammerDamage||0):1),dir.x*(145+(s.stats[sessionContext.selected==='asterix'?'punchForce':'hammerForce']||0)),dir.y*(145+(s.stats[sessionContext.selected==='asterix'?'punchForce':'hammerForce']||0)));
       }
-      sessionContext.beep(210,.035);
+      if(sessionContext.selected!=='asterix')sessionContext.soundEffect('throw');
     }
 return {damage,throwStones,beginAction,advanceAction,hurtPlayer,heroImpact};
 }};
@@ -1593,7 +1700,7 @@ function update(dt){
           const r=100+st.orbit*10;
           s.fx.push({kind:'ring',x:p.x,y:p.y-8,r,life:.45,max:.45});
           for(const e of s.enemies)if(sessionContext.dist(e,p)<r+e.r)sessionContext.damage(e,12*st.orbit*st.damage);
-          sessionContext.beep(440,.09,'sine');
+          sessionContext.soundEffect('magic');
         }
       }
       sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage,sessionContext.Village);
@@ -1621,7 +1728,7 @@ function update(dt){
           const angle=sessionContext.Math.atan2(a.aim.y-e.y,a.aim.x-e.x),ax=sessionContext.Math.cos(angle),ay=sessionContext.Math.sin(angle),px=p.x-e.x,py=p.y-e.y,along=px*ax+py*ay,across=sessionContext.Math.abs(px*ay-py*ax);
           if(e.unit==='pilum'){
             s.enemyShots.push({x:e.x,y:e.y,vx:ax*235,vy:ay*235,life:2,damage:e.damage});
-            sessionContext.beep(250,.04);
+            sessionContext.soundEffect('throw');
           }
   else if(e.unit==='ram'){
             e.charge={x:ax,y:ay,left:1.3};
@@ -1652,7 +1759,7 @@ function update(dt){
           e.cd=u.cooldown;
           e.heading=sessionContext.Math.atan2(p.y-e.y,p.x-e.x);
         }
-        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800),dir=sessionContext.Village.direction(e,p,e.r),ox=e.x,oy=e.y;
+        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
         sessionContext.Village.move(e,(moving?dir.x*speed*dt:0)+e.vx*dt,(moving?dir.y*speed*dt:0)+e.vy*dt,e.r);
         const travel=sessionContext.Math.hypot(e.x-ox,e.y-oy);
         e.moving=travel>.01;
@@ -1716,7 +1823,7 @@ function update(dt){
         if(d<19){
           s.xp+=gem.v;
           gem.dead=true;
-          sessionContext.beep(700+sessionContext.Math.random()*200,.025,'sine',.01);
+          sessionContext.soundEffect('pickup');
         }
       }
       s.gems=s.gems.filter(g=>!g.dead);
@@ -1734,7 +1841,7 @@ function update(dt){
         p.hp=sessionContext.Math.min(p.max,p.hp+25);
         item.dead=true;
         s.texts.push({x:p.x,y:p.y-30,v:'+25 ♥',life:1});
-        sessionContext.beep(530,.1,'triangle');
+        sessionContext.soundEffect('heal');
       }
       s.pickups=s.pickups.filter(i=>!i.dead);
       s.enemies=s.enemies.filter(e=>e.hp>0);
@@ -1794,6 +1901,7 @@ function draw(){
       sessionContext.ctx.translate(-cx,-cy);
       if(s){
         const minX=cx-50,maxX=cx+sessionContext.W+50,minY=cy-50,maxY=cy+sessionContext.H+50;
+        const sceneryView={minX,maxX,minY,maxY};
         drawHazards(sessionContext.ctx,s);
         sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
@@ -1831,7 +1939,7 @@ function draw(){
         const actors=orderActors(sessionContext.Village.depthObjects,s.enemies,p,sessionContext.selected);
         for(const e of actors){
           if(e.scenery){
-            sessionContext.Village.drawObject(sessionContext.ctx,e,p);
+            sessionContext.Village.drawObject(sessionContext.ctx,e,p,sceneryView);
             continue;
           }
           if(!e.player&&(e.x<minX-100||e.x>maxX+100||e.y<minY-100||e.y>maxY+100))continue;
@@ -2026,11 +2134,13 @@ function frame(now) {
 function run() {
       if (running) return;
       running = true;
+      sessionContext.resumeAudio();
       freshFrame = true;
       frameId = sessionContext.requestAnimationFrame(frame);
     }
 function stop() {
       running = false;
+      sessionContext.stopAudio();
       if (frameId !== null) sessionContext.cancelAnimationFrame(frameId);
       frameId = null;
     }
@@ -2363,14 +2473,35 @@ Progression=(()=>{
  for(const id of Object.keys(upgrades))data.levels[id]=0;
  const integer=(v,max=1e9)=>Number.isSafeInteger(v)&&v>=0?Math.min(max,v):0;
  try{const saved=JSON.parse(localStorage.getItem(key));if(saved&&typeof saved==='object'){data.helmets=integer(saved.helmets);data.kills=integer(saved.kills);if(Array.isArray(saved.unlocked))data.unlocked=[...new Set(['asterix','obelix',...saved.unlocked.filter(id=>Object.hasOwn(prices,id))])];for(const id of Object.keys(upgrades))data.levels[id]=integer(saved.levels?.[id],upgrades[id].max);}}catch{}
- function save(){try{localStorage.setItem(key,JSON.stringify(data));persistent=true;}catch{persistent=false;}}
- function earn(amount){if(!Number.isSafeInteger(amount)||amount<=0)return 0;data.helmets+=amount;save();return amount;}
- function kill(){data.kills++;const reward=data.kills%10===0?1:0;data.helmets+=reward;save();return reward;}
+ let dirty=false,pending=null,idle=null;
+ function flush(){
+  if(pending!==null){clearTimeout(pending);pending=null;}
+  if(idle!==null){globalThis.cancelIdleCallback?.(idle);idle=null;}
+  if(!dirty)return;
+  try{localStorage.setItem(key,JSON.stringify(data));persistent=true;dirty=false;}catch{persistent=false;}
+ }
+ function save(){dirty=true;flush();}
+ // Combat only updates memory. Coalesce rewards into one write outside the
+ // simulation, preferably when the browser has idle time between frames.
+ function deferSave(){
+  dirty=true;
+  if(pending!==null||idle!==null)return;
+  if(typeof setTimeout!=='function'){flush();return;}
+  pending=setTimeout(()=>{
+   pending=null;
+   if(globalThis.requestIdleCallback)idle=globalThis.requestIdleCallback(()=>{idle=null;flush();},{timeout:2000});
+   else flush();
+  },1000);
+ }
+ globalThis.addEventListener?.('pagehide',flush);
+ globalThis.document?.addEventListener?.('visibilitychange',()=>{if(document.hidden)flush();});
+ function earn(amount){if(!Number.isSafeInteger(amount)||amount<=0)return 0;data.helmets+=amount;deferSave();return amount;}
+ function kill(){data.kills++;const reward=data.kills%10===0?1:0;data.helmets+=reward;deferSave();return reward;}
  const owned=id=>data.unlocked.includes(id);
  const cost=id=>Object.hasOwn(upgrades,id)?(upgrades[id].hero?50:30)*(data.levels[id]+1):prices[id];
  function buyHero(id){if(!Object.hasOwn(prices,id)||owned(id)||data.helmets<prices[id])return false;data.helmets-=prices[id];data.unlocked.push(id);save();return true;}
  function buyUpgrade(id){if(!Object.hasOwn(upgrades,id)||(upgrades[id].hero&&!owned(upgrades[id].hero))||data.levels[id]>=upgrades[id].max||data.helmets<cost(id))return false;data.helmets-=cost(id);data.levels[id]++;save();return true;}
- return {prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
+ return {prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
 })();
 
 Object.defineProperty(exports, "Progression", {get: () => Progression});

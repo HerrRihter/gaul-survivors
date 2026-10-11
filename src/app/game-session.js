@@ -21,6 +21,7 @@ GameSession = {
   }) {
 const arenas=createArenas(Village);
 let selectedMap='village';
+let audioController=null;
 const sessionContext={
 get selectedMap(){return selectedMap},
 get arenaDefinitions(){return arenaDefinitions},
@@ -52,11 +53,9 @@ get WORLD(){return WORLD},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
-get mode(){return mode},set mode(value){mode=value},
+get mode(){return mode},set mode(value){mode=value;audioController?.sync()},
 get state(){return state},set state(value){state=value},
 get keys(){return keys},set keys(value){keys=value},
-get audio(){return audio},set audio(value){audio=value},
-get sound(){return sound},set sound(value){sound=value},
 get toastLeft(){return toastLeft},set toastLeft(value){toastLeft=value},
 get choice(){return choice},set choice(value){choice=value},
 get pointer(){return pointer},set pointer(value){pointer=value},
@@ -71,7 +70,10 @@ get portraits(){return portraits},
 get fitPortrait(){return fitPortrait},
 get menuPortraitPhase(){return menuPortraitPhase},set menuPortraitPhase(value){menuPortraitPhase=value},
 get animateMenu(){return animateMenu},
-get beep(){return beep},
+get soundEffect(){return audioController.effect},
+get finishAudio(){return audioController.finish},
+get stopAudio(){return audioController.stop},
+get resumeAudio(){return audioController.resume},
 get show(){return show},
 get toast(){return toast},
 get resetInput(){return resetInput},
@@ -109,7 +111,7 @@ get stop(){return stop}
     const {resizeCanvas}=CanvasSystem.create(sessionContext);
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
-    let selected='asterix',mode='menu',state=null,keys=new Set(),audio=null,sound=false,toastLeft=0,choice=[];
+    let selected='asterix',mode='menu',state=null,keys=new Set(),toastLeft=0,choice=[];
     let pointer=null,stick={x:0,y:0},best={kills:0,time:0};
     try{
       best=JSON.parse(localStorage.getItem('gaul-best'))||best;
@@ -143,7 +145,7 @@ get stop(){return stop}
       if(mode==='menu')renderShop();
     });
 
-    const {beep}=AudioSystem.create(sessionContext);
+    audioController=AudioSystem.create(sessionContext);
 
     const {resetInput,bind:bindInput}=InputSystem.create(sessionContext);
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
@@ -177,11 +179,6 @@ get stop(){return stop}
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;
-    $('sound').onclick=()=>{
-      sound=!sound;
-      $('sound').textContent=`ЗВУК: ${sound?'ВКЛ':'ВЫКЛ'}`;
-      beep(500,.1);
-    };
     bindInput();
 
     const {spawn,updateSpawning}=EnemySpawning.create(sessionContext);

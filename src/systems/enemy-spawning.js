@@ -54,7 +54,7 @@ function updateSpawning(dt){
     }
   }
   if(s.t>=waves.boss.time&&!s.bossSpawned){
-    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.beep(90,.4,'sawtooth');
+    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.soundEffect('boss');
   }
   for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
 }

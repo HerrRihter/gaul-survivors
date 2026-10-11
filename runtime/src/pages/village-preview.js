@@ -121,9 +121,13 @@ VillageCollision=(()=>{
   function intersects(a,b,c,d){return Math.max(a.x,b.x)>=Math.min(c.x,d.x)&&Math.max(c.x,d.x)>=Math.min(a.x,b.x)&&Math.max(a.y,b.y)>=Math.min(c.y,d.y)&&Math.max(c.y,d.y)>=Math.min(a.y,b.y)&&cross(a,b,c)*cross(a,b,d)<=0&&cross(c,d,a)*cross(c,d,b)<=0;}
   function clear(a,b,r=14){
    if(Math.min(a.x,b.x)<r||Math.min(a.y,b.y)<r||Math.max(a.x,b.x)>size-r||Math.max(a.y,b.y)>size-r)return false;
-   const cand=candidates(Math.min(a.x,b.x)-r,Math.min(a.y,b.y)-r,Math.max(a.x,b.x)+r,Math.max(a.y,b.y)+r);
+   const minX=Math.min(a.x,b.x)-r,minY=Math.min(a.y,b.y)-r,maxX=Math.max(a.x,b.x)+r,maxY=Math.max(a.y,b.y)+r;
+   const cand=candidates(minX,minY,maxX,maxY);
    for(let k=0;k<cand.length;k++){
     const p=cand[k];
+    // Buckets deliberately over-select; reject non-overlapping bounds before
+    // the expensive polygon/segment distance tests.
+    if(p.maxX<minX||p.minX>maxX||p.maxY<minY||p.minY>maxY)continue;
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;
@@ -145,6 +149,7 @@ let VillageNavigation;
 VillageNavigation={create({size,cell,cols,blocked,clear}){
  const moveNext={x:0,y:0},moveNextX={x:0,y:0},moveNextY={x:0,y:0};
  function move(a,dx,dy,r=14){
+  if(dx===0&&dy===0)return;
   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/5));
   const sx=dx/n,sy=dy/n;
   for(let i=0;i<n;i++){
@@ -156,7 +161,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(clear(a,moveNextY,r))a.y=moveNext.y;
   }
  }
- const grids=new Map(),maps=new Map();
+ const grids=new Map(),maps=new Map(),queries=new Map();
  const centers=Array.from({length:cols*cols},(_,k)=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell}));
  const center=k=>centers[k];
  const sharedQueue=new Int32Array(cols*cols);
@@ -172,6 +177,15 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const out={free,edges};grids.set(r,out);return out;
  }
  function field(p,r){
+  // Every enemy of this radius shares the same target. Cache even an
+  // unreachable target: otherwise each enemy repeats the full seed search.
+  const query=queries.get(r);
+  if(query&&query.x===p.x&&query.y===p.y)return query.flow;
+  const flow=computeField(p,r);
+  queries.set(r,{x:p.x,y:p.y,flow});
+  return flow;
+ }
+ function computeField(p,r){
   const {free,edges}=grid(r),tx=Math.floor(p.x/cell),ty=Math.floor(p.y/cell),target=tx+ty*cols;
   const cached=maps.get(r);if(cached&&cached.target===target&&clear(center(cached.seed),p,2))return cached;
   // A hero can stand in a gap that siege units cannot enter: route to the nearest reachable approach.
@@ -181,7 +195,7 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(d<best&&clear(c,p,2)){best=d;seed=k;}
   }
   if(seed<0)return null;
-  const old=maps.get(r);if(old&&old.seed===seed)return old;
+  const old=maps.get(r);if(old&&old.seed===seed){old.target=target;return old;}
   const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
   for(let q=0;q<n;q++){
    const k=sharedQueue[q],edge=edges[k],c=costs[k]+1;
@@ -206,13 +220,18 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   if(!best)return {x:0,y:0};const n=Math.hypot(best.x-a.x,best.y-a.y);return {x:(best.x-a.x)/Math.max(1,n),y:(best.y-a.y)/Math.max(1,n)};
  }
 
-return {move,direction};
+// Geometry stays fixed for this arena; build each body-size grid before combat.
+function prepare(radii,target){for(const r of new Set(radii)){grid(r);if(target)field(target,r);}}
+return {move,direction,prepare};
 }};
 
 Object.defineProperty(exports, "VillageNavigation", {get: () => VillageNavigation});
 },
 "src/world/village/village-renderer.js": function(require, exports){
 let VillageRenderer;
+function sceneryVisible(o,height,view){
+ return !view||(o.x+o.width/2>=view.minX&&o.x-o.width/2<=view.maxX&&o.y+12>=view.minY&&o.y+12-height<=view.maxY);
+}
 VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,roughRoads=false}){
  let groundCache=null; const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
  const lanes=roughRoads?roads.map(([x,y,a,b,c,d,e,f,w],index)=>{
@@ -282,7 +301,9 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   ensureGroundCache();
   if(groundCache)g.drawImage(groundCache,0,0);else paintGround(g);
  }
- function drawObject(g,o,player){
+ function drawObject(g,o,player,view){
+  const image=VillageArt?.images?.[o.art];
+  if(image?.naturalWidth&&!sceneryVisible(o,o.width*image.naturalHeight/image.naturalWidth,view))return;
   g.save();
   // Keep the hero visible when a roof or the bard's canopy overlaps them.
   if(player&&player.y<o.y&&player.y>o.y-o.width&&Math.abs(player.x-o.x)<o.width*.48)g.globalAlpha=.48;
@@ -295,6 +316,7 @@ return {draw,drawGround,drawObject,depthObjects};
 }};
 
 Object.defineProperty(exports, "VillageRenderer", {get: () => VillageRenderer});
+Object.defineProperty(exports, "sceneryVisible", {get: () => sceneryVisible});
 },
 "src/rendering/art/village-art.js": function(require, exports){
 const {AssetPaths} = require("src/rendering/asset-paths.js");
@@ -330,7 +352,7 @@ Object.defineProperty(exports, "AssetPaths", {get: () => AssetPaths});
 "src/world/arenas.js": function(require, exports){
 const {VillageCollision} = require("src/world/village/collision.js");
 const {VillageNavigation} = require("src/world/village/navigation.js");
-const {VillageRenderer} = require("src/world/village/village-renderer.js");
+const {VillageRenderer,sceneryVisible} = require("src/world/village/village-renderer.js");
 const {VillageArt} = require("src/rendering/art/village-art.js");
 const {SceneryArt} = require("src/rendering/art/scenery-art.js");
 const arenaDefinitions={
@@ -402,9 +424,12 @@ function createArena(id){
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
  const renderer=VillageRenderer.create({size,objects,roads,plaza:false,roughRoads:id==='camp',VillageArt,document:typeof document==='undefined'?null:document});
  const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
- function drawObject(g,o,p){
-  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p);return;}
-  const sprite=scenery[o.art];g.save();
+ function drawObject(g,o,p,view){
+  if(o.art==='trees'||o.art==='fence'){renderer.drawObject(g,o,p,view);return;}
+  const sprite=scenery[o.art];
+  const height=sprite?.ready?o.width*sprite.image.naturalHeight/sprite.image.naturalWidth:72;
+  if(!sceneryVisible(o,height,view))return;
+  g.save();
   if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.48)g.globalAlpha=.48;
   if(sprite?.ready){const h=o.width*sprite.image.naturalHeight/sprite.image.naturalWidth;g.imageSmoothingEnabled=true;g.drawImage(sprite.image,o.x-o.width/2,o.y+12-h,o.width,h);}
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}

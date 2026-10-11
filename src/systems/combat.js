@@ -9,6 +9,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       n*=sessionContext.Legion.mitigation(e,source);
       expansionDrop(e,n,sessionContext.state);
       e.hp-=n;
+      sessionContext.soundEffect('hit');
       e.hit=.12;
       if(e.hp>0&&(e.unit==='turtle'||e.unit==='ram'||expansionUnits[e.unit]))e.visualHurt={elapsed:0,duration:.34,flip:sessionContext.Math.cos(e.heading)<0};
       if(e.hp>0&&e.type==='roman'){
@@ -25,6 +26,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       e.vy+=dy*weight;
       if(sessionContext.state.texts.length<45)sessionContext.state.texts.push({x:e.x,y:e.y-25,v:sessionContext.Math.round(n),life:.55});
       if(e.hp<=0){
+        sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
         sessionContext.state.kills++;
         sessionContext.state.earned+=sessionContext.Progression.kill();
@@ -44,7 +46,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
         if(e.boss){
           sessionContext.state.bossDead=true;
           sessionContext.toast('Центурион повержен! Продержись до пира.');
-          sessionContext.beep(160,.5,'sawtooth');
+          sessionContext.soundEffect('boss');
         }
       }
     }
@@ -65,10 +67,11 @@ function throwStones(count,baseDamage,direction=null){
           angle:a+sessionContext.Math.PI
         });
       }
-      sessionContext.beep(110,.06,'triangle');
+      sessionContext.soundEffect('stone');
     }
 function beginAction(actor,duration,target){
       actor.action={elapsed:0,duration,hit:false,flip:target.x<actor.x,aim:{x:target.x,y:target.y}};
+      if(actor===sessionContext.state.p&&sessionContext.selected==='asterix')sessionContext.soundEffect('punchSwing');
     }
 function hurtPlayer(e){
       const p=sessionContext.state.p;
@@ -77,7 +80,7 @@ function hurtPlayer(e){
       p.inv=.7;
       p.hurt={elapsed:0,duration:.34,flip:p.flip};
       sessionContext.state.shake=4;
-      sessionContext.beep(75,.12,'sawtooth');
+      sessionContext.soundEffect('hurt');
       sessionContext.state.fx.push({kind:'hurt',x:p.x,y:p.y,r:25,life:.25,max:.25});
     }
 function heroImpact(a){
@@ -98,7 +101,7 @@ function heroImpact(a){
         const delta=sessionContext.Math.abs(sessionContext.Math.atan2(dx*dir.y-dy*dir.x,along));
         if(e.hp>0&&d<r+e.r&&along>=0&&delta<=spec.half+sessionContext.Math.asin(sessionContext.Math.min(1,e.r/sessionContext.Math.max(1,d)))&&sessionContext.Village.clear(p,e,2))damage(e,spec.damage*s.stats.damage*(sessionContext.selected==='automatix'?1+(s.stats.hammerDamage||0):1),dir.x*(145+(s.stats[sessionContext.selected==='asterix'?'punchForce':'hammerForce']||0)),dir.y*(145+(s.stats[sessionContext.selected==='asterix'?'punchForce':'hammerForce']||0)));
       }
-      sessionContext.beep(210,.035);
+      if(sessionContext.selected!=='asterix')sessionContext.soundEffect('throw');
     }
 return {damage,throwStones,beginAction,advanceAction,hurtPlayer,heroImpact};
 }};

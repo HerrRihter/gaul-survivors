@@ -29,6 +29,7 @@ function draw(){
       sessionContext.ctx.translate(-cx,-cy);
       if(s){
         const minX=cx-50,maxX=cx+sessionContext.W+50,minY=cy-50,maxY=cy+sessionContext.H+50;
+        const sceneryView={minX,maxX,minY,maxY};
         drawHazards(sessionContext.ctx,s);
         sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
@@ -66,7 +67,7 @@ function draw(){
         const actors=orderActors(sessionContext.Village.depthObjects,s.enemies,p,sessionContext.selected);
         for(const e of actors){
           if(e.scenery){
-            sessionContext.Village.drawObject(sessionContext.ctx,e,p);
+            sessionContext.Village.drawObject(sessionContext.ctx,e,p,sceneryView);
             continue;
           }
           if(!e.player&&(e.x<minX-100||e.x>maxX+100||e.y<minY-100||e.y>maxY+100))continue;

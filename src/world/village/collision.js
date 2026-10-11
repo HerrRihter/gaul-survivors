@@ -55,9 +55,13 @@ VillageCollision=(()=>{
   function intersects(a,b,c,d){return Math.max(a.x,b.x)>=Math.min(c.x,d.x)&&Math.max(c.x,d.x)>=Math.min(a.x,b.x)&&Math.max(a.y,b.y)>=Math.min(c.y,d.y)&&Math.max(c.y,d.y)>=Math.min(a.y,b.y)&&cross(a,b,c)*cross(a,b,d)<=0&&cross(c,d,a)*cross(c,d,b)<=0;}
   function clear(a,b,r=14){
    if(Math.min(a.x,b.x)<r||Math.min(a.y,b.y)<r||Math.max(a.x,b.x)>size-r||Math.max(a.y,b.y)>size-r)return false;
-   const cand=candidates(Math.min(a.x,b.x)-r,Math.min(a.y,b.y)-r,Math.max(a.x,b.x)+r,Math.max(a.y,b.y)+r);
+   const minX=Math.min(a.x,b.x)-r,minY=Math.min(a.y,b.y)-r,maxX=Math.max(a.x,b.x)+r,maxY=Math.max(a.y,b.y)+r;
+   const cand=candidates(minX,minY,maxX,maxY);
    for(let k=0;k<cand.length;k++){
     const p=cand[k];
+    // Buckets deliberately over-select; reject non-overlapping bounds before
+    // the expensive polygon/segment distance tests.
+    if(p.maxX<minX||p.minX>maxX||p.maxY<minY||p.minY>maxY)continue;
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;

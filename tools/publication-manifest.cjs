@@ -7,6 +7,12 @@ module.exports={
     "village-preview.html"
   ],
   "groups": [
+    {purpose:'Local CC0 music, effects and source credits',consumers:['index.html'],files:[
+      'assets/audio/CREDITS.md', 'assets/audio/Kenney-Impact-LICENSE.txt', 'assets/audio/Kenney-RPG-LICENSE.txt',
+      ...['tavern','battle','victory','defeat'].map(name=>'assets/audio/music/'+name+'.mp3'),
+      ...['throw','stone','pickup','heal','level','ui','boss','magic','death-1','death-2','death-3'].map(name=>'assets/audio/sfx/'+name+'.ogg'),
+      ...['punch','hit-1','hit-2','hurt'].map(name=>'assets/audio/sfx/'+name+'.mp3')
+    ]},
     {purpose:'Independent character poses and shared loader',consumers:['index.html','legion-preview.html'],files:['src/rendering/character-frames.js','data/animations/character-frames.js',...[...new Set(Object.values(characterFrames.characters).flatMap(c=>Object.values(c.actions).flat()))].map(file=>"assets/runtime/"+file)]},
     {
       "purpose": "Game rules, persistence, input, UI and render loop",

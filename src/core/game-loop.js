@@ -18,11 +18,13 @@ function frame(now) {
 function run() {
       if (running) return;
       running = true;
+      sessionContext.resumeAudio();
       freshFrame = true;
       frameId = sessionContext.requestAnimationFrame(frame);
     }
 function stop() {
       running = false;
+      sessionContext.stopAudio();
       if (frameId !== null) sessionContext.cancelAnimationFrame(frameId);
       frameId = null;
     }

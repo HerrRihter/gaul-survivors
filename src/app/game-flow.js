@@ -63,15 +63,17 @@ function start(){
         }
       };
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
+      sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
       ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
-      sessionContext.beep(450,.14);
+      sessionContext.soundEffect('ui');
       sessionContext.hud();
     }
 function menu(){
+      sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.state=null;
       sessionContext.resetInput();
@@ -83,6 +85,7 @@ function menu(){
     }
 function pause(){
       if(sessionContext.mode==='play'){
+        sessionContext.Progression.flush();
         sessionContext.mode='pause';
         sessionContext.resetInput();
         sessionContext.show('paused',true);
@@ -107,7 +110,7 @@ function levelUp(){
         sessionContext.$('cards').append(b);
       });
       sessionContext.show('levelup',true);
-      sessionContext.beep(760,.23,'triangle');
+      sessionContext.soundEffect('level');
       sessionContext.hud();
     }
 function pickUpgrade(i){
@@ -115,10 +118,12 @@ function pickUpgrade(i){
       sessionContext.UpgradeSystem.apply(sessionContext.choice[i],sessionContext.state);
       sessionContext.show('levelup',false);
       sessionContext.mode='play';
-      sessionContext.beep(580,.12);
+      sessionContext.soundEffect('ui');
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
+      sessionContext.Progression.flush();
+      sessionContext.finishAudio(win);
       sessionContext.mode='end';
       sessionContext.resetInput();
       sessionContext.show('end',true);
@@ -133,7 +138,6 @@ function finish(win){
         sessionContext.localStorage.setItem('gaul-best',JSON.stringify(sessionContext.best));
       }catch{
       }
-      sessionContext.beep(win?660:140,.4,'triangle');
     }
 return {start,menu,pause,levelUp,pickUpgrade,finish};
 }};

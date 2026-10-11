@@ -115,11 +115,15 @@ async function main() {
         const value = match[1] || match[2];
         if (!/^(?:https?:|data:|mailto:|#)/i.test(value)) requests.add(new URL(value, pageURL).href);
       }
+      // Audio loads only after a user gesture and is absent from the image loader graph.
+      if (page === 'index.html') for (const file of publicationFiles().filter(file => file.startsWith('assets/audio/'))) requests.add(new URL(file, base).href);
       for (const request of requests) {
         assert(new URL(request).pathname.startsWith(prefix), `${page}: URL escapes project prefix: ${request}`);
         const resource = await fetch(request);
         assert.equal(resource.status, 200, `${page}: missing ${request}`);
         const file = decodeURIComponent(new URL(request).pathname.slice(prefix.length));
+        if (file.endsWith('.mp3')) assert.equal(resource.headers.get('content-type'), 'audio/mpeg');
+        if (file.endsWith('.ogg')) assert.equal(resource.headers.get('content-type'), 'audio/ogg');
         const body = Buffer.from(await resource.arrayBuffer());
         assert.deepEqual(body, fs.readFileSync(path.join(result.out, file)), 'Served resource matches build');
         if(file.endsWith('.css'))for(const match of body.toString().matchAll(/url\(["']?([^\s"')]+)["']?\)/g))requests.add(new URL(match[1],request).href);
