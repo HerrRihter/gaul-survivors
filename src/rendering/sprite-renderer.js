@@ -1,3 +1,4 @@
+import {CharacterFrameManifest} from '../../data/animations/character-frames.js';
 export let SpriteRenderer;
 'use strict';
 SpriteRenderer={create(sessionContext){
@@ -55,8 +56,8 @@ function sprite(g,name,x,y,size=2,flip=false,bob=0,flash=false,phase=0,actor=nul
       if(flash&&!hurt)g.globalAlpha=.45;
       const hero=typeof sessionContext.HeroArt!=='undefined'?sessionContext.HeroArt.get(name):null;
       if(animated){
-        const box=name==='boss'?120:name==='asterix'||name==='obelix'?112:104;
-        g.drawImage(animated,-box/2,-box*.9,box,box);
+        const [anchorX,anchorY]=CharacterFrameManifest.anchor;
+        g.drawImage(animated,-anchorX,-anchorY);
       }
   else if(hero){
         g.drawImage(hero,-48,-91,96,96);

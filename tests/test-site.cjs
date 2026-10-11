@@ -59,8 +59,8 @@ async function imageRequests(out, html, pageURL, baseURL) {
       createElement: () => ({getContext: () => context}),
     },
     Image: class {
-      naturalWidth = 4096;
-      naturalHeight = 4096;
+      naturalWidth = 256;
+      naturalHeight = 256;
       set src(value) {
         const url=value.startsWith('file:')?new URL(path.relative(out,resourcePath(value)).replaceAll('\\','/'),baseURL):new URL(value,pageURL);
         requests.add(url.href);

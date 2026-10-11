@@ -6,7 +6,7 @@ const root = path.resolve(__dirname, '..');
 const tests = ['test.cjs', 'test-animation.cjs', 'test-progression.cjs',
   'test-upgrades.cjs', 'test-projectile-art.cjs', 'test-unit-art.cjs',
   'test-villager-art.cjs', 'test-hero-art.cjs', 'test-menu-portraits.cjs', 'test-village-collision.cjs',
-  'test-session.cjs', 'test-rendering.cjs', 'test-file-launch.cjs', 'test-site.cjs'];
+  'test-session.cjs', 'test-rendering.cjs', 'test-character-frames.cjs', 'test-character-preview.cjs', 'test-file-launch.cjs', 'test-site.cjs'];
 let failed = 0;
 const generated=spawnSync(process.execPath,[path.join(root,'tools/generate-layouts.cjs'),'--check'],{cwd:root,stdio:'inherit'});
 if(generated.error||generated.status!==0)process.exit(1);

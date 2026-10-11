@@ -10,29 +10,100 @@ function draw(){['asterix','obelix','roman'].forEach(name=>{const g=document.get
 
 },
 "src/rendering/art/roman-art.js": function(require, exports){
-const {AssetPaths} = require("src/rendering/asset-paths.js");
+const {CharacterFrames} = require("src/rendering/character-frames.js");
 const {RomanArt:LegacyRomanArt} = require("src/rendering/art/roman-art-legacy.js");
-let RomanArt;
-/* Reference-based transparent atlas. Shared scale and baseline preserve silhouettes. */
-(() => {
-  const fallback=LegacyRomanArt;
-  if(typeof Image==='undefined'){RomanArt=fallback;return;}
-  const atlas=new Image(),sprites=[];
-  RomanArt={width:96,height:128,status:'loading',get(variant=0,frame=0,boss=false){return sprites[boss?3:variant%3]||fallback.get(variant,frame,boss);}};
-  atlas.onload=()=>{
-    const cell=atlas.naturalWidth/4;
-    for(let i=0;i<4;i++){
-      const c=document.createElement('canvas');c.width=96;c.height=128;
-      const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-      g.drawImage(atlas,cell*i,0,cell,atlas.naturalHeight,0,0,96,128);sprites.push(c);
-    }
-    RomanArt.status='ready';document.dispatchEvent(new Event('roman-art-ready'));
-  };
-  atlas.onerror=()=>{RomanArt.status='fallback';console.warn('Roman atlas unavailable; using legacy sprites.');document.dispatchEvent(new Event('roman-art-ready'));};
-  atlas.src=AssetPaths.url('characters/enemies/shared/roman-atlas-v2.png');
-})();
+const ids=['roman-0','roman-1','roman-2','boss'];
+const status=CharacterFrames.register(ids,'roman-art-ready'),portraits=new Map();
+const RomanArt={width:96,height:128,
+ get status(){return Object.values(status).every(s=>s==='ready')?'ready':Object.values(status).some(s=>s==='loading')?'loading':'fallback';},
+ get(variant=0,frame=0,boss=false){
+  const id=boss?'boss':'roman-'+((Math.floor(variant)%3+3)%3);
+  const pose=CharacterFrames.get(id,'idle');
+  if(!pose)return LegacyRomanArt.get(variant,frame,boss);
+  if(!portraits.has(id)){const c=document.createElement('canvas');c.width=96;c.height=128;c.getContext('2d').drawImage(pose,64,108,128,128,0,0,96,128);portraits.set(id,c);}
+  return portraits.get(id);
+ },
+};
 
 Object.defineProperty(exports, "RomanArt", {get: () => RomanArt});
+},
+"src/rendering/character-frames.js": function(require, exports){
+const {CharacterFrameManifest} = require("data/animations/character-frames.js");
+const {AssetPaths} = require("src/rendering/asset-paths.js");
+// One decoded image per pose, shared by every actor. No crop or canvas allocation
+// occurs during animation playback. The manifest is the character's source of truth.
+const loaded=new Map();
+const CharacterFrames={
+ manifest:CharacterFrameManifest,
+ register(ids,eventName){
+  const status={};
+  for(const id of ids){
+   const spec=CharacterFrameManifest.characters[id];
+   if(!spec)throw new Error('Unknown character frame set: '+id);
+   status[id]='loading';
+   let entry=loaded.get(id);
+   if(!entry){
+    entry={status:'loading',images:new Map(),listeners:[]};loaded.set(id,entry);
+    if(typeof Image!=='undefined'){
+     const files=new Map();
+     for(const [action,sequence]of Object.entries(spec.actions)){
+      const scale=spec.actionScale?.[action]??1;
+      if(!Number.isFinite(scale)||scale<=0)throw new Error('Invalid action scale: '+id+'/'+action);
+      for(const file of sequence){
+       if(files.has(file)&&files.get(file)!==scale)throw new Error('Conflicting frame scales: '+file);
+       files.set(file,scale);
+      }
+     }
+     let remaining=files.size;
+     const notify=()=>{for(const listener of entry.listeners)listener(entry.status);};
+     for(const [file,scale]of files){
+      const image=new Image();entry.images.set(file,image);
+      image.onload=()=>{
+       if(entry.status!=='loading')return;
+       if(image.naturalWidth!==CharacterFrameManifest.width||image.naturalHeight!==CharacterFrameManifest.height){
+        entry.status='fallback';notify();return;
+       }
+       // Normalize mismatched source actions once, around the same foot anchor.
+       // Every pose in an action gets the same scale: crouches remain crouches.
+       if(scale!==1){
+        const frame=document.createElement('canvas');
+        frame.width=CharacterFrameManifest.width;frame.height=CharacterFrameManifest.height;
+        const g=frame.getContext('2d'),[ax,ay]=CharacterFrameManifest.anchor;
+        g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+        g.drawImage(image,ax*(1-scale),ay*(1-scale),frame.width*scale,frame.height*scale);
+        entry.images.set(file,frame);
+       }
+       if(--remaining===0){entry.status='ready';notify();}
+      };
+      image.onerror=()=>{if(entry.status==='loading'){entry.status='fallback';notify();}};
+      image.src=AssetPaths.url(file);
+     }
+    }
+   }
+   entry.listeners.push(value=>{status[id]=value;document.dispatchEvent(new Event(eventName));});
+   status[id]=entry.status;
+  }
+  return status;
+ },
+ get(id,action='idle',progress=0){
+  const entry=loaded.get(id),spec=CharacterFrameManifest.characters[id];
+  if(!spec||entry?.status!=='ready')return null;
+  if(action==='idle')return entry.images.get(spec.actions[spec.idle.action][spec.idle.index]);
+  const sequence=spec.actions[action]||spec.actions.walk;
+  if(!sequence?.length)return null;
+  const p=Number.isFinite(progress)?progress:0;
+  const index=action==='walk'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
+  return entry.images.get(sequence[index]);
+ },
+};
+
+Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
+},
+"data/animations/character-frames.js": function(require, exports){
+// Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"}}};
+
+Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
 },
 "src/rendering/asset-paths.js": function(require, exports){
 let AssetPaths;

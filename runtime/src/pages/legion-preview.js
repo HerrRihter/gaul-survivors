@@ -3,77 +3,53 @@
 const rootURL = new URL("../../../", document.currentScript.src);
 const factories = {
 "src/pages/legion-preview.js": function(require, exports){
-const {Legion} = require("src/entities/legion.js");
+const {unitDefinitions} = require("data/enemies/units.js");
+const {CharacterFrameManifest} = require("data/animations/character-frames.js");
+const {CharacterBounds} = require("data/animations/character-bounds.js");
 const {AnimationArt} = require("src/rendering/art/animation-art.js");
-const {RomanArt} = require("src/rendering/art/roman-art.js");
 const {UnitArt} = require("src/rendering/art/unit-art.js");
 const {Village} = require("src/world/village/village.js");
+const {fitCharacterPreview,drawCharacterPreview} = require("src/ui/character-preview.js");
 const descriptions={roman:['С начала боя','Короткий удар мечом. Прерывается попаданием.'],spear:['С 0:25','Дальний выпад по зафиксированной линии. Уйди вбок во время замаха.'],pilum:['С 0:50','Держится на дистанции и метает пилум. Снаряд останавливается о дом.'],veteran:['С 1:25','Тяжёлый удар с долгой подготовкой; меньше отбрасывается.'],turtle:['С 1:40 · затем каждые 65 с','Шесть солдат как один строй. Щиты поглощают 65% урона спереди; обходи сбоку или сзади.'],ram:['С 2:35 · затем каждые 80 с','Отряд с тараном разгоняется по отмеченной полосе. Столкновение с домом останавливает разгон.'],boss:['С 3:50','Центурион завершает наступление. Победи его и продержись до пира.']};
-const previews=[];for(const [unit,u] of Object.entries(Legion.units)){const card=document.createElement('article');card.className='card';card.innerHTML=`<canvas width="280" height="210" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${descriptions[unit][0]}</p><p>${descriptions[unit][1]}</p>`;document.getElementById('cards').append(card);previews.push({g:card.querySelector('canvas').getContext('2d'),e:{unit,type:unit==='boss'?'boss':'roman',x:140,y:172,r:u.r,phase:unit==='spear'?1:unit==='pilum'?2:0,hp:u.hp,max:u.hp,heading:0,moving:true,walk:0}});}
-function sprite(g,name,x,y,size,flip,bob,flash,phase,actor){const art=AnimationArt.get(name,Math.floor(phase)%3,actor.hurt?'hurt':actor.action?'attack':actor.moving?'walk':'idle',actor.hurt?actor.hurt.elapsed/actor.hurt.duration:actor.action?actor.action.elapsed/actor.action.duration:actor.walk)||RomanArt.get(Math.floor(phase)%3,0,name==='boss');g.save();g.translate(x,y);if(flip)g.scale(-1,1);g.drawImage(art,-52,-94,104,104);g.restore();}
+
+const anchor=CharacterFrameManifest.anchor,previews=[];
+for(const [unit,u]of Object.entries(unitDefinitions)){
+ const card=document.createElement('article');card.className='card';
+ const description=descriptions[unit]||['Новый отряд',''];
+ card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${description[0]}</p><p>${description[1]}</p>`;
+ document.getElementById('cards').append(card);
+ const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit;
+ const bounds=CharacterBounds[id]||{left:0,top:0,right:256,bottom:256};
+ previews.push({unit,id,g:canvas.getContext('2d'),placement:fitCharacterPreview(bounds,anchor,canvas.width,canvas.height),wide:u.r>30});
+}
 let motion='walk',frozen=false,reverse=false,phase=0,lastTime=0;
-document.getElementById('motion').onchange=e=>{motion=e.target.value;phase=0;};document.getElementById('freeze').onclick=e=>{frozen=!frozen;e.target.textContent=frozen?'Продолжить анимацию':'Пауза анимации';};document.getElementById('reverse').onchange=e=>reverse=e.target.checked;
-function frame(t){const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;if(!frozen)phase+=dt;for(const {g,e} of previews){g.imageSmoothingEnabled=false;g.clearRect(0,0,280,210);e.walk=phase/1.1;e.heading=reverse?Math.PI:0;e.moving=motion==='walk';e.action=motion==='attack'?{elapsed:phase%1.8,duration:1.8,flip:reverse}:null;e.hurt=motion==='hurt'?{elapsed:phase%1.2,duration:1.2,flip:reverse}:null;g.fillStyle='#172d2266';g.beginPath();g.ellipse(140,179,e.r>30?70:27,9,0,0,Math.PI*2);g.fill();Legion.draw(g,e,sprite);}const loaded=Object.values(UnitArt.status).filter(s=>s==='ready').length;document.getElementById('artStatus').textContent=loaded===5?'Легион готов к бою':('Загружено '+loaded+' / 5');requestAnimationFrame(frame);}requestAnimationFrame(frame);
+document.getElementById('motion').onchange=e=>{motion=e.target.value;phase=0;};
+document.getElementById('freeze').onclick=e=>{frozen=!frozen;e.target.textContent=frozen?'Продолжить анимацию':'Пауза анимации';};
+document.getElementById('reverse').onchange=e=>{reverse=e.target.checked;};
+function frame(t){
+ const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;if(!frozen)phase+=dt;
+ const duration=motion==='attack'?1.8:motion==='hurt'?1.2:1.1;
+ const progress=(phase%duration)/duration;
+ let loaded=0,failed=0;
+ for(const {unit,id,g,placement,wide}of previews){
+  g.clearRect(0,0,g.canvas.width,g.canvas.height);g.imageSmoothingEnabled=false;
+  const art=UnitArt.get(unit,motion,progress)||AnimationArt.get(unit,0,motion,progress);
+  if(!art){
+   const missing=(UnitArt.status[id]||AnimationArt.status[id])==='fallback';if(missing)failed++;
+   g.fillStyle='#b1c4a4';g.font='14px Consolas,monospace';g.textAlign='center';g.fillText(missing?'Кадры недоступны':'Загрузка…',g.canvas.width/2,g.canvas.height/2);continue;
+  }
+  loaded++;
+  g.fillStyle='#172d2266';g.beginPath();g.ellipse(placement.x,placement.y+5,(wide?58:24)*placement.scale,5,0,0,Math.PI*2);g.fill();
+  drawCharacterPreview(g,art,anchor,placement,reverse);
+ }
+ const label=loaded===previews.length?'Легион готов к бою':failed?'Не удалось загрузить '+failed+' отр.':('Загружено '+loaded+' / '+previews.length);
+ const status=document.getElementById('artStatus');if(status.textContent!==label)status.textContent=label;
+ requestAnimationFrame(frame);
+}
+requestAnimationFrame(frame);
 function drawMap(){const g=document.getElementById('map').getContext('2d');g.setTransform(.25,0,0,.25,0,0);g.fillStyle='#344b34';g.fillRect(0,0,2200,2200);Village.draw(g);g.fillStyle='#f6cb72';g.beginPath();g.arc(1100,1100,22,0,Math.PI*2);g.fill();}setInterval(drawMap,500);drawMap();
 
 
-},
-"src/entities/legion.js": function(require, exports){
-const {waves} = require("data/enemies/waves.js");
-const {unitDefinitions} = require("data/enemies/units.js");
-const {ProjectileArt} = require("src/rendering/art/projectile-art.js");
-const {UnitArt} = require("src/rendering/art/unit-art.js");
-let Legion;
-'use strict';
-Legion=(()=>{
- const units=unitDefinitions;
- function wave(t,r=Math.random()){
-  for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
- }
- function mitigation(e,p){if(e.unit!=='turtle')return 1;const a=Math.atan2(p.y-e.y,p.x-e.x);return Math.cos(a-(e.heading||0))>.15?.35:1;}
- function telegraph(g,e){if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
-  if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
- }
- function projectile(g,b){ProjectileArt.drawPilum(g,b);}
- function draw(g,e,sprite){
-  const u=units[e.unit];
-  if(typeof UnitArt!=='undefined'&&UnitArt.draw(g,e)){
-   // Illustrated specialist atlas; old drawings below remain load-failure fallbacks.
-  }else if(e.unit==='turtle'){
-   for(let row=0;row<2;row++)for(let col=0;col<3;col++)sprite(g,'roman',e.x+(col-1)*25,e.y+row*23-15,2,Math.cos(e.heading)<0,0,e.hit>0,col+row,{...e,action:null});
-   g.save();g.translate(e.x,e.y-32);g.rotate(e.heading+Math.PI/2);
-   for(let row=0;row<2;row++)for(let col=0;col<3;col++){g.fillStyle=e.hit>0?'#c9e0e4':'#6891ad';g.fillRect(-43+col*29,-36+row*35,27,33);g.strokeStyle='#e4dec0';g.lineWidth=3;g.strokeRect(-43+col*29,-36+row*35,27,33);g.fillStyle='#edc975';g.beginPath();g.arc(-30+col*29,-20+row*35,5,0,Math.PI*2);g.fill();}g.restore();
-  }else if(e.unit==='ram'){
-   for(const side of [-1,1])sprite(g,'roman',e.x-34,e.y+side*32,2,Math.cos(e.heading)<0,0,e.hit>0,side+1,{...e,action:null});
-   g.save();g.translate(e.x,e.y-22);g.rotate(e.heading);g.fillStyle='#282b22';for(const x of [-30,27])for(const y of [-30,22]){g.fillRect(x,y,14,14);g.fillStyle='#70543b';g.fillRect(x+4,y+3,6,8);g.fillStyle='#282b22';}
-   g.fillStyle='#64452f';g.fillRect(-49,-22,93,44);g.strokeStyle='#bb925d';g.lineWidth=6;g.strokeRect(-39,-20,68,40);g.fillStyle=e.hit>0?'#f0d8a4':'#a47b4e';g.fillRect(-62,-10,127,20);g.fillStyle='#aab7b6';g.fillRect(51,-14,23,28);g.fillStyle='#e0dfc8';g.fillRect(70,-9,5,18);g.restore();
-  }else{
-   sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
-   if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
-  }
-  if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(e.unit==='ram'?142:e.unit==='turtle'?124:96));}
- }
- return {units,wave,mitigation,telegraph,draw,projectile};
-})();
-
-Object.defineProperty(exports, "Legion", {get: () => Legion});
-},
-"data/enemies/waves.js": function(require, exports){
-const waves={
-  normal:{firstDelay:.5,minInterval:.35,interval:.95,timeFactor:.0018,batchEvery:110,cap:120},
-  units:[
-    {type:'veteran',time:85,cutoff:.13,message:'ВЕТЕРАНЫ · Медленные, но опасные удары.'},
-    {type:'pilum',time:50,cutoff:.32,message:'ПИЛУМЫ · Дома блокируют вражеские снаряды.'},
-    {type:'spear',time:25,cutoff:.56,message:'КОПЕЙЩИКИ · Уклоняйся от длинного выпада.'},
-  ],
-  siege:{
-    turtle:{first:100,every:65,cap:2,message:'ЧЕРЕПАХА · Обойди строй: сзади щиты не защищают.'},
-    ram:{first:155,every:80,cap:2,message:'ТАРАН · Уйди с линии разгона или укройся за домом.'},
-  },
-  boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
-};
-
-Object.defineProperty(exports, "waves", {get: () => waves});
 },
 "data/enemies/units.js": function(require, exports){
 const unitDefinitions={
@@ -88,53 +64,102 @@ const unitDefinitions={
 
 Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
 },
-"src/rendering/art/projectile-art.js": function(require, exports){
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-let ProjectileArt;
-'use strict';
-ProjectileArt=(()=>{
- // The release hand is 48 logical pixels above the foot anchor.
- const FISH_HEIGHT=48,art={};
- if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url('projectiles/projectiles-v2.png');}
- function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=(kind==='fish'?34:72)*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
- function drawFish(g,f){
-  const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
-  if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055,(f.r||12)/12))return;
-  g.save();g.translate(f.x,f.y-FISH_HEIGHT);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15*(f.r||12)/12,1.15*(f.r||12)/12);
-  g.lineWidth=1.7;g.lineJoin='round';g.lineCap='round';
-  g.fillStyle='#50634c';g.strokeStyle='#202921';
-  g.beginPath();g.moveTo(-22,0);g.lineTo(-34,-10);g.quadraticCurveTo(-31,-3,-30,0);g.quadraticCurveTo(-32,4,-35,9);g.lineTo(-21,5);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#748568';
-  g.beginPath();g.moveTo(-26,0);g.quadraticCurveTo(-13,-12,4,-10);g.quadraticCurveTo(14,-10,22,-5);g.lineTo(29,-2);g.quadraticCurveTo(32,0,29,2);g.lineTo(20,5);g.quadraticCurveTo(8,12,-5,10);g.quadraticCurveTo(-19,9,-26,0);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#d3c69f';g.strokeStyle='#465341';g.lineWidth=1;
-  g.beginPath();g.moveTo(-19,4);g.quadraticCurveTo(-5,11,9,7);g.lineTo(21,2);g.quadraticCurveTo(11,10,-4,11);g.quadraticCurveTo(-15,10,-19,4);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#50634c';g.strokeStyle='#202921';g.lineWidth=1.4;
-  g.beginPath();g.moveTo(-15,-8);g.lineTo(-10,-15);g.lineTo(-5,-9);g.lineTo(3,-14);g.lineTo(8,-8);g.closePath();g.fill();g.stroke();
-  g.beginPath();g.moveTo(-7,8);g.lineTo(-2,15);g.lineTo(5,8);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#99a37c';g.beginPath();g.moveTo(1,-4);g.quadraticCurveTo(9,0,11,7);g.quadraticCurveTo(2,7,-2,0);g.closePath();g.fill();g.stroke();
-  g.strokeStyle='#414e3d';g.lineWidth=1.25;g.beginPath();g.moveTo(11,-7);g.quadraticCurveTo(7,-1,11,5);g.stroke();
-  g.fillStyle='#d7bc46';g.strokeStyle='#252d26';g.lineWidth=1.4;g.beginPath();g.arc(18,-3,3.5,0,Math.PI*2);g.fill();g.stroke();
-  g.fillStyle='#172019';g.beginPath();g.arc(19,-3,1.45,0,Math.PI*2);g.fill();
-  g.fillStyle='#313b31';for(const [x,y]of [[-16,-3],[-10,-6],[-3,-5],[4,-6],[8,3],[2,5],[-7,4]]){g.beginPath();g.ellipse(x,y,1.1,.8,-.3,0,Math.PI*2);g.fill();}
-  g.restore();
- }
- function drawPilum(g,b){
-  if(bitmap(g,'pilum',b.x,b.y-16,Math.atan2(b.vy,b.vx)))return;
-  g.save();g.translate(b.x,b.y-16);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
-  g.strokeStyle='#251c16';g.lineWidth=6;g.beginPath();g.moveTo(-31,0);g.lineTo(17,0);g.stroke();
-  g.strokeStyle='#80552f';g.lineWidth=3.5;g.beginPath();g.moveTo(-30,0);g.lineTo(17,0);g.stroke();
-  g.strokeStyle='#c19459';g.lineWidth=1;g.beginPath();g.moveTo(-24,-.8);g.lineTo(12,-.8);g.stroke();
-  g.fillStyle='#36332e';g.strokeStyle='#202421';g.lineWidth=1.5;g.beginPath();g.moveTo(39,0);g.lineTo(28,-5);g.lineTo(25,-2);g.lineTo(10,-1.8);g.lineTo(10,1.8);g.lineTo(25,2);g.lineTo(28,5);g.closePath();g.fill();g.stroke();
-  g.fillStyle='#aeb9c0';g.beginPath();g.moveTo(37,0);g.lineTo(28,-3.6);g.lineTo(26,-1.15);g.lineTo(12,-1.05);g.lineTo(12,1.05);g.lineTo(26,1.15);g.lineTo(28,3.6);g.closePath();g.fill();
-  g.strokeStyle='#e2e8e8';g.lineWidth=.8;g.beginPath();g.moveTo(35,0);g.lineTo(27,-2.3);g.stroke();
-  g.fillStyle='#d3d7d2';g.strokeStyle='#34332e';g.lineWidth=1;
-  g.beginPath();g.moveTo(8,-2.8);g.lineTo(12,-2.8);g.lineTo(12,2.8);g.lineTo(8,2.8);g.closePath();g.fill();g.stroke();
-  g.restore();
- }
- return {drawFish,drawPilum};
-})();
+"data/animations/character-frames.js": function(require, exports){
+// Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"}}};
 
-Object.defineProperty(exports, "ProjectileArt", {get: () => ProjectileArt});
+Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
+},
+"data/animations/character-bounds.js": function(require, exports){
+// Generated from all character poses; run npm run generate after changing PNGs.
+const CharacterBounds={"asterix":{"left":96,"top":171,"right":164,"bottom":237},"obelix":{"left":69,"top":129,"right":194,"bottom":237},"roman-0":{"left":83,"top":155,"right":180,"bottom":237},"roman-1":{"left":80,"top":160,"right":180,"bottom":237},"roman-2":{"left":79,"top":152,"right":180,"bottom":237},"boss":{"left":81,"top":141,"right":181,"bottom":237},"cacofonix":{"left":87,"top":152,"right":169,"bottom":237},"antisanitarix":{"left":78,"top":153,"right":178,"bottom":237},"automatix":{"left":71,"top":142,"right":185,"bottom":237},"panoramix":{"left":79,"top":144,"right":177,"bottom":239},"spear":{"left":83,"top":151,"right":189,"bottom":237},"pilum":{"left":81,"top":151,"right":184,"bottom":237},"veteran":{"left":84,"top":155,"right":185,"bottom":237},"turtle":{"left":50,"top":124,"right":209,"bottom":238},"ram":{"left":17,"top":113,"right":232,"bottom":237}};
+
+Object.defineProperty(exports, "CharacterBounds", {get: () => CharacterBounds});
+},
+"src/rendering/art/animation-art.js": function(require, exports){
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const ids=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='animation');
+const AnimationArt={
+ status:CharacterFrames.register(ids,'animation-art-ready'),
+ get(name,variant=0,action='walk',progress=0){
+  const id=name==='roman'?'roman-'+((Math.floor(variant)%3+3)%3):name;
+  return ids.includes(id)?CharacterFrames.get(id,action,progress):null;
+ },
+};
+
+Object.defineProperty(exports, "AnimationArt", {get: () => AnimationArt});
+},
+"src/rendering/character-frames.js": function(require, exports){
+const {CharacterFrameManifest} = require("data/animations/character-frames.js");
+const {AssetPaths} = require("src/rendering/asset-paths.js");
+// One decoded image per pose, shared by every actor. No crop or canvas allocation
+// occurs during animation playback. The manifest is the character's source of truth.
+const loaded=new Map();
+const CharacterFrames={
+ manifest:CharacterFrameManifest,
+ register(ids,eventName){
+  const status={};
+  for(const id of ids){
+   const spec=CharacterFrameManifest.characters[id];
+   if(!spec)throw new Error('Unknown character frame set: '+id);
+   status[id]='loading';
+   let entry=loaded.get(id);
+   if(!entry){
+    entry={status:'loading',images:new Map(),listeners:[]};loaded.set(id,entry);
+    if(typeof Image!=='undefined'){
+     const files=new Map();
+     for(const [action,sequence]of Object.entries(spec.actions)){
+      const scale=spec.actionScale?.[action]??1;
+      if(!Number.isFinite(scale)||scale<=0)throw new Error('Invalid action scale: '+id+'/'+action);
+      for(const file of sequence){
+       if(files.has(file)&&files.get(file)!==scale)throw new Error('Conflicting frame scales: '+file);
+       files.set(file,scale);
+      }
+     }
+     let remaining=files.size;
+     const notify=()=>{for(const listener of entry.listeners)listener(entry.status);};
+     for(const [file,scale]of files){
+      const image=new Image();entry.images.set(file,image);
+      image.onload=()=>{
+       if(entry.status!=='loading')return;
+       if(image.naturalWidth!==CharacterFrameManifest.width||image.naturalHeight!==CharacterFrameManifest.height){
+        entry.status='fallback';notify();return;
+       }
+       // Normalize mismatched source actions once, around the same foot anchor.
+       // Every pose in an action gets the same scale: crouches remain crouches.
+       if(scale!==1){
+        const frame=document.createElement('canvas');
+        frame.width=CharacterFrameManifest.width;frame.height=CharacterFrameManifest.height;
+        const g=frame.getContext('2d'),[ax,ay]=CharacterFrameManifest.anchor;
+        g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+        g.drawImage(image,ax*(1-scale),ay*(1-scale),frame.width*scale,frame.height*scale);
+        entry.images.set(file,frame);
+       }
+       if(--remaining===0){entry.status='ready';notify();}
+      };
+      image.onerror=()=>{if(entry.status==='loading'){entry.status='fallback';notify();}};
+      image.src=AssetPaths.url(file);
+     }
+    }
+   }
+   entry.listeners.push(value=>{status[id]=value;document.dispatchEvent(new Event(eventName));});
+   status[id]=entry.status;
+  }
+  return status;
+ },
+ get(id,action='idle',progress=0){
+  const entry=loaded.get(id),spec=CharacterFrameManifest.characters[id];
+  if(!spec||entry?.status!=='ready')return null;
+  if(action==='idle')return entry.images.get(spec.actions[spec.idle.action][spec.idle.index]);
+  const sequence=spec.actions[action]||spec.actions.walk;
+  if(!sequence?.length)return null;
+  const p=Number.isFinite(progress)?progress:0;
+  const index=action==='walk'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
+  return entry.images.get(sequence[index]);
+ },
+};
+
+Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
 },
 "src/rendering/asset-paths.js": function(require, exports){
 let AssetPaths;
@@ -148,20 +173,9 @@ AssetPaths = (() => {
 Object.defineProperty(exports, "AssetPaths", {get: () => AssetPaths});
 },
 "src/rendering/art/unit-art.js": function(require, exports){
-const {clampedFrame,loopFrame} = require("src/rendering/animation-player.js");
-const {UnitLayout} = require("data/animations/unit-layout.js");
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-let UnitArt;
-/* Dedicated, cached walk / attack / hurt atlases for specialist legion units. */
-(()=>{
- const frames={},status={},names=['spear','pilum','veteran','turtle','ram'];
- const sizes={spear:84,pilum:84,veteran:80,turtle:106,ram:122};
- function get(name,action='idle',progress=0){
-  if(!frames[name])return null;
-  const row=action==='attack'?1:action==='hurt'?2:0;
-  const col=action==='idle'?1:row?clampedFrame(progress):loopFrame(progress);
-  return frames[name][row*4+col];
- }
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
+function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
  function draw(g,e){
   const reaction=e.hurt||e.visualHurt,attack=e.action;
   const ramImpact=e.charge&&e.charge.left>1.14;
@@ -170,283 +184,12 @@ let UnitArt;
   const frame=get(e.unit,action,progress);if(!frame)return false;
   const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
-  g.drawImage(frame,-128,-236);g.restore();return true;
+  g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
  }
- UnitArt={status,get,draw};
- if(typeof Image==='undefined')return;
- for(const name of names){
-  status[name]='loading';const image=new Image();
-  image.onload=()=>{
-   const boxes=UnitLayout[name],cell=image.naturalWidth/4;
-   // One scale per entire sheet avoids changes in body size between poses.
-   const walkHeight=Math.max(...boxes.slice(0,4).map(b=>b[3]));
-   const scale=sizes[name]/walkHeight;
-   frames[name]=boxes.map(([sx,sy,sw,sh],index)=>{
-    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
-    const g=canvas.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-    const dx=128+(sx-(index%4+.5)*cell)*scale;
-    g.drawImage(image,sx,sy,sw,sh,dx,236-sh*scale,sw*scale,sh*scale);
-    return canvas;
-   });
-   status[name]='ready';document.dispatchEvent(new Event('unit-art-ready'));
-  };
-  image.onerror=()=>{status[name]='fallback';console.warn('Unit atlas unavailable: '+name);};
-  image.src=AssetPaths.url('characters/enemies/'+name+'/unit-'+name+'-v1.png');
- }
-})();
+
+const UnitArt={status:CharacterFrames.register(names,'unit-art-ready'),get,draw};
 
 Object.defineProperty(exports, "UnitArt", {get: () => UnitArt});
-},
-"src/rendering/animation-player.js": function(require, exports){
-const {actionTiming} = require("data/animations/action-timing.js");
-function clampedFrame(progress){
-  return Math.min(actionTiming.frameCount-1,Math.floor(Math.max(0,progress)*actionTiming.frameCount));
-}
-function loopFrame(progress){
-  return Math.floor(((progress%1)+1)%1*actionTiming.frameCount);
-}
-function advanceAction(actor,dt,impact){
-  const action=actor.action;
-  if(!action)return;
-  action.elapsed+=dt;
-  if(!action.hit&&action.elapsed>=action.duration*actionTiming.impactProgress){
-    action.hit=true;
-    impact(action);
-  }
-  if(action.elapsed>=action.duration)actor.action=null;
-}
-
-Object.defineProperty(exports, "clampedFrame", {get: () => clampedFrame});
-Object.defineProperty(exports, "loopFrame", {get: () => loopFrame});
-Object.defineProperty(exports, "advanceAction", {get: () => advanceAction});
-},
-"data/animations/action-timing.js": function(require, exports){
-// Four visual phases; the hit event begins on the third frame. Rendering reads
-// this timing, while simulation owns event dispatch and damage.
-const actionTiming={frameCount:4,impactProgress:0.5,event:'hit',loop:false};
-
-Object.defineProperty(exports, "actionTiming", {get: () => actionTiming});
-},
-"data/animations/unit-layout.js": function(require, exports){
-// Generated from data/animations/unit-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const UnitLayout={"ram":[[7,86,383,251],[390,86,378,250],[763,91,379,246],[1139,89,382,248],[7,406,386,244],[393,405,367,245],[735,405,435,247],[1158,405,374,246],[30,712,351,248],[403,712,384,249],[783,713,374,247],[1157,711,373,250]],"turtle":[[22,33,355,277],[409,35,348,276],[786,35,350,277],[1170,36,351,275],[17,369,353,270],[398,374,379,267],[760,374,407,268],[1168,371,352,272],[20,702,360,284],[408,698,364,288],[787,700,353,284],[1166,702,357,285]],"pilum":[[109,13,190,350],[465,15,203,348],[836,13,199,350],[1226,12,195,351],[71,378,211,343],[354,423,336,298],[765,431,367,290],[1192,375,236,346],[58,764,247,300],[404,763,290,303],[810,778,237,289],[1210,720,217,346]],"spear":[[121,13,188,325],[519,14,187,324],[865,14,188,323],[1241,14,188,323],[105,356,183,303],[409,389,331,269],[798,395,391,263],[1241,359,226,300],[107,675,229,312],[449,674,263,314],[853,674,222,313],[1249,675,199,313]],"veteran":[[89,12,269,317],[458,15,260,313],[816,14,288,315],[1216,12,262,316],[48,358,287,301],[427,343,295,316],[801,371,379,288],[1215,358,290,301],[62,689,310,299],[406,707,340,282],[819,708,287,285],[1208,681,279,315]]};
-
-Object.defineProperty(exports, "UnitLayout", {get: () => UnitLayout});
-},
-"src/rendering/art/animation-art.js": function(require, exports){
-const {clampedFrame,loopFrame} = require("src/rendering/animation-player.js");
-const {AnimationLayout} = require("data/animations/animation-layout.js");
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-const {MotionV2Layout} = require("data/animations/motion-v2-layout.js");
-let AnimationArt;
-/* Four actual drawn poses per walk/attack. Decode and cache once, not per actor. */
-(() => {
-  const sheets={},walkSheets={},status={};
-  const specs={asterix:{file:'characters/heroes/asterix/animations.png',rows:2,scale:.66},obelix:{file:'characters/heroes/obelix/animations.png',rows:2,scale:.84},legion:{file:'characters/enemies/shared/legion-animation.png',rows:6},centurion:{file:'characters/enemies/shared/centurion-animation.png',rows:2},legionhurt:{file:'characters/enemies/shared/legion-hurt.png',rows:3}};
-  AnimationArt={status,get(name,variant=0,action='walk',progress=0){
-    if(action==='idle'){action='attack';progress=0;}
-    const group=action==='hurt'&&name==='roman'?'legionhurt':name==='asterix'||name==='obelix'?name:name==='boss'?'centurion':name==='roman'?'legion':null;
-    if(!group||!sheets[group])return null;
-    if(action==='walk'&&walkSheets[group])return walkSheets[group][loopFrame(progress)];
-    const row=group==='legionhurt'?variant%3:(group==='legion'?(variant%3)*2:0)+(action==='attack'?1:0);
-    const frame=action==='attack'||action==='hurt'?clampedFrame(progress):loopFrame(progress);
-    return sheets[group][row*4+frame];
-  }};
-  if(typeof Image==='undefined')return;
-  for(const [name,spec] of Object.entries(specs)){
-    status[name]='loading';const image=new Image();
-    image.onload=()=>{
-      const frames=[],w=image.naturalWidth/4,h=image.naturalHeight/spec.rows;
-      for(let row=0;row<spec.rows;row++)for(let col=0;col<4;col++){
-        const c=document.createElement('canvas');c.width=128;c.height=128;
-        const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-        const bounds=typeof AnimationLayout!=='undefined'&&AnimationLayout[name]?AnimationLayout[name][row*4+col]:[col*w,row*h,w,h];
-        const [sx,sy,sw,sh]=bounds;
-        let scale=128/w*(spec.scale|| (name==='centurion'?.8:.75));
-        if(row===0&&(name==='asterix'||name==='obelix'))scale*=Math.max(...AnimationLayout[name].slice(0,4).map(b=>b[3]))/sh;
-        // Source poses can reach across an implicit grid line. Measured opaque
-        // bounds retain the entire spear/fist; a fixed cell pivot avoids jitter.
-        if(name==='legionhurt'||name==='centurion'&&!(row===1&&col===2)){g.translate(128,0);g.scale(-1,1);}
-        const dx=Math.max(2,Math.min(126-sw*scale,64+(sx-(col+.5)*w)*scale));
-        g.drawImage(image,sx,sy,sw,sh,dx,115-sh*scale,sw*scale,sh*scale);frames.push(c);
-      }
-      sheets[name]=frames;status[name]='ready';document.dispatchEvent(new Event('animation-art-ready'));
-      const layout=MotionV2Layout[name];
-      if(layout){
-        const walk=new Image();
-        walk.onload=()=>{
-          const height=Math.min(128/w*spec.scale*Math.max(...AnimationLayout[name].slice(0,4).map(b=>b[3])),...layout.boxes.map(b=>124*b[3]/b[2]));
-          walkSheets[name]=layout.boxes.map(([x,y,sw,sh])=>{
-            const c=document.createElement('canvas');c.width=c.height=128;
-            const g=c.getContext('2d'),k=height/sh;g.imageSmoothingEnabled=true;
-            g.drawImage(walk,x,y,sw,sh,64-sw*k/2,115-height,sw*k,height);return c;
-          });
-          document.dispatchEvent(new Event('animation-art-ready'));
-        };
-        walk.src=AssetPaths.url(layout.file);
-      }
-    };
-    image.onerror=()=>{status[name]='fallback';console.warn('Animation atlas unavailable: '+spec.file);document.dispatchEvent(new Event('animation-art-ready'));};
-    image.src=AssetPaths.url(spec.file);
-  }
-})();
-
-Object.defineProperty(exports, "AnimationArt", {get: () => AnimationArt});
-},
-"data/animations/animation-layout.js": function(require, exports){
-// Generated from data/animations/animation-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const AnimationLayout={"legion":[[71,25,128,251],[306,16,130,260],[563,17,135,259],[837,17,129,259],[72,282,130,251],[240,321,235,213],[531,325,272,208],[826,305,164,228],[63,554,153,216],[314,556,164,215],[570,557,158,214],[830,556,153,215],[65,779,140,231],[233,818,254,194],[524,830,290,183],[832,788,162,225],[50,1028,170,267],[288,1029,184,267],[541,1031,182,265],[807,1028,181,268],[61,1297,139,224],[242,1326,238,196],[501,1341,315,181],[825,1314,166,208]],"centurion":[[59,9,342,429],[479,8,368,432],[922,9,377,431],[1395,8,333,432],[55,453,352,419],[505,453,365,417],[897,460,450,409],[1411,450,315,421]],"legionhurt":[[138,3,207,367],[423,19,296,353],[790,13,247,359],[1159,9,195,363],[111,380,251,339],[447,378,306,342],[798,386,261,336],[1161,386,239,338],[105,721,267,345],[439,722,320,341],[793,725,275,342],[1165,724,237,343]],"asterix":[[70,8,187,259],[389,0,153,265],[686,8,202,260],[1017,2,147,266],[64,300,185,260],[380,297,182,263],[657,306,275,253],[1011,303,185,258]],"obelix":[[35,4,268,291],[363,0,224,297],[662,2,270,296],[1005,1,195,297],[46,380,271,228],[317,314,297,296],[643,352,343,258],[1011,352,210,256]]};
-
-Object.defineProperty(exports, "AnimationLayout", {get: () => AnimationLayout});
-},
-"data/animations/motion-v2-layout.js": function(require, exports){
-// Generated from data/animations/motion-v2-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const MotionV2Layout={"antisanitarix":{"boxes":[[41,103,500,538],[609,103,415,541],[1097,103,503,541],[1664,103,401,541]],"height":724,"width":2172,"file":"characters/heroes/antisanitarix/walk-v3.png"},"projectiles":{"height":1024,"boxes":[[426,185,680,300],[110,748,1334,76]],"width":1536,"file":"projectiles/projectiles-v2.png"},"automatix":{"width":2043,"boxes":[[28,127,471,563],[564,123,424,572],[1057,125,486,566],[1608,125,422,570]],"file":"characters/heroes/automatix/walk-v3.png","height":770},"panoramix":{"width":2172,"boxes":[[24,72,488,568],[564,71,473,574],[1112,72,470,572],[1659,71,461,574]],"file":"characters/heroes/panoramix/walk-v3.png","height":724},"cacofonix":{"width":2172,"boxes":[[24,43,541,642],[584,44,494,637],[1099,45,517,638],[1647,44,501,640]],"file":"characters/heroes/cacofonix/walk-v3.png","height":724},"obelix":{"width":2204,"boxes":[[30,81,496,553],[573,78,454,556],[1124,81,499,553],[1712,81,473,552]],"file":"characters/heroes/obelix/walk-v3.png","height":713}};
-
-Object.defineProperty(exports, "MotionV2Layout", {get: () => MotionV2Layout});
-},
-"src/rendering/art/roman-art.js": function(require, exports){
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-const {RomanArt:LegacyRomanArt} = require("src/rendering/art/roman-art-legacy.js");
-let RomanArt;
-/* Reference-based transparent atlas. Shared scale and baseline preserve silhouettes. */
-(() => {
-  const fallback=LegacyRomanArt;
-  if(typeof Image==='undefined'){RomanArt=fallback;return;}
-  const atlas=new Image(),sprites=[];
-  RomanArt={width:96,height:128,status:'loading',get(variant=0,frame=0,boss=false){return sprites[boss?3:variant%3]||fallback.get(variant,frame,boss);}};
-  atlas.onload=()=>{
-    const cell=atlas.naturalWidth/4;
-    for(let i=0;i<4;i++){
-      const c=document.createElement('canvas');c.width=96;c.height=128;
-      const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-      g.drawImage(atlas,cell*i,0,cell,atlas.naturalHeight,0,0,96,128);sprites.push(c);
-    }
-    RomanArt.status='ready';document.dispatchEvent(new Event('roman-art-ready'));
-  };
-  atlas.onerror=()=>{RomanArt.status='fallback';console.warn('Roman atlas unavailable; using legacy sprites.');document.dispatchEvent(new Event('roman-art-ready'));};
-  atlas.src=AssetPaths.url('characters/enemies/shared/roman-atlas-v2.png');
-})();
-
-Object.defineProperty(exports, "RomanArt", {get: () => RomanArt});
-},
-"src/rendering/art/roman-art-legacy.js": function(require, exports){
-let RomanArt;
-/* Hand-authored pixel art. Integer scanlines keep all edges crisp and transparent.
- * 48 x 64, four walking frames, three legionary faces and a centurion.
- * Feet are the anchor; shields and spears are visual, not extra hitboxes. */
-(() => {
-  const ink='#303039', skin='#efbd91', light='#ffdbad', shade='#c58c6b';
-  const silver='#b8c7ce', bright='#eff1df', steel='#7d8e9d';
-  const frames=new Map();
-  function make(variant=0,frame=0,boss=false){
-    const c=document.createElement('canvas');c.width=48;c.height=64;
-    const g=c.getContext('2d');
-    const rect=(x,y,w,h,color)=>{g.fillStyle=color;g.fillRect(x,y,w,h);};
-    // Scan-converted polygons: no vector antialiasing on the sprite grid.
-    function poly(points,color){
-      const min=Math.min(...points.map(p=>p[1])),max=Math.max(...points.map(p=>p[1]));
-      for(let y=min;y<max;y++){
-        const cross=[];
-        for(let i=0,j=points.length-1;i<points.length;j=i++){
-          const a=points[j],b=points[i],scan=y+.5;
-          if((a[1]<=scan&&b[1]>scan)||(b[1]<=scan&&a[1]>scan))cross.push(a[0]+(scan-a[1])*(b[0]-a[0])/(b[1]-a[1]));
-        }
-        cross.sort((a,b)=>a-b);
-        for(let i=0;i+1<cross.length;i+=2)rect(Math.ceil(cross[i]),y,Math.ceil(cross[i+1])-Math.ceil(cross[i]),1,color);
-      }
-    }
-    function oval(x,y,rx,ry,color){for(let row=-ry;row<=ry;row++){const half=Math.floor(rx*Math.sqrt(Math.max(0,1-row*row/(ry*ry))));rect(x-half,y+row,half*2+1,1,color);}}
-    const stride=[0,2,0,-2][frame],green=boss?'#b8413d':variant===1?'#198453':'#238f55';
-    // Back arm and green tunic, darker right-hand side.
-    poly([[25,30],[36,30],[41,35],[41,43],[36,45],[34,39],[28,38]],ink);
-    poly([[29,32],[35,32],[39,36],[39,41],[35,42],[33,36],[28,36]],skin);
-    rect(37,35,2,5,light);
-    poly([[17,30],[29,28],[36,33],[37,46],[33,52],[16,51],[13,44]],ink);
-    poly([[18,32],[28,30],[34,34],[35,46],[31,49],[18,49],[15,44]],green);
-    poly([[19,33],[23,31],[23,46],[19,48],[17,43]],boss?'#e66b50':'#4abe6e');
-    rect(27,35,6,13,boss?'#7d3438':'#176a46');
-    // Bare legs with strapped leather sandals. Four proper walking poses.
-    for(const [x,step] of [[18,stride],[29,-stride]]){
-      poly([[x,49],[x+6,49],[x+6,55+step],[x+4,59+step],[x-5,59+step],[x-5,56+step],[x,54+step]],ink);
-      rect(x+1,50,4,6+step,skin);rect(x+1,50,2,4+step,light);
-      rect(x-4,56+step,9,3,'#9c623f');rect(x-5,59+step,11,2,ink);
-      rect(x-3,56+step,2,2,'#e5b88b');rect(x,56+step,2,2,'#e5b88b');
-      rect(x+1,52+step,4,1,'#8a573b');rect(x+2,54+step,3,1,'#8a573b');
-    }
-    // Belt and segmented silver armour over the green tunic.
-    rect(16,43,19,4,ink);rect(17,44,17,2,'#72513a');rect(23,43,5,4,'#d5ad59');rect(24,44,3,2,'#f7d582');
-    poly([[17,31],[20,30],[22,38],[29,38],[30,30],[33,31],[33,41],[17,41]],ink);
-    poly([[18,31],[20,32],[21,39],[30,39],[31,31],[32,32],[32,40],[18,40]],silver);
-    rect(18,34,2,5,bright);rect(20,39,10,1,steel);
-    for(let x=21;x<31;x+=3)rect(x,38,1,2,bright);
-    // Short neck behind a full cheek and a rounded, continuous jaw silhouette.
-    poly([[21,25],[32,24],[33,30],[29,34],[23,34],[20,30]],ink);
-    poly([[23,26],[30,26],[31,30],[28,32],[24,32],[22,30]],shade);
-    oval(24,21,boss?11:10,11,ink);
-    oval(24,21,boss?10:9,10,skin);
-    // Warm shadow follows the cheek; the light chin is broad rather than pointed.
-    poly([[30,18],[33,19],[33,24],[31,28],[27,31],[22,31],[19,29],[26,29],[30,26]],shade);
-    oval(25,23,boss?7:6,6,light);
-    oval(23,28,boss?6:5,2,skin);
-    // Ear sits within the side contour, not at the end of a thin jaw.
-    oval(33,20,3,4,ink);oval(33,20,2,3,skin);rect(33,19,1,2,shade);
-    // The nose has a raised bridge and a plump oval tip, shaded underneath.
-    const nose=variant===1&&!boss?1:0;
-    poly([[17,16],[20,16],[22,20],[20,24],[16,24],[14,20]],ink);
-    poly([[18,17],[19,17],[21,20],[19,23],[16,22],[16,20]],skin);
-    oval(13-nose,21,7+nose,4,ink);
-    oval(13-nose,21,6+nose,3,skin);
-    oval(12-nose,20,4+nose,1,light);
-    rect(11-nose,24,6+nose,1,shade);rect(18,23,2,1,shade);
-    // Smaller eyes grouped around the bridge keep the face in three-quarter view.
-    oval(19,16,2,3,bright);rect(18,17,1,2,ink);
-    oval(25,16,2,3,bright);rect(24,17,1,2,ink);
-    rect(17,13,4,1,ink);rect(24,13,4,1,ink);
-    // Curved mouth and cheek crease, with a wider moustached jaw on the officer.
-    if(boss){
-      oval(19,25,4,2,ink);oval(25,25,4,2,ink);
-      rect(16,26,2,2,ink);rect(27,26,2,2,ink);
-      rect(21,27,4,1,'#803f37');rect(22,29,4,1,shade);
-      rect(17,14,4,1,ink);rect(24,14,4,1,ink);
-    }else{
-      rect(20,26,5,1,ink);rect(25,25,2,1,ink);rect(27,23,1,2,shade);
-      rect(21,28,5,1,shade);
-      if(variant===2){rect(18,15,3,1,steel);rect(24,15,3,1,steel);rect(20,25,6,1,'#786353');}
-    }
-    // Domed silver helmet with rim, side guard and top knob (no red crest on soldiers).
-    poly([[12,13],[14,8],[18,5],[26,4],[32,7],[35,12],[36,16],[31,16],[29,13],[21,12],[17,15],[10,15]],ink);
-    poly([[14,12],[16,8],[20,6],[26,6],[31,8],[33,12],[34,14],[31,14],[28,11],[20,10],[16,13]],silver);
-    poly([[16,10],[19,7],[25,6],[28,7],[21,8],[18,11]],bright);
-    poly([[27,7],[31,9],[33,13],[30,12],[29,9]],steel);
-    rect(12,13,7,1,bright);rect(11,14,6,1,steel);
-    poly([[29,13],[33,14],[34,17],[33,21],[30,22],[28,20]],ink);
-    poly([[30,14],[32,15],[32,19],[30,20],[29,18]],silver);rect(30,15,1,3,bright);
-    oval(27,3,3,3,ink);oval(27,3,2,2,silver);rect(26,2,2,1,bright);
-    if(boss){poly([[15,7],[14,4],[18,1],[32,0],[38,3],[38,8],[32,6],[21,6]],ink);poly([[16,4],[20,2],[32,1],[36,3],[36,6],[31,4],[21,4],[16,6]],'#d65746');rect(21,2,10,1,'#ff9870');rect(16,12,17,2,'#e1b85f');}
-    // Horizontal spear visible beside the blue shield.
-    rect(1,38,45,3,ink);rect(7,39,39,1,'#b99a65');
-    poly([[0,39],[8,35],[13,39],[8,42]],ink);poly([[1,39],[8,37],[11,39],[8,40]],silver);rect(5,38,4,1,bright);
-    // Foreground hand gripping the shaft, with individual fingers.
-    oval(17,39,4,5,ink);oval(17,39,3,4,skin);rect(15,36,2,4,light);
-    rect(16,39,4,1,shade);rect(16,41,3,1,shade);
-    // Rectangular curved shield: silver edging, blue panels, golden boss and rivets.
-    poly([[27,30],[45,32],[46,58],[28,57],[25,53],[25,33]],ink);
-    poly([[28,32],[43,34],[44,56],[29,55],[27,52],[27,34]],'#d4ddd4');
-    poly([[29,34],[42,35],[42,54],[30,53],[29,51]],boss?'#698cba':'#77a9cf');
-    poly([[29,34],[33,35],[33,53],[30,52]],'#a5c9e0');
-    poly([[40,35],[42,35],[42,54],[39,53]],'#527da9');
-    rect(28,33,1,19,bright);rect(43,35,1,19,steel);rect(30,55,13,1,steel);
-    oval(35,44,5,7,'#84633d');oval(35,43,4,6,'#d5ac55');oval(34,42,3,4,'#f1cf76');rect(33,39,2,3,'#ffe39c');
-    for(const [x,y] of [[29,34],[41,35],[30,53],[42,54]]){rect(x,y,2,2,'#977642');rect(x,y,1,1,'#f4d780');}
-    return c;
-  }
-  for(let v=0;v<3;v++)for(let f=0;f<4;f++)frames.set(`${v}:${f}:false`,make(v,f,false));
-  for(let f=0;f<4;f++)frames.set(`0:${f}:true`,make(0,f,true));
-  RomanArt={get(variant=0,frame=0,boss=false){return frames.get(`${boss?0:variant%3}:${frame%4}:${boss}`);},width:48,height:64};
-})();
-
-Object.defineProperty(exports, "RomanArt", {get: () => RomanArt});
 },
 "src/world/village/village.js": function(require, exports){
 const {VillageData} = require("src/world/village/village-data.js");
@@ -671,6 +414,25 @@ VillageArt=(()=>{
 })();
 
 Object.defineProperty(exports, "VillageArt", {get: () => VillageArt});
+},
+"src/ui/character-preview.js": function(require, exports){
+// Fit the union of all poses, including the mirrored poses, once per card.
+// Keeping one scale and one foot position prevents zooming between frames.
+function fitCharacterPreview(bounds,anchor,width,height){
+ const padding=18,groundGap=8,[ax,ay]=anchor;
+ const halfWidth=Math.max(ax-bounds.left,bounds.right-ax,1);
+ const above=Math.max(ay-bounds.top,1),below=Math.max(bounds.bottom-ay,0);
+ const scale=Math.min(1.6,(width-2*padding)/(2*halfWidth),(height-2*padding-groundGap)/(above+below));
+ return {scale,x:width/2,y:height-padding-groundGap-below*scale};
+}
+function drawCharacterPreview(g,frame,anchor,placement,reverse=false){
+ const {x,y,scale}=placement;
+ g.save();g.translate(x,y);g.scale(reverse?-scale:scale,scale);
+ g.drawImage(frame,-anchor[0],-anchor[1]);g.restore();
+}
+
+Object.defineProperty(exports, "fitCharacterPreview", {get: () => fitCharacterPreview});
+Object.defineProperty(exports, "drawCharacterPreview", {get: () => drawCharacterPreview});
 }
 };
 const cache = Object.create(null);

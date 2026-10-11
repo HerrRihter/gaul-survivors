@@ -1,4 +1,5 @@
 'use strict';
+const characterFrames=require('../data/animations/character-frames.json');
 module.exports={
   "pages": [
     "index.html",
@@ -6,6 +7,7 @@ module.exports={
     "village-preview.html"
   ],
   "groups": [
+    {purpose:'Independent character poses and shared loader',consumers:['index.html','legion-preview.html'],files:['src/rendering/character-frames.js','data/animations/character-frames.js',...[...new Set(Object.values(characterFrames.characters).flatMap(c=>Object.values(c.actions).flat()))].map(file=>"assets/runtime/"+file)]},
     {
       "purpose": "Game rules, persistence, input, UI and render loop",
       "consumers": [
@@ -23,13 +25,14 @@ module.exports={
         "src/rendering/art/projectile-art.js",
         "src/entities/heroes.js",
         "data/animations/villager-layout.js",
-        "data/animations/motion-v2-layout.js",
         "src/rendering/art/villager-art.js",
         "src/rendering/art/hero-art.js",
         "data/animations/menhir-layout.js",
         "src/rendering/art/menhir-art.js",
         "src/systems/corpses.js",
         "src/ui/menu-portraits.js",
+        "src/ui/character-preview.js",
+        "data/animations/character-bounds.js",
         "src/app/game-session.js",
         "src/main.js", "src/core/math.js", "src/rendering/depth-order.js", "src/rendering/animation-player.js", "data/animations/action-timing.js",
         "src/world/village/village-data.js",
@@ -54,7 +57,7 @@ module.exports={
       ]
     },
     {
-      "purpose": "Roman art, animation bounds and units; legacy load-failure fallback",
+      "purpose": "Roman portraits, animation adapters and units; legacy load-failure fallback",
       "consumers": [
         "index.html",
         "legion-preview.html"
@@ -62,27 +65,9 @@ module.exports={
       "files": [
         "src/rendering/art/roman-art-legacy.js",
         "src/rendering/art/roman-art.js",
-        "data/animations/animation-layout.js",
         "src/rendering/art/animation-art.js",
-        "data/animations/unit-layout.js",
         "src/rendering/art/unit-art.js",
         "src/entities/legion.js",
-        "assets/runtime/characters/enemies/shared/roman-atlas-v2.png",
-        "assets/runtime/characters/heroes/asterix/animations.png",
-        "assets/runtime/characters/heroes/obelix/animations.png",
-        "assets/runtime/characters/heroes/obelix/walk-v3.png",
-        "assets/runtime/characters/heroes/cacofonix/walk-v3.png",
-        "assets/runtime/characters/heroes/antisanitarix/walk-v3.png",
-        "assets/runtime/characters/heroes/automatix/walk-v3.png",
-        "assets/runtime/characters/heroes/panoramix/walk-v3.png",
-        "assets/runtime/characters/enemies/shared/legion-animation.png",
-        "assets/runtime/characters/enemies/shared/centurion-animation.png",
-        "assets/runtime/characters/enemies/shared/legion-hurt.png",
-        "assets/runtime/characters/enemies/spear/unit-spear-v1.png",
-        "assets/runtime/characters/enemies/pilum/unit-pilum-v1.png",
-        "assets/runtime/characters/enemies/veteran/unit-veteran-v1.png",
-        "assets/runtime/characters/enemies/turtle/unit-turtle-v1.png",
-        "assets/runtime/characters/enemies/ram/unit-ram-v1.png"
       ]
     },
     {
@@ -109,7 +94,7 @@ module.exports={
       ]
     },
     {
-      "purpose": "Hero portraits, projectiles, helmet currency and replacement walking sheets",
+      "purpose": "Static hero portraits, projectiles and helmet currency",
       "consumers": [
         "index.html"
       ],
@@ -118,66 +103,7 @@ module.exports={
         "assets/runtime/characters/heroes/obelix/portrait.png",
         "assets/runtime/projectiles/projectiles-v2.png",
         "assets/runtime/projectiles/menhir-flight-v2.png",
-        "assets/runtime/ui/roman-helmet-v1.png",
-        "assets/runtime/characters/heroes/antisanitarix/hero-antisanitarix-walk-v2.png",
-        "assets/runtime/characters/heroes/automatix/hero-automatix-walk-v2.png",
-        "assets/runtime/characters/heroes/panoramix/hero-panoramix-walk-v2.png"
-      ]
-    },
-    {
-      "purpose": "Twelve isolated animation frames per unlockable hero",
-      "consumers": [
-        "index.html"
-      ],
-      "files": [
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-0.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-1.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-2.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-3.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-4.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-5.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-6.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-7.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-8.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-9.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-10.png",
-        "assets/runtime/characters/heroes/cacofonix/animations/cacofonix-11.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-0.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-1.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-2.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-3.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-4.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-5.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-6.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-7.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-8.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-9.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-10.png",
-        "assets/runtime/characters/heroes/antisanitarix/animations/antisanitarix-11.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-0.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-1.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-2.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-3.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-4.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-5.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-6.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-7.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-8.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-9.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-10.png",
-        "assets/runtime/characters/heroes/automatix/animations/automatix-11.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-0.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-1.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-2.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-3.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-4.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-5.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-6.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-7.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-8.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-9.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-10.png",
-        "assets/runtime/characters/heroes/panoramix/animations/panoramix-11.png"
+        "assets/runtime/ui/roman-helmet-v1.png"
       ]
     }
   ]

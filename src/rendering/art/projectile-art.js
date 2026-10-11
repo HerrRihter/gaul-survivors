@@ -4,13 +4,8 @@ export let ProjectileArt;
 ProjectileArt=(()=>{
  // The release hand is 48 logical pixels above the foot anchor.
  const FISH_HEIGHT=48,art={};
-<<<<<<< HEAD:src/rendering/art/projectile-art.js
  if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url('projectiles/projectiles-v2.png');}
  function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=(kind==='fish'?34:72)*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
-=======
- if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src='projectiles-v2.png';}
- function bitmap(g,kind,x,y,angle){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=kind==='fish'?34:72,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
->>>>>>> parent of 666fb51 (Add hero and permanent upgrades):projectile-art.js
  function drawFish(g,f){
   const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
   if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055))return;

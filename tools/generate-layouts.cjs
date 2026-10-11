@@ -10,9 +10,10 @@ function generateLayouts({root=path.resolve(__dirname,'..'),check=false}={}){
    if(fs.readFileSync(target,'utf8')!==output)throw new Error('Outdated generated layout: '+module);
   }else fs.writeFileSync(target,output);
  }
+ require('./generate-character-bounds.cjs').generateCharacterBounds({root,check});
 }
 if(require.main===module){
- try{generateLayouts({check:process.argv.includes('--check')});console.log('PASS: five animation layouts match their primary JSON definitions.');}
+ try{generateLayouts({check:process.argv.includes('--check')});console.log('PASS: animation definitions match their primary JSON sources.');}
  catch(error){console.error(error.message);process.exitCode=1;}
 }
 module.exports={generateLayouts};

@@ -6,16 +6,18 @@ const factories = {
 const {VillagerArt} = require("src/rendering/art/villager-art.js");
 const {AnimationArt} = require("src/rendering/art/animation-art.js");
 const {UnitArt} = require("src/rendering/art/unit-art.js");
-const specs=[['asterix',0],['obelix',0],['roman',0],['roman',1],['roman',2],['boss',0],...['cacofonix','antisanitarix','automatix','panoramix'].map(n=>[n,0]),...['spear','pilum','veteran','turtle','ram'].map(n=>[n,0])];
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const specs=Object.entries(CharacterFrames.manifest.characters);
 function run(){
  if(Object.values(VillagerArt.status).some(s=>s!=='ready')||Object.values(AnimationArt.status).some(s=>s!=='ready')||Object.values(UnitArt.status).some(s=>s!=='ready'))return;
  const root=document.getElementById('frames');root.replaceChildren();let count=0,clipped=[];
- for(const [name,v] of specs){const title=document.createElement('h2');title.textContent=name+' '+v;root.append(title);const row=document.createElement('section');root.append(row);
- for(const action of ['walk','attack',...((name==='roman'||UnitArt.get(name)||VillagerArt.get(name))?['hurt']:[])])for(let i=0;i<4;i++){
- const frame=VillagerArt.get(name,action,i/4)||UnitArt.get(name,action,i/4)||AnimationArt.get(name,v,action,i/4),w=frame.width,h=frame.height;
- const data=frame.getContext('2d').getImageData(0,0,w,h).data;let edge=0;
+ for(const [name,spec] of specs){const title=document.createElement('h2');title.textContent=name;root.append(title);const row=document.createElement('section');root.append(row);
+ for(const [action,sequence]of Object.entries(spec.actions))for(let i=0;i<sequence.length;i++){
+ const frame=CharacterFrames.get(name,action,(i+.01)/sequence.length),w=frame.width,h=frame.height;
+ const audit=document.createElement('canvas');audit.width=w;audit.height=h;const ag=audit.getContext('2d');ag.drawImage(frame,0,0);
+ const data=ag.getImageData(0,0,w,h).data;let edge=0;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if((x===0||x===w-1||y===0||y===h-1)&&data[(y*w+x)*4+3]>8)edge++;
- if(edge)clipped.push(name+'/'+v+'/'+action+'/'+i);count++;
+ if(edge)clipped.push(name+'/'+action+'/'+i);count++;
  const c=document.createElement('canvas');c.width=180;c.height=200;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(frame,0,0,w,h,5,5,170,170);g.fillStyle=edge?'#ff6666':'#eee';g.font='15px monospace';g.fillText(action+' '+i,8,194);row.append(c);
  }}
  document.getElementById('status').textContent=count+' frames · '+clipped.length+' touching frame edges'+(clipped.length?' · '+clipped.join(', '):' · PASS');
@@ -26,50 +28,21 @@ const timer=setInterval(run,250);run();
 
 },
 "src/rendering/art/villager-art.js": function(require, exports){
-const {clampedFrame,loopFrame} = require("src/rendering/animation-player.js");
+const {CharacterFrames} = require("src/rendering/character-frames.js");
 const {VillagerLayout} = require("data/animations/villager-layout.js");
-const {MotionV2Layout} = require("data/animations/motion-v2-layout.js");
 const {AssetPaths} = require("src/rendering/asset-paths.js");
-let VillagerArt;
-let HelmetArt;
-'use strict';
-VillagerArt=(()=>{
- const names=['cacofonix','antisanitarix','automatix','panoramix'],frames={},walkFrames={},status={},heights={cacofonix:82,antisanitarix:78,automatix:88,panoramix:86};
- function get(name,action='idle',progress=0){
-  if(!frames[name])return null;const row=action==='hurt'?2:action==='attack'?1:0;
-  const col=action==='idle'?1:row?clampedFrame(progress):loopFrame(progress);
-  return action==='walk'&&walkFrames[name]?walkFrames[name][col]:frames[name][row*4+col];
- }
+const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='villager');
+function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
  function draw(g,name,x,y,actor,flip=false){
   const a=actor||{},reaction=a.hurt,attack=a.action||a.visualAction;
   const action=reaction?'hurt':attack?'attack':a.moving?'walk':'idle';
   const progress=reaction?reaction.elapsed/reaction.duration:attack?attack.elapsed/attack.duration:a.walk||0;
   const frame=get(name,action,progress);if(!frame)return false;
-  g.save();g.translate(Math.round(x),Math.round(y));if(reaction?reaction.flip:attack?attack.flip:flip)g.scale(-1,1);g.drawImage(frame,-128,-236);g.restore();return true;
+  g.save();g.translate(Math.round(x),Math.round(y));if(reaction?reaction.flip:attack?attack.flip:flip)g.scale(-1,1);g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
  }
- if(typeof Image!=='undefined')for(const name of names){
-  status[name]='loading';const images=[];let loaded=0;
-  const finish=()=>{
-   const boxes=VillagerLayout[name],cell=362;
-   const lo=Math.min(...boxes.map((b,i)=>b[0]-(i%4)*cell)),hi=Math.max(...boxes.map((b,i)=>b[0]+b[2]-(i%4)*cell));
-   const scale=Math.min(heights[name]/Math.max(...boxes.slice(0,4).map(b=>b[3])),105/Math.max(...boxes.map(b=>b[3])),112/(hi-lo)),pivot=(lo+hi)/2;
-   frames[name]=boxes.map(([sx,sy,sw,sh],i)=>{
-    const c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.imageSmoothingEnabled=true;
-    g.drawImage(images[i],0,0,sw,sh,128+(sx-i%4*cell-pivot)*scale,236-sh*scale,sw*scale,sh*scale);return c;
-   });status[name]='ready';document.dispatchEvent(new Event('villager-art-ready'));
-   if(typeof MotionV2Layout!=='undefined'&&MotionV2Layout[name]){
-    const sheet=new Image(),layout=MotionV2Layout[name];sheet.onload=()=>{
-     // Normalize the standing height of each walk pose, not the sheet's largest
-     // pose. Keep aspect ratio and a shared floor so the body never pulses.
-     const height=Math.min(scale*Math.max(...boxes.slice(0,4).map(b=>b[3])),...layout.boxes.map(b=>112*b[3]/b[2]));
-     walkFrames[name]=layout.boxes.map(([x,y,w,h])=>{const k=height/h,c=document.createElement('canvas');c.width=c.height=256;const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.drawImage(sheet,x,y,w,h,128-w*k/2,236-height,w*k,height);return c;});document.dispatchEvent(new Event('villager-art-ready'));
-    };sheet.src=AssetPaths.url(layout.file);
-   }
-  };
-  for(let i=0;i<12;i++){const image=new Image();images.push(image);image.onload=()=>{if(++loaded===12)finish();};image.onerror=()=>status[name]='fallback';image.src=AssetPaths.url('characters/heroes/'+name+'/animations/'+name+'-'+i+'.png');}
- }
- return {status,get,draw};
-})();
+
+const VillagerArt={status:CharacterFrames.register(names,'villager-art-ready'),get,draw};
+let HelmetArt;
 HelmetArt=(()=>{
  let art=null;const api={status:'loading',draw(g,x,y,scale=1){if(!art)return false;g.save();g.fillStyle='#17271c66';g.beginPath();g.ellipse(x,y+7*scale,12*scale,4*scale,0,0,Math.PI*2);g.fill();g.drawImage(art,x-15*scale,y-20*scale,30*scale,30*scale);g.restore();return true;}};
  if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art=document.createElement('canvas');art.width=art.height=64;const g=art.getContext('2d'),[x,y,w,h]=VillagerLayout.helmet;const scale=58/Math.max(w,h);g.drawImage(image,x,y,w,h,(64-w*scale)/2,(64-h*scale)/2,w*scale,h*scale);api.status='ready';};image.onerror=()=>api.status='fallback';image.src=AssetPaths.url('ui/roman-helmet-v1.png');}
@@ -79,47 +52,83 @@ HelmetArt=(()=>{
 Object.defineProperty(exports, "VillagerArt", {get: () => VillagerArt});
 Object.defineProperty(exports, "HelmetArt", {get: () => HelmetArt});
 },
-"src/rendering/animation-player.js": function(require, exports){
-const {actionTiming} = require("data/animations/action-timing.js");
-function clampedFrame(progress){
-  return Math.min(actionTiming.frameCount-1,Math.floor(Math.max(0,progress)*actionTiming.frameCount));
-}
-function loopFrame(progress){
-  return Math.floor(((progress%1)+1)%1*actionTiming.frameCount);
-}
-function advanceAction(actor,dt,impact){
-  const action=actor.action;
-  if(!action)return;
-  action.elapsed+=dt;
-  if(!action.hit&&action.elapsed>=action.duration*actionTiming.impactProgress){
-    action.hit=true;
-    impact(action);
+"src/rendering/character-frames.js": function(require, exports){
+const {CharacterFrameManifest} = require("data/animations/character-frames.js");
+const {AssetPaths} = require("src/rendering/asset-paths.js");
+// One decoded image per pose, shared by every actor. No crop or canvas allocation
+// occurs during animation playback. The manifest is the character's source of truth.
+const loaded=new Map();
+const CharacterFrames={
+ manifest:CharacterFrameManifest,
+ register(ids,eventName){
+  const status={};
+  for(const id of ids){
+   const spec=CharacterFrameManifest.characters[id];
+   if(!spec)throw new Error('Unknown character frame set: '+id);
+   status[id]='loading';
+   let entry=loaded.get(id);
+   if(!entry){
+    entry={status:'loading',images:new Map(),listeners:[]};loaded.set(id,entry);
+    if(typeof Image!=='undefined'){
+     const files=new Map();
+     for(const [action,sequence]of Object.entries(spec.actions)){
+      const scale=spec.actionScale?.[action]??1;
+      if(!Number.isFinite(scale)||scale<=0)throw new Error('Invalid action scale: '+id+'/'+action);
+      for(const file of sequence){
+       if(files.has(file)&&files.get(file)!==scale)throw new Error('Conflicting frame scales: '+file);
+       files.set(file,scale);
+      }
+     }
+     let remaining=files.size;
+     const notify=()=>{for(const listener of entry.listeners)listener(entry.status);};
+     for(const [file,scale]of files){
+      const image=new Image();entry.images.set(file,image);
+      image.onload=()=>{
+       if(entry.status!=='loading')return;
+       if(image.naturalWidth!==CharacterFrameManifest.width||image.naturalHeight!==CharacterFrameManifest.height){
+        entry.status='fallback';notify();return;
+       }
+       // Normalize mismatched source actions once, around the same foot anchor.
+       // Every pose in an action gets the same scale: crouches remain crouches.
+       if(scale!==1){
+        const frame=document.createElement('canvas');
+        frame.width=CharacterFrameManifest.width;frame.height=CharacterFrameManifest.height;
+        const g=frame.getContext('2d'),[ax,ay]=CharacterFrameManifest.anchor;
+        g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
+        g.drawImage(image,ax*(1-scale),ay*(1-scale),frame.width*scale,frame.height*scale);
+        entry.images.set(file,frame);
+       }
+       if(--remaining===0){entry.status='ready';notify();}
+      };
+      image.onerror=()=>{if(entry.status==='loading'){entry.status='fallback';notify();}};
+      image.src=AssetPaths.url(file);
+     }
+    }
+   }
+   entry.listeners.push(value=>{status[id]=value;document.dispatchEvent(new Event(eventName));});
+   status[id]=entry.status;
   }
-  if(action.elapsed>=action.duration)actor.action=null;
-}
+  return status;
+ },
+ get(id,action='idle',progress=0){
+  const entry=loaded.get(id),spec=CharacterFrameManifest.characters[id];
+  if(!spec||entry?.status!=='ready')return null;
+  if(action==='idle')return entry.images.get(spec.actions[spec.idle.action][spec.idle.index]);
+  const sequence=spec.actions[action]||spec.actions.walk;
+  if(!sequence?.length)return null;
+  const p=Number.isFinite(progress)?progress:0;
+  const index=action==='walk'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
+  return entry.images.get(sequence[index]);
+ },
+};
 
-Object.defineProperty(exports, "clampedFrame", {get: () => clampedFrame});
-Object.defineProperty(exports, "loopFrame", {get: () => loopFrame});
-Object.defineProperty(exports, "advanceAction", {get: () => advanceAction});
+Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
 },
-"data/animations/action-timing.js": function(require, exports){
-// Four visual phases; the hit event begins on the third frame. Rendering reads
-// this timing, while simulation owns event dispatch and damage.
-const actionTiming={frameCount:4,impactProgress:0.5,event:'hit',loop:false};
+"data/animations/character-frames.js": function(require, exports){
+// Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"}}};
 
-Object.defineProperty(exports, "actionTiming", {get: () => actionTiming});
-},
-"data/animations/villager-layout.js": function(require, exports){
-// Generated from data/animations/villager-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const VillagerLayout={"automatix":[[35,22,261,312],[444,19,218,313],[775,21,255,315],[1179,22,200,310],[35,385,270,305],[425,347,253,344],[744,421,415,268],[1166,388,260,302],[27,699,338,340],[427,768,265,276],[786,740,275,302],[1154,728,261,308]],"antisanitarix":[[50,19,272,322],[439,19,230,322],[779,22,287,320],[1183,19,225,323],[56,388,267,316],[362,365,351,339],[734,400,388,301],[1159,385,259,317],[22,724,337,339],[419,757,257,304],[776,737,284,328],[1185,736,225,331]],"helmet":[302,128,851,908],"panoramix":[[37,10,298,333],[414,13,265,328],[766,11,288,331],[1172,13,256,334],[34,374,299,323],[411,362,276,336],[764,379,359,319],[1175,366,254,334],[33,721,331,343],[409,727,307,331],[767,754,343,304],[1162,712,255,351]],"cacofonix":[[38,4,283,348],[416,6,267,347],[779,3,290,350],[1157,8,262,343],[47,376,273,339],[416,361,275,353],[762,383,334,335],[1157,378,262,341],[35,721,316,346],[406,732,313,334],[810,768,268,297],[1158,724,261,343]]};
-
-Object.defineProperty(exports, "VillagerLayout", {get: () => VillagerLayout});
-},
-"data/animations/motion-v2-layout.js": function(require, exports){
-// Generated from data/animations/motion-v2-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const MotionV2Layout={"antisanitarix":{"boxes":[[41,103,500,538],[609,103,415,541],[1097,103,503,541],[1664,103,401,541]],"height":724,"width":2172,"file":"characters/heroes/antisanitarix/walk-v3.png"},"projectiles":{"height":1024,"boxes":[[426,185,680,300],[110,748,1334,76]],"width":1536,"file":"projectiles/projectiles-v2.png"},"automatix":{"width":2043,"boxes":[[28,127,471,563],[564,123,424,572],[1057,125,486,566],[1608,125,422,570]],"file":"characters/heroes/automatix/walk-v3.png","height":770},"panoramix":{"width":2172,"boxes":[[24,72,488,568],[564,71,473,574],[1112,72,470,572],[1659,71,461,574]],"file":"characters/heroes/panoramix/walk-v3.png","height":724},"cacofonix":{"width":2172,"boxes":[[24,43,541,642],[584,44,494,637],[1099,45,517,638],[1647,44,501,640]],"file":"characters/heroes/cacofonix/walk-v3.png","height":724},"obelix":{"width":2204,"boxes":[[30,81,496,553],[573,78,454,556],[1124,81,499,553],[1712,81,473,552]],"file":"characters/heroes/obelix/walk-v3.png","height":713}};
-
-Object.defineProperty(exports, "MotionV2Layout", {get: () => MotionV2Layout});
+Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
 },
 "src/rendering/asset-paths.js": function(require, exports){
 let AssetPaths;
@@ -132,87 +141,29 @@ AssetPaths = (() => {
 
 Object.defineProperty(exports, "AssetPaths", {get: () => AssetPaths});
 },
+"data/animations/villager-layout.js": function(require, exports){
+// Generated from data/animations/villager-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
+const VillagerLayout={"automatix":[[35,22,261,312],[444,19,218,313],[775,21,255,315],[1179,22,200,310],[35,385,270,305],[425,347,253,344],[744,421,415,268],[1166,388,260,302],[27,699,338,340],[427,768,265,276],[786,740,275,302],[1154,728,261,308]],"antisanitarix":[[50,19,272,322],[439,19,230,322],[779,22,287,320],[1183,19,225,323],[56,388,267,316],[362,365,351,339],[734,400,388,301],[1159,385,259,317],[22,724,337,339],[419,757,257,304],[776,737,284,328],[1185,736,225,331]],"helmet":[302,128,851,908],"panoramix":[[37,10,298,333],[414,13,265,328],[766,11,288,331],[1172,13,256,334],[34,374,299,323],[411,362,276,336],[764,379,359,319],[1175,366,254,334],[33,721,331,343],[409,727,307,331],[767,754,343,304],[1162,712,255,351]],"cacofonix":[[38,4,283,348],[416,6,267,347],[779,3,290,350],[1157,8,262,343],[47,376,273,339],[416,361,275,353],[762,383,334,335],[1157,378,262,341],[35,721,316,346],[406,732,313,334],[810,768,268,297],[1158,724,261,343]]};
+
+Object.defineProperty(exports, "VillagerLayout", {get: () => VillagerLayout});
+},
 "src/rendering/art/animation-art.js": function(require, exports){
-const {clampedFrame,loopFrame} = require("src/rendering/animation-player.js");
-const {AnimationLayout} = require("data/animations/animation-layout.js");
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-const {MotionV2Layout} = require("data/animations/motion-v2-layout.js");
-let AnimationArt;
-/* Four actual drawn poses per walk/attack. Decode and cache once, not per actor. */
-(() => {
-  const sheets={},walkSheets={},status={};
-  const specs={asterix:{file:'characters/heroes/asterix/animations.png',rows:2,scale:.66},obelix:{file:'characters/heroes/obelix/animations.png',rows:2,scale:.84},legion:{file:'characters/enemies/shared/legion-animation.png',rows:6},centurion:{file:'characters/enemies/shared/centurion-animation.png',rows:2},legionhurt:{file:'characters/enemies/shared/legion-hurt.png',rows:3}};
-  AnimationArt={status,get(name,variant=0,action='walk',progress=0){
-    if(action==='idle'){action='attack';progress=0;}
-    const group=action==='hurt'&&name==='roman'?'legionhurt':name==='asterix'||name==='obelix'?name:name==='boss'?'centurion':name==='roman'?'legion':null;
-    if(!group||!sheets[group])return null;
-    if(action==='walk'&&walkSheets[group])return walkSheets[group][loopFrame(progress)];
-    const row=group==='legionhurt'?variant%3:(group==='legion'?(variant%3)*2:0)+(action==='attack'?1:0);
-    const frame=action==='attack'||action==='hurt'?clampedFrame(progress):loopFrame(progress);
-    return sheets[group][row*4+frame];
-  }};
-  if(typeof Image==='undefined')return;
-  for(const [name,spec] of Object.entries(specs)){
-    status[name]='loading';const image=new Image();
-    image.onload=()=>{
-      const frames=[],w=image.naturalWidth/4,h=image.naturalHeight/spec.rows;
-      for(let row=0;row<spec.rows;row++)for(let col=0;col<4;col++){
-        const c=document.createElement('canvas');c.width=128;c.height=128;
-        const g=c.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-        const bounds=typeof AnimationLayout!=='undefined'&&AnimationLayout[name]?AnimationLayout[name][row*4+col]:[col*w,row*h,w,h];
-        const [sx,sy,sw,sh]=bounds;
-        let scale=128/w*(spec.scale|| (name==='centurion'?.8:.75));
-        if(row===0&&(name==='asterix'||name==='obelix'))scale*=Math.max(...AnimationLayout[name].slice(0,4).map(b=>b[3]))/sh;
-        // Source poses can reach across an implicit grid line. Measured opaque
-        // bounds retain the entire spear/fist; a fixed cell pivot avoids jitter.
-        if(name==='legionhurt'||name==='centurion'&&!(row===1&&col===2)){g.translate(128,0);g.scale(-1,1);}
-        const dx=Math.max(2,Math.min(126-sw*scale,64+(sx-(col+.5)*w)*scale));
-        g.drawImage(image,sx,sy,sw,sh,dx,115-sh*scale,sw*scale,sh*scale);frames.push(c);
-      }
-      sheets[name]=frames;status[name]='ready';document.dispatchEvent(new Event('animation-art-ready'));
-      const layout=MotionV2Layout[name];
-      if(layout){
-        const walk=new Image();
-        walk.onload=()=>{
-          const height=Math.min(128/w*spec.scale*Math.max(...AnimationLayout[name].slice(0,4).map(b=>b[3])),...layout.boxes.map(b=>124*b[3]/b[2]));
-          walkSheets[name]=layout.boxes.map(([x,y,sw,sh])=>{
-            const c=document.createElement('canvas');c.width=c.height=128;
-            const g=c.getContext('2d'),k=height/sh;g.imageSmoothingEnabled=true;
-            g.drawImage(walk,x,y,sw,sh,64-sw*k/2,115-height,sw*k,height);return c;
-          });
-          document.dispatchEvent(new Event('animation-art-ready'));
-        };
-        walk.src=AssetPaths.url(layout.file);
-      }
-    };
-    image.onerror=()=>{status[name]='fallback';console.warn('Animation atlas unavailable: '+spec.file);document.dispatchEvent(new Event('animation-art-ready'));};
-    image.src=AssetPaths.url(spec.file);
-  }
-})();
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const ids=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='animation');
+const AnimationArt={
+ status:CharacterFrames.register(ids,'animation-art-ready'),
+ get(name,variant=0,action='walk',progress=0){
+  const id=name==='roman'?'roman-'+((Math.floor(variant)%3+3)%3):name;
+  return ids.includes(id)?CharacterFrames.get(id,action,progress):null;
+ },
+};
 
 Object.defineProperty(exports, "AnimationArt", {get: () => AnimationArt});
 },
-"data/animations/animation-layout.js": function(require, exports){
-// Generated from data/animations/animation-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const AnimationLayout={"legion":[[71,25,128,251],[306,16,130,260],[563,17,135,259],[837,17,129,259],[72,282,130,251],[240,321,235,213],[531,325,272,208],[826,305,164,228],[63,554,153,216],[314,556,164,215],[570,557,158,214],[830,556,153,215],[65,779,140,231],[233,818,254,194],[524,830,290,183],[832,788,162,225],[50,1028,170,267],[288,1029,184,267],[541,1031,182,265],[807,1028,181,268],[61,1297,139,224],[242,1326,238,196],[501,1341,315,181],[825,1314,166,208]],"centurion":[[59,9,342,429],[479,8,368,432],[922,9,377,431],[1395,8,333,432],[55,453,352,419],[505,453,365,417],[897,460,450,409],[1411,450,315,421]],"legionhurt":[[138,3,207,367],[423,19,296,353],[790,13,247,359],[1159,9,195,363],[111,380,251,339],[447,378,306,342],[798,386,261,336],[1161,386,239,338],[105,721,267,345],[439,722,320,341],[793,725,275,342],[1165,724,237,343]],"asterix":[[70,8,187,259],[389,0,153,265],[686,8,202,260],[1017,2,147,266],[64,300,185,260],[380,297,182,263],[657,306,275,253],[1011,303,185,258]],"obelix":[[35,4,268,291],[363,0,224,297],[662,2,270,296],[1005,1,195,297],[46,380,271,228],[317,314,297,296],[643,352,343,258],[1011,352,210,256]]};
-
-Object.defineProperty(exports, "AnimationLayout", {get: () => AnimationLayout});
-},
 "src/rendering/art/unit-art.js": function(require, exports){
-const {clampedFrame,loopFrame} = require("src/rendering/animation-player.js");
-const {UnitLayout} = require("data/animations/unit-layout.js");
-const {AssetPaths} = require("src/rendering/asset-paths.js");
-let UnitArt;
-/* Dedicated, cached walk / attack / hurt atlases for specialist legion units. */
-(()=>{
- const frames={},status={},names=['spear','pilum','veteran','turtle','ram'];
- const sizes={spear:84,pilum:84,veteran:80,turtle:106,ram:122};
- function get(name,action='idle',progress=0){
-  if(!frames[name])return null;
-  const row=action==='attack'?1:action==='hurt'?2:0;
-  const col=action==='idle'?1:row?clampedFrame(progress):loopFrame(progress);
-  return frames[name][row*4+col];
- }
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
+function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
  function draw(g,e){
   const reaction=e.hurt||e.visualHurt,attack=e.action;
   const ramImpact=e.charge&&e.charge.left>1.14;
@@ -221,38 +172,12 @@ let UnitArt;
   const frame=get(e.unit,action,progress);if(!frame)return false;
   const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
-  g.drawImage(frame,-128,-236);g.restore();return true;
+  g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
  }
- UnitArt={status,get,draw};
- if(typeof Image==='undefined')return;
- for(const name of names){
-  status[name]='loading';const image=new Image();
-  image.onload=()=>{
-   const boxes=UnitLayout[name],cell=image.naturalWidth/4;
-   // One scale per entire sheet avoids changes in body size between poses.
-   const walkHeight=Math.max(...boxes.slice(0,4).map(b=>b[3]));
-   const scale=sizes[name]/walkHeight;
-   frames[name]=boxes.map(([sx,sy,sw,sh],index)=>{
-    const canvas=document.createElement('canvas');canvas.width=256;canvas.height=256;
-    const g=canvas.getContext('2d');g.imageSmoothingEnabled=true;g.imageSmoothingQuality='high';
-    const dx=128+(sx-(index%4+.5)*cell)*scale;
-    g.drawImage(image,sx,sy,sw,sh,dx,236-sh*scale,sw*scale,sh*scale);
-    return canvas;
-   });
-   status[name]='ready';document.dispatchEvent(new Event('unit-art-ready'));
-  };
-  image.onerror=()=>{status[name]='fallback';console.warn('Unit atlas unavailable: '+name);};
-  image.src=AssetPaths.url('characters/enemies/'+name+'/unit-'+name+'-v1.png');
- }
-})();
+
+const UnitArt={status:CharacterFrames.register(names,'unit-art-ready'),get,draw};
 
 Object.defineProperty(exports, "UnitArt", {get: () => UnitArt});
-},
-"data/animations/unit-layout.js": function(require, exports){
-// Generated from data/animations/unit-layout.json; edit the JSON and run node tools/generate-layouts.cjs.
-const UnitLayout={"ram":[[7,86,383,251],[390,86,378,250],[763,91,379,246],[1139,89,382,248],[7,406,386,244],[393,405,367,245],[735,405,435,247],[1158,405,374,246],[30,712,351,248],[403,712,384,249],[783,713,374,247],[1157,711,373,250]],"turtle":[[22,33,355,277],[409,35,348,276],[786,35,350,277],[1170,36,351,275],[17,369,353,270],[398,374,379,267],[760,374,407,268],[1168,371,352,272],[20,702,360,284],[408,698,364,288],[787,700,353,284],[1166,702,357,285]],"pilum":[[109,13,190,350],[465,15,203,348],[836,13,199,350],[1226,12,195,351],[71,378,211,343],[354,423,336,298],[765,431,367,290],[1192,375,236,346],[58,764,247,300],[404,763,290,303],[810,778,237,289],[1210,720,217,346]],"spear":[[121,13,188,325],[519,14,187,324],[865,14,188,323],[1241,14,188,323],[105,356,183,303],[409,389,331,269],[798,395,391,263],[1241,359,226,300],[107,675,229,312],[449,674,263,314],[853,674,222,313],[1249,675,199,313]],"veteran":[[89,12,269,317],[458,15,260,313],[816,14,288,315],[1216,12,262,316],[48,358,287,301],[427,343,295,316],[801,371,379,288],[1215,358,290,301],[62,689,310,299],[406,707,340,282],[819,708,287,285],[1208,681,279,315]]};
-
-Object.defineProperty(exports, "UnitLayout", {get: () => UnitLayout});
 }
 };
 const cache = Object.create(null);

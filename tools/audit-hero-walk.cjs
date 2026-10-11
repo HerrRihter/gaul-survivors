@@ -5,13 +5,13 @@ const {createServer}=require('./server.cjs');
 async function main(){
  const {chromium}=require(process.env.PLAYWRIGHT_MODULE||'playwright');
  const server=createServer();await new Promise(r=>server.listen(0,'127.0.0.1',r));
- const browser=await chromium.launch({headless:true});
+ const browser=await chromium.launch({headless:true,channel:process.env.PLAYWRIGHT_CHANNEL||'msedge'}).catch(error=>{server.close();throw error;});
  try{
   const page=await browser.newPage({viewport:{width:1080,height:1180}}),errors=[];
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/previews/animation-preview.html`);
   await page.waitForFunction(()=>document.querySelector('#status').textContent==='Герои готовы к бою');
-  await page.waitForFunction(()=>performance.getEntriesByType('resource').filter(e=>e.name.endsWith('/walk-v3.png')).length===5);
+ await page.waitForFunction(()=>performance.getEntriesByType('resource').filter(e=>/\/frames\/(asterix|obelix|cacofonix|antisanitarix|automatix|panoramix)\/walk\//.test(e.name)).length===24);
   const audit=await page.evaluate(async()=>{
    const {VillagerArt}=await import('/src/rendering/art/villager-art.js');
    const {AnimationArt}=await import('/src/rendering/art/animation-art.js');
@@ -25,7 +25,7 @@ async function main(){
     const bounds=[];
     for(let i=0;i<4;i++){
      const frame=VillagerArt.get(name,'walk',i/4)||AnimationArt.get(name,0,'walk',i/4);
-     const ctx=frame.getContext('2d'),data=ctx.getImageData(0,0,frame.width,frame.height).data;
+     const audit=document.createElement('canvas');audit.width=frame.width;audit.height=frame.height;const ctx=audit.getContext('2d');ctx.drawImage(frame,0,0);const data=ctx.getImageData(0,0,frame.width,frame.height).data;
      let top=frame.height,bottom=-1,left=frame.width,right=-1;
      for(let y=0;y<frame.height;y++)for(let x=0;x<frame.width;x++)if(data[(y*frame.width+x)*4+3]>32){top=Math.min(top,y);bottom=Math.max(bottom,y);left=Math.min(left,x);right=Math.max(right,x);}
      bounds.push({top,bottom,left,right,width:frame.width,height:frame.height});

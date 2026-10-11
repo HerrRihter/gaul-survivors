@@ -1,17 +1,19 @@
 import {VillagerArt} from '../src/rendering/art/villager-art.js';
 import {AnimationArt} from '../src/rendering/art/animation-art.js';
 import {UnitArt} from '../src/rendering/art/unit-art.js';
+import {CharacterFrames} from '../src/rendering/character-frames.js';
 
-const specs=[['asterix',0],['obelix',0],['roman',0],['roman',1],['roman',2],['boss',0],...['cacofonix','antisanitarix','automatix','panoramix'].map(n=>[n,0]),...['spear','pilum','veteran','turtle','ram'].map(n=>[n,0])];
+const specs=Object.entries(CharacterFrames.manifest.characters);
 function run(){
  if(Object.values(VillagerArt.status).some(s=>s!=='ready')||Object.values(AnimationArt.status).some(s=>s!=='ready')||Object.values(UnitArt.status).some(s=>s!=='ready'))return;
  const root=document.getElementById('frames');root.replaceChildren();let count=0,clipped=[];
- for(const [name,v] of specs){const title=document.createElement('h2');title.textContent=name+' '+v;root.append(title);const row=document.createElement('section');root.append(row);
- for(const action of ['walk','attack',...((name==='roman'||UnitArt.get(name)||VillagerArt.get(name))?['hurt']:[])])for(let i=0;i<4;i++){
- const frame=VillagerArt.get(name,action,i/4)||UnitArt.get(name,action,i/4)||AnimationArt.get(name,v,action,i/4),w=frame.width,h=frame.height;
- const data=frame.getContext('2d').getImageData(0,0,w,h).data;let edge=0;
+ for(const [name,spec] of specs){const title=document.createElement('h2');title.textContent=name;root.append(title);const row=document.createElement('section');root.append(row);
+ for(const [action,sequence]of Object.entries(spec.actions))for(let i=0;i<sequence.length;i++){
+ const frame=CharacterFrames.get(name,action,(i+.01)/sequence.length),w=frame.width,h=frame.height;
+ const audit=document.createElement('canvas');audit.width=w;audit.height=h;const ag=audit.getContext('2d');ag.drawImage(frame,0,0);
+ const data=ag.getImageData(0,0,w,h).data;let edge=0;
  for(let y=0;y<h;y++)for(let x=0;x<w;x++)if((x===0||x===w-1||y===0||y===h-1)&&data[(y*w+x)*4+3]>8)edge++;
- if(edge)clipped.push(name+'/'+v+'/'+action+'/'+i);count++;
+ if(edge)clipped.push(name+'/'+action+'/'+i);count++;
  const c=document.createElement('canvas');c.width=180;c.height=200;const g=c.getContext('2d');g.imageSmoothingEnabled=false;g.drawImage(frame,0,0,w,h,5,5,170,170);g.fillStyle=edge?'#ff6666':'#eee';g.font='15px monospace';g.fillText(action+' '+i,8,194);row.append(c);
  }}
  document.getElementById('status').textContent=count+' frames · '+clipped.length+' touching frame edges'+(clipped.length?' · '+clipped.join(', '):' · PASS');
