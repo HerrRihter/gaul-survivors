@@ -704,7 +704,7 @@ let CanvasSystem;
 'use strict';
 CanvasSystem={create(sessionContext){
 function resizeCanvas(){
-      const zoom=sessionContext.window.innerWidth<sessionContext.window.innerHeight?1.35:1,ratio=sessionContext.Math.min(sessionContext.window.devicePixelRatio||1,2)*zoom;
+      const zoom=sessionContext.window.innerWidth<sessionContext.window.innerHeight?0.9:1,ratio=sessionContext.Math.min(sessionContext.window.devicePixelRatio||1,2)*zoom;
       sessionContext.W=sessionContext.Math.max(1,(sessionContext.window.innerWidth||960)/zoom);
       sessionContext.H=sessionContext.Math.max(1,(sessionContext.window.innerHeight||540)/zoom);
       sessionContext.canvas.width=sessionContext.Math.round(sessionContext.W*ratio);
