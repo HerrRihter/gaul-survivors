@@ -22,6 +22,7 @@ export function prepareExpansion(e,c){
     e.x=horizontal?(sign>0?40:2160):lane;e.y=horizontal?lane:(sign>0?40:2160);
     e.lane={x:horizontal?sign:0,y:horizontal?0:sign};e.heading=Math.atan2(e.lane.y,e.lane.x);
     c.beginAction(e,3,{x:e.x+e.lane.x*2200,y:e.y+e.lane.y*2200});
+    if(e.action)e.action.warning=true;
   }
 }
 
@@ -62,7 +63,19 @@ export function updateExpansion(e,c,dt){
     const steps=Math.max(1,Math.ceil(speed*dt/10));let travel=0;
     for(let i=0;i<steps;i++){
       const ox=e.x,oy=e.y;c.Village.move(e,q.x*speed*dt/steps,q.y*speed*dt/steps,e.r);travel+=Math.hypot(e.x-ox,e.y-oy);
-      if(c.dist(e,p)<e.r+14)c.hurtPlayer(e);
+      if(c.dist(e,p)<e.r+14){
+        c.hurtPlayer(e);
+        if(e.unit==='cavalry'&&!e.strike&&!e.struck)e.strike={elapsed:0,duration:.35};
+      }
+    }
+    if(e.unit==='cavalry'){
+      if(!e.strike&&!e.struck&&d<110){
+        e.strike={elapsed:0,duration:.35};
+      }
+      if(e.strike){
+        e.strike.elapsed+=dt;
+        if(e.strike.elapsed>=e.strike.duration){e.strike=null;e.struck=true;}
+      }
     }
     e.moving=travel>.01;advanceWalk(travel);q.left-=dt;
     if(q.left<=0||travel<speed*dt*.7){e.charge=null;e.action=null;e.cd=2.5;if(e.unit==='stoneSquad')e.crush=.65;if(e.unit==='cavalry')e.hp=0;}

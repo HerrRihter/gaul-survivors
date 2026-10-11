@@ -37,6 +37,7 @@ async function main(){
  reset();e=enemy('netter',1280);ticks(1);t.state.p.y+=150;ticks(100);assert(!t.state.p.stun,'Net aims at locked position and can be dodged');
  reset('camp');e=enemy('tower',1460,1100);ticks(45);assert.equal(t.state.enemyShots.filter(b=>b.kind==='arrow').length,3,'Tower fires three arrows');
  reset('camp');e=t.spawn('cavalry');const entry={x:e.x,y:e.y};ticks(1);assert(e.action&&!e.charge);ticks(90);assert(e.charge,'Cavalry starts after warning');const walkStart=e.walk;const walkFrames=new Set();for(let i=0;i<50;i++){ticks(1);const phase=((e.walk%1)+1)%1;walkFrames.add(Math.floor(phase*4));}assert.equal(Math.round((e.walk-walkStart)*100)/100,2,'Cavalry gait advances at two cycles per second');assert.deepEqual([...walkFrames].sort(),[0,1,2,3],'Cavalry runs through every walk frame');ticks(350);assert.equal(e.hp,0,'Cavalry exits without chasing');assert(Math.hypot(e.x-entry.x,e.y-entry.y)>2000,'Crosses the whole map');assert.equal(t.state.kills,0);
+ reset('camp');e=t.spawn('cavalry');t.state.p.x=e.x+e.lane.x*300;t.state.p.y=e.y+e.lane.y*300;ticks(90);assert(e.charge);assert(!e.strike);ticks(30);assert(e.strike,'Cavalry triggers strike when encountering hero on path');ticks(30);assert(!e.strike&&e.struck,'Cavalry finishes strike and resumes galloping');
  reset('camp');t.state.t=150;
  const lanes=new Set();
  for(let i=0;i<30;i++){

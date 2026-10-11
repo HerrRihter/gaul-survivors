@@ -1298,6 +1298,7 @@ function prepareExpansion(e,c){
     e.x=horizontal?(sign>0?40:2160):lane;e.y=horizontal?lane:(sign>0?40:2160);
     e.lane={x:horizontal?sign:0,y:horizontal?0:sign};e.heading=Math.atan2(e.lane.y,e.lane.x);
     c.beginAction(e,3,{x:e.x+e.lane.x*2200,y:e.y+e.lane.y*2200});
+    if(e.action)e.action.warning=true;
   }
 }
 
@@ -1338,7 +1339,19 @@ function updateExpansion(e,c,dt){
     const steps=Math.max(1,Math.ceil(speed*dt/10));let travel=0;
     for(let i=0;i<steps;i++){
       const ox=e.x,oy=e.y;c.Village.move(e,q.x*speed*dt/steps,q.y*speed*dt/steps,e.r);travel+=Math.hypot(e.x-ox,e.y-oy);
-      if(c.dist(e,p)<e.r+14)c.hurtPlayer(e);
+      if(c.dist(e,p)<e.r+14){
+        c.hurtPlayer(e);
+        if(e.unit==='cavalry'&&!e.strike&&!e.struck)e.strike={elapsed:0,duration:.35};
+      }
+    }
+    if(e.unit==='cavalry'){
+      if(!e.strike&&!e.struck&&d<110){
+        e.strike={elapsed:0,duration:.35};
+      }
+      if(e.strike){
+        e.strike.elapsed+=dt;
+        if(e.strike.elapsed>=e.strike.duration){e.strike=null;e.struck=true;}
+      }
     }
     e.moving=travel>.01;advanceWalk(travel);q.left-=dt;
     if(q.left<=0||travel<speed*dt*.7){e.charge=null;e.action=null;e.cd=2.5;if(e.unit==='stoneSquad')e.crush=.65;if(e.unit==='cavalry')e.hp=0;}
@@ -2589,10 +2602,11 @@ const {CharacterFrames} = require("src/rendering/character-frames.js");
 const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
 function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
  function draw(g,e){
-  const reaction=e.hurt||e.visualHurt,attack=e.action;
-  const ramImpact=e.charge&&e.charge.left>1.14;
-  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
-  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:attack&&!e.charge?attack.elapsed/attack.duration:e.walk||0;
+  const reaction=e.hurt||e.visualHurt,attack=e.action?.warning?null:e.action;
+  const ramImpact=e.unit==='ram'&&e.charge&&e.charge.left>1.14;
+  const strike=e.strike;
+  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
+  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:e.walk||0;
   const frame=get(e.unit,action,progress);if(!frame)return false;
   const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
