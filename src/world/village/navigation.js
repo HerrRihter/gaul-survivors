@@ -1,16 +1,22 @@
 export let VillageNavigation;
 VillageNavigation={create({size,cell,cols,blocked,clear}){
+ const moveNext={x:0,y:0},moveNextX={x:0,y:0},moveNextY={x:0,y:0};
  function move(a,dx,dy,r=14){
   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/5));
+  const sx=dx/n,sy=dy/n;
   for(let i=0;i<n;i++){
-   const next={x:a.x+dx/n,y:a.y+dy/n};
-   if(clear(a,next,r)){a.x=next.x;a.y=next.y;continue;}
-   if(clear(a,{x:next.x,y:a.y},r))a.x=next.x;
-   if(clear(a,{x:a.x,y:next.y},r))a.y=next.y;
+   moveNext.x=a.x+sx;moveNext.y=a.y+sy;
+   if(clear(a,moveNext,r)){a.x=moveNext.x;a.y=moveNext.y;continue;}
+   moveNextX.x=moveNext.x;moveNextX.y=a.y;
+   if(clear(a,moveNextX,r))a.x=moveNext.x;
+   moveNextY.x=a.x;moveNextY.y=moveNext.y;
+   if(clear(a,moveNextY,r))a.y=moveNext.y;
   }
  }
  const grids=new Map(),maps=new Map();
- const center=k=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell});
+ const centers=Array.from({length:cols*cols},(_,k)=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell}));
+ const center=k=>centers[k];
+ const sharedQueue=new Int32Array(cols*cols);
  function grid(r){
   if(grids.has(r))return grids.get(r);
   const free=new Uint8Array(cols*cols),edges=new Uint8Array(cols*cols);
@@ -33,8 +39,14 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   }
   if(seed<0)return null;
   const old=maps.get(r);if(old&&old.seed===seed)return old;
-  const costs=new Int16Array(cols*cols).fill(-1),queue=new Int32Array(cols*cols);let n=1;queue[0]=seed;costs[seed]=0;
-  for(let q=0;q<n;q++){const k=queue[q];for(const [flag,offset] of [[1,1],[2,-1],[4,cols],[8,-cols]])if(edges[k]&flag){const nk=k+offset;if(costs[nk]<0){costs[nk]=costs[k]+1;queue[n++]=nk;}}}
+  const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
+  for(let q=0;q<n;q++){
+   const k=sharedQueue[q],edge=edges[k],c=costs[k]+1;
+   if(edge&1){const nk=k+1;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&2){const nk=k-1;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&4){const nk=k+cols;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&8){const nk=k-cols;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+  }
   const out={seed,costs,target};maps.set(r,out);return out;
  }
  function direction(a,p,r=14){
@@ -43,8 +55,10 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const flow=field(p,r);if(!flow)return {x:0,y:0};
   const ax=Math.floor(a.x/cell),ay=Math.floor(a.y/cell);let best=null,score=Infinity;
   for(let y=ay-2;y<=ay+2;y++)for(let x=ax-2;x<=ax+2;x++){
-   if(x<0||y<0||x>=cols||y>=cols)continue;const k=x+y*cols,b=center(k);if(flow.costs[k]<0||!clear(a,b,r))continue;
-   const s=flow.costs[k]*cell*1.05+Math.hypot(a.x-b.x,a.y-b.y);if(s<score){score=s;best=b;}
+   if(x<0||y<0||x>=cols||y>=cols)continue;const k=x+y*cols;const cost=flow.costs[k];if(cost<0)continue;
+   const b=center(k);const s=cost*cell*1.05+Math.hypot(a.x-b.x,a.y-b.y);if(s>=score)continue;
+   if(!clear(a,b,r))continue;
+   score=s;best=b;
   }
   if(!best)return {x:0,y:0};const n=Math.hypot(best.x-a.x,best.y-a.y);return {x:(best.x-a.x)/Math.max(1,n),y:(best.y-a.y)/Math.max(1,n)};
  }

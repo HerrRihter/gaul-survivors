@@ -324,32 +324,57 @@ VillageCollision=(()=>{
  };
  const dimensions={chief:[617,496],asterix:[411,378],obelix:[515,436],forge:[550,447],fish:[511,448],bard:[504,539],trees:[666,637],fence:[773,353],gate:[708,682]};
  function create(objects,size){
-  const polygons=[],buckets=new Map(),bucketSize=100;
+  const polygons=[],bucketSize=100,bucketCols=Math.ceil(size/bucketSize)+2,buckets=[];
+  let queryStamp=1;
+  const candidateList=[];
   for(const o of objects){
    const [w,h]=dimensions[o.art]||[1,1],height=o.width*h/w;
    const [fx,fy,fw,fh]=o.footprint||[0,0,0,0];
    const outlines=o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art];
    for(const shape of outlines){
     const points=shape.map(([x,y])=>o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
-    const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y))};polygons.push(p);
-    for(let y=Math.floor(p.minY/bucketSize);y<=Math.floor(p.maxY/bucketSize);y++)for(let x=Math.floor(p.minX/bucketSize);x<=Math.floor(p.maxX/bucketSize);x++){const key=x+','+y;if(!buckets.has(key))buckets.set(key,[]);buckets.get(key).push(p);}
+    const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),stamp:0};polygons.push(p);
+    const minBy=Math.max(0,Math.floor(p.minY/bucketSize)),maxBy=Math.min(bucketCols-1,Math.floor(p.maxY/bucketSize));
+    const minBx=Math.max(0,Math.floor(p.minX/bucketSize)),maxBx=Math.min(bucketCols-1,Math.floor(p.maxX/bucketSize));
+    for(let y=minBy;y<=maxBy;y++)for(let x=minBx;x<=maxBx;x++){
+     const idx=x+y*bucketCols;
+     if(!buckets[idx])buckets[idx]=[];
+     buckets[idx].push(p);
+    }
    }
   }
-  function candidates(x0,y0,x1,y1){const out=new Set();for(let y=Math.floor(y0/bucketSize);y<=Math.floor(y1/bucketSize);y++)for(let x=Math.floor(x0/bucketSize);x<=Math.floor(x1/bucketSize);x++)for(const p of buckets.get(x+','+y)||[])out.add(p);return out;}
+  function candidates(x0,y0,x1,y1){
+   const minBx=Math.max(0,Math.floor(x0/bucketSize)),maxBx=Math.min(bucketCols-1,Math.floor(x1/bucketSize));
+   const minBy=Math.max(0,Math.floor(y0/bucketSize)),maxBy=Math.min(bucketCols-1,Math.floor(y1/bucketSize));
+   queryStamp++;
+   if(queryStamp>2000000000){for(let i=0;i<polygons.length;i++)polygons[i].stamp=0;queryStamp=1;}
+   candidateList.length=0;
+   for(let y=minBy;y<=maxBy;y++){
+    const row=y*bucketCols;
+    for(let x=minBx;x<=maxBx;x++){
+     const b=buckets[row+x];
+     if(b)for(let i=0;i<b.length;i++){const p=b[i];if(p.stamp!==queryStamp){p.stamp=queryStamp;candidateList.push(p);}}
+    }
+   }
+   return candidateList;
+  }
   function distance2(p,a,b){const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return (p.x-a.x-t*dx)**2+(p.y-a.y-t*dy)**2;}
   function inside(p,points){let yes=false;for(let i=0,j=points.length-1;i<points.length;j=i++){const a=points[i],b=points[j];if((a.y>p.y)!==(b.y>p.y)&&p.x<(b.x-a.x)*(p.y-a.y)/(b.y-a.y)+a.x)yes=!yes;}return yes;}
   const cross=(a,b,c)=>(b.x-a.x)*(c.y-a.y)-(b.y-a.y)*(c.x-a.x);
   function intersects(a,b,c,d){return Math.max(a.x,b.x)>=Math.min(c.x,d.x)&&Math.max(c.x,d.x)>=Math.min(a.x,b.x)&&Math.max(a.y,b.y)>=Math.min(c.y,d.y)&&Math.max(c.y,d.y)>=Math.min(a.y,b.y)&&cross(a,b,c)*cross(a,b,d)<=0&&cross(c,d,a)*cross(c,d,b)<=0;}
   function clear(a,b,r=14){
    if(Math.min(a.x,b.x)<r||Math.min(a.y,b.y)<r||Math.max(a.x,b.x)>size-r||Math.max(a.y,b.y)>size-r)return false;
-   for(const p of candidates(Math.min(a.x,b.x)-r,Math.min(a.y,b.y)-r,Math.max(a.x,b.x)+r,Math.max(a.y,b.y)+r)){
+   const cand=candidates(Math.min(a.x,b.x)-r,Math.min(a.y,b.y)-r,Math.max(a.x,b.x)+r,Math.max(a.y,b.y)+r);
+   for(let k=0;k<cand.length;k++){
+    const p=cand[k];
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;
     }
    }return true;
   }
-  const blocked=(x,y,r=14)=>!clear({x,y},{x,y},r);
+  const reusablePoint={x:0,y:0};
+  const blocked=(x,y,r=14)=>{reusablePoint.x=x;reusablePoint.y=y;return !clear(reusablePoint,reusablePoint,r);};
   function draw(g){g.save();g.lineWidth=2;for(const p of polygons){g.beginPath();p.points.forEach((v,i)=>i?g.lineTo(v.x,v.y):g.moveTo(v.x,v.y));g.closePath();g.fillStyle='#f25d4540';g.strokeStyle='#ffcf85';g.fill();g.stroke();}g.restore();}
   return {polygons,blocked,clear,draw};
  }
@@ -361,17 +386,23 @@ Object.defineProperty(exports, "VillageCollision", {get: () => VillageCollision}
 "src/world/village/navigation.js": function(require, exports){
 let VillageNavigation;
 VillageNavigation={create({size,cell,cols,blocked,clear}){
+ const moveNext={x:0,y:0},moveNextX={x:0,y:0},moveNextY={x:0,y:0};
  function move(a,dx,dy,r=14){
   const n=Math.max(1,Math.ceil(Math.hypot(dx,dy)/5));
+  const sx=dx/n,sy=dy/n;
   for(let i=0;i<n;i++){
-   const next={x:a.x+dx/n,y:a.y+dy/n};
-   if(clear(a,next,r)){a.x=next.x;a.y=next.y;continue;}
-   if(clear(a,{x:next.x,y:a.y},r))a.x=next.x;
-   if(clear(a,{x:a.x,y:next.y},r))a.y=next.y;
+   moveNext.x=a.x+sx;moveNext.y=a.y+sy;
+   if(clear(a,moveNext,r)){a.x=moveNext.x;a.y=moveNext.y;continue;}
+   moveNextX.x=moveNext.x;moveNextX.y=a.y;
+   if(clear(a,moveNextX,r))a.x=moveNext.x;
+   moveNextY.x=a.x;moveNextY.y=moveNext.y;
+   if(clear(a,moveNextY,r))a.y=moveNext.y;
   }
  }
  const grids=new Map(),maps=new Map();
- const center=k=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell});
+ const centers=Array.from({length:cols*cols},(_,k)=>({x:(k%cols+.5)*cell,y:(Math.floor(k/cols)+.5)*cell}));
+ const center=k=>centers[k];
+ const sharedQueue=new Int32Array(cols*cols);
  function grid(r){
   if(grids.has(r))return grids.get(r);
   const free=new Uint8Array(cols*cols),edges=new Uint8Array(cols*cols);
@@ -394,8 +425,14 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   }
   if(seed<0)return null;
   const old=maps.get(r);if(old&&old.seed===seed)return old;
-  const costs=new Int16Array(cols*cols).fill(-1),queue=new Int32Array(cols*cols);let n=1;queue[0]=seed;costs[seed]=0;
-  for(let q=0;q<n;q++){const k=queue[q];for(const [flag,offset] of [[1,1],[2,-1],[4,cols],[8,-cols]])if(edges[k]&flag){const nk=k+offset;if(costs[nk]<0){costs[nk]=costs[k]+1;queue[n++]=nk;}}}
+  const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
+  for(let q=0;q<n;q++){
+   const k=sharedQueue[q],edge=edges[k],c=costs[k]+1;
+   if(edge&1){const nk=k+1;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&2){const nk=k-1;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&4){const nk=k+cols;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+   if(edge&8){const nk=k-cols;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
+  }
   const out={seed,costs,target};maps.set(r,out);return out;
  }
  function direction(a,p,r=14){
@@ -404,8 +441,10 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const flow=field(p,r);if(!flow)return {x:0,y:0};
   const ax=Math.floor(a.x/cell),ay=Math.floor(a.y/cell);let best=null,score=Infinity;
   for(let y=ay-2;y<=ay+2;y++)for(let x=ax-2;x<=ax+2;x++){
-   if(x<0||y<0||x>=cols||y>=cols)continue;const k=x+y*cols,b=center(k);if(flow.costs[k]<0||!clear(a,b,r))continue;
-   const s=flow.costs[k]*cell*1.05+Math.hypot(a.x-b.x,a.y-b.y);if(s<score){score=s;best=b;}
+   if(x<0||y<0||x>=cols||y>=cols)continue;const k=x+y*cols;const cost=flow.costs[k];if(cost<0)continue;
+   const b=center(k);const s=cost*cell*1.05+Math.hypot(a.x-b.x,a.y-b.y);if(s>=score)continue;
+   if(!clear(a,b,r))continue;
+   score=s;best=b;
   }
   if(!best)return {x:0,y:0};const n=Math.hypot(best.x-a.x,best.y-a.y);return {x:(best.x-a.x)/Math.max(1,n),y:(best.y-a.y)/Math.max(1,n)};
  }
@@ -472,10 +511,18 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   // Deterministic, quiet flecks soften the lanes without adding visual collision.
   for(let i=0;i<1800;i++){const x=(i*397.31)%size,y=(i*673.73)%size;g.fillStyle=i%2?'#78674918':'#f3dcac25';g.fillRect(x,y,2+i%5,1+i%2);}
  }
- function drawGround(g){
-  if(VillageArt&&VillageArt.status['ground-v1']==='ready'&&!groundCache){
-   groundCache=document.createElement('canvas');groundCache.width=size;groundCache.height=size;paintGround(groundCache.getContext('2d'));
+ let groundCacheReady=false;
+ function ensureGroundCache(){
+  if(!document)return;
+  const ready=VillageArt&&VillageArt.status['ground-v1']==='ready';
+  if(!groundCache||(ready&&!groundCacheReady)){
+   groundCache??=document.createElement('canvas');groundCache.width=size;groundCache.height=size;
+   paintGround(groundCache.getContext('2d'));
+   if(ready)groundCacheReady=true;
   }
+ }
+ function drawGround(g){
+  ensureGroundCache();
   if(groundCache)g.drawImage(groundCache,0,0);else paintGround(g);
  }
  function drawObject(g,o,player){

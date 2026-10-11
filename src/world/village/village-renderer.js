@@ -54,10 +54,18 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   // Deterministic, quiet flecks soften the lanes without adding visual collision.
   for(let i=0;i<1800;i++){const x=(i*397.31)%size,y=(i*673.73)%size;g.fillStyle=i%2?'#78674918':'#f3dcac25';g.fillRect(x,y,2+i%5,1+i%2);}
  }
- function drawGround(g){
-  if(VillageArt&&VillageArt.status['ground-v1']==='ready'&&!groundCache){
-   groundCache=document.createElement('canvas');groundCache.width=size;groundCache.height=size;paintGround(groundCache.getContext('2d'));
+ let groundCacheReady=false;
+ function ensureGroundCache(){
+  if(!document)return;
+  const ready=VillageArt&&VillageArt.status['ground-v1']==='ready';
+  if(!groundCache||(ready&&!groundCacheReady)){
+   groundCache??=document.createElement('canvas');groundCache.width=size;groundCache.height=size;
+   paintGround(groundCache.getContext('2d'));
+   if(ready)groundCacheReady=true;
   }
+ }
+ function drawGround(g){
+  ensureGroundCache();
   if(groundCache)g.drawImage(groundCache,0,0);else paintGround(g);
  }
  function drawObject(g,o,player){

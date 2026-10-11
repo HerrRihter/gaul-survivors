@@ -32,7 +32,11 @@ if (require.main === module) {
   const args = process.argv.slice(2);
   const prefixIndex = args.indexOf('--prefix');
   const prefix = prefixIndex < 0 ? '/' : args[prefixIndex + 1];
+  const portIndex = args.indexOf('--port');
+  const port = portIndex >= 0 ? parseInt(args[portIndex + 1], 10) : (process.env.PORT ? parseInt(process.env.PORT, 10) : 3000);
+  const hostIndex = args.indexOf('--host');
+  const host = hostIndex >= 0 ? args[hostIndex + 1] : (process.env.HOST || '0.0.0.0');
   createServer({root: args.includes('--site') ? path.join(projectRoot, '_site') : projectRoot, prefix})
-    .listen(8765, '127.0.0.1', () => console.log('http://127.0.0.1:8765' + prefix));
+    .listen(port, host, () => console.log(`http://${host}:${port}${prefix}`));
 }
 module.exports = {createServer};

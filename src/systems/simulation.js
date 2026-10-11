@@ -168,14 +168,19 @@ function update(dt){
         }
       }
       s.helmets=s.helmets.filter(h=>!h.dead);
+      const mag=st.magnet;
       for(const gem of s.gems){
-        const d=sessionContext.dist(gem,p);
-        if(d<st.magnet){
-          const speed=270+200*(1-d/st.magnet);
-          gem.x+=(p.x-gem.x)/sessionContext.Math.max(1,d)*sessionContext.Math.min(d,speed*dt);
-          gem.y+=(p.y-gem.y)/sessionContext.Math.max(1,d)*sessionContext.Math.min(d,speed*dt);
+        const dx=p.x-gem.x,dy=p.y-gem.y;
+        if(sessionContext.Math.abs(dx)>mag||sessionContext.Math.abs(dy)>mag)continue;
+        const d=sessionContext.Math.hypot(dx,dy);
+        if(d<mag){
+          const speed=270+200*(1-d/mag);
+          const step=sessionContext.Math.min(d,speed*dt);
+          const invD=1/sessionContext.Math.max(1,d);
+          gem.x+=dx*invD*step;
+          gem.y+=dy*invD*step;
         }
-        if(sessionContext.dist(gem,p)<19){
+        if(d<19){
           s.xp+=gem.v;
           gem.dead=true;
           sessionContext.beep(700+sessionContext.Math.random()*200,.025,'sine',.01);
@@ -186,8 +191,9 @@ function update(dt){
       if(s.gems.length>500){
         const grid=new Map();
         for(const g of s.gems){
-          const key=`${sessionContext.Math.floor(g.x/50)},${sessionContext.Math.floor(g.y/50)}`;
-          if(grid.has(key))grid.get(key).v+=g.v;else grid.set(key,g);
+          const key=(sessionContext.Math.floor(g.x/50)&0xffff)|((sessionContext.Math.floor(g.y/50)&0xffff)<<16);
+          const existing=grid.get(key);
+          if(existing)existing.v+=g.v;else grid.set(key,g);
         }
         s.gems=[...grid.values()];
       }

@@ -3,6 +3,15 @@ import {orderActors} from './depth-order.js';
 export let SceneRenderer;
 'use strict';
 SceneRenderer={create(sessionContext){
+let cachedVignette=null,cachedVignetteW=0,cachedVignetteH=0;
+function getVignette(w,h){
+  if(cachedVignette&&cachedVignetteW===w&&cachedVignetteH===h)return cachedVignette;
+  cachedVignetteW=w;cachedVignetteH=h;
+  cachedVignette=sessionContext.ctx.createRadialGradient(w/2,h/2,150,w/2,h/2,600);
+  cachedVignette.addColorStop(0,'transparent');
+  cachedVignette.addColorStop(1,'#08171188');
+  return cachedVignette;
+}
 function background(cx,cy){
       sessionContext.ctx.fillStyle='#89954e';
       sessionContext.ctx.fillRect(0,0,sessionContext.W,sessionContext.H);
@@ -19,11 +28,16 @@ function draw(){
       sessionContext.ctx.save();
       sessionContext.ctx.translate(-cx,-cy);
       if(s){
+        const minX=cx-50,maxX=cx+sessionContext.W+50,minY=cy-50,maxY=cy+sessionContext.H+50;
         drawHazards(sessionContext.ctx,s);
         sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
-        for(const h of s.helmets)sessionContext.Villagers.helmet(sessionContext.ctx,h.x,h.y);
+        for(const h of s.helmets){
+          if(h.x<minX||h.x>maxX||h.y<minY||h.y>maxY)continue;
+          sessionContext.Villagers.helmet(sessionContext.ctx,h.x,h.y);
+        }
         for(const g of s.gems){
+          if(g.x<minX||g.x>maxX||g.y<minY||g.y>maxY)continue;
           sessionContext.ctx.fillStyle='#142d25';
           sessionContext.ctx.fillRect(g.x-4,g.y,9,5);
           sessionContext.ctx.fillStyle=g.v>3?'#d4e890':'#8bd3ac';
@@ -37,6 +51,7 @@ function draw(){
           sessionContext.ctx.fillRect(g.x-1,g.y-4,2,3);
         }
         for(const a of s.pickups){
+          if(a.x<minX||a.x>maxX||a.y<minY||a.y>maxY)continue;
           sessionContext.ctx.fillStyle='#603b26';
           sessionContext.ctx.fillRect(a.x-7,a.y-5,14,10);
           sessionContext.ctx.fillStyle='#dc9c5e';
@@ -44,13 +59,17 @@ function draw(){
           sessionContext.ctx.fillStyle='#efdcab';
           sessionContext.ctx.fillRect(a.x+5,a.y-2,5,3);
         }
-        for(const e of s.enemies)sessionContext.Legion.telegraph(sessionContext.ctx,e);
+        for(const e of s.enemies){
+          if(e.x<minX-70||e.x>maxX+70||e.y<minY-70||e.y>maxY+70)continue;
+          sessionContext.Legion.telegraph(sessionContext.ctx,e);
+        }
         const actors=orderActors(sessionContext.Village.depthObjects,s.enemies,p,sessionContext.selected);
         for(const e of actors){
           if(e.scenery){
             sessionContext.Village.drawObject(sessionContext.ctx,e,p);
             continue;
           }
+          if(!e.player&&(e.x<minX-100||e.x>maxX+100||e.y<minY-100||e.y>maxY+100))continue;
           const size=e.boss?3.5:e.type==='obelix'?3.5:e.player?3:e.type==='monster'?3:2.5;
           sessionContext.ctx.fillStyle='#14291e66';
           sessionContext.ctx.beginPath();
@@ -110,6 +129,7 @@ function draw(){
         sessionContext.ctx.font='bold 12px monospace';
         sessionContext.ctx.textAlign='center';
         for(const t of s.texts){
+          if(t.x<minX||t.x>maxX||t.y<minY||t.y>maxY)continue;
           sessionContext.ctx.globalAlpha=sessionContext.Math.min(1,t.life*3);
           sessionContext.ctx.fillStyle='#111f18';
           sessionContext.ctx.fillText(t.v,t.x+1,t.y+1);
@@ -122,9 +142,7 @@ function draw(){
         for(let i=0;i<14;i++)sessionContext.sprite(sessionContext.ctx,'roman',1300+(i%5)*47,890+sessionContext.Math.floor(i/5)*60,2,i%2===0,sessionContext.Math.sin(sessionContext.performance.now()/300+i));
       }
       sessionContext.ctx.restore();
-      const vignette=sessionContext.ctx.createRadialGradient(sessionContext.W/2,sessionContext.H/2,150,sessionContext.W/2,sessionContext.H/2,600);
-      vignette.addColorStop(0,'transparent');
-      vignette.addColorStop(1,'#08171188');
+      const vignette=getVignette(sessionContext.W,sessionContext.H);
       sessionContext.ctx.fillStyle=vignette;
       sessionContext.ctx.fillRect(0,0,sessionContext.W,sessionContext.H);
       sessionContext.ctx.restore();

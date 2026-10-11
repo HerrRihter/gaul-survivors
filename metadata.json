@@ -1,0 +1,8 @@
+{
+  "name": "Галлы: последний пир",
+  "description": "Римляне снова испортили вечер. Продержись до пира, собирай волшебные кристаллы и объясни легиону, почему эту деревню обходят стороной.",
+  "prompt": "Gaul Survivors - action roguelite survivor game in ancient Gaul",
+  "capabilities": [
+    "MAJOR_CAPABILITY_SERVER_SIDE_GEMINI_API"
+  ]
+}

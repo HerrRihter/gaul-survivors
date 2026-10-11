@@ -116,19 +116,62 @@ function closeShop(){
       show('shop',false);
       show('menu',true);
     }
+let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
+let lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
 function hud(){
       if(!sessionContext.state)return;
       const s=sessionContext.state;
-      sessionContext.$('health').style.width=`${s.p.hp/s.p.max*100}%`;
-      sessionContext.$('xp').style.width=`${sessionContext.Math.min(100,s.xp/s.need*100)}%`;
-      sessionContext.$('levelText').textContent=`УР. ${s.level}  ·  ${sessionContext.Math.ceil(s.p.hp)} / ${s.p.max} HP`;
-      sessionContext.$('time').textContent=sessionContext.clock(s.t);
-      sessionContext.$('kills').textContent=`${s.kills} ПОБЕЖДЕНО`;
-      sessionContext.$('weapon').textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon+' · '+sessionContext.arenaDefinitions[s.map].name;
-      sessionContext.$('helmets').textContent='ШЛЕМЫ: '+sessionContext.Progression.data.helmets+' (+'+s.earned+')';
+      elHealth??=sessionContext.$('health');
+      elXp??=sessionContext.$('xp');
+      elLevel??=sessionContext.$('levelText');
+      elTime??=sessionContext.$('time');
+      elKills??=sessionContext.$('kills');
+      elWeapon??=sessionContext.$('weapon');
+      elHelmets??=sessionContext.$('helmets');
+      elBosshealth??=sessionContext.$('bosshealth');
+
+      const hp=s.p.hp,max=s.p.max;
+      if(hp!==lastHp||max!==lastMax||s.level!==lastLevel){
+        lastHp=hp;lastMax=max;lastLevel=s.level;
+        elHealth.style.width=`${hp/max*100}%`;
+        elLevel.textContent=`УР. ${s.level}  ·  ${sessionContext.Math.ceil(hp)} / ${max} HP`;
+      }
+      if(s.xp!==lastXp||s.need!==lastNeed){
+        lastXp=s.xp;lastNeed=s.need;
+        elXp.style.width=`${sessionContext.Math.min(100,s.xp/s.need*100)}%`;
+      }
+      const sec=sessionContext.Math.floor(s.t);
+      if(sec!==lastTime){
+        lastTime=sec;
+        elTime.textContent=sessionContext.clock(s.t);
+      }
+      if(s.kills!==lastKills){
+        lastKills=s.kills;
+        elKills.textContent=`${s.kills} ПОБЕЖДЕНО`;
+      }
+      const wKey=`${sessionContext.selected}:${s.map}`;
+      if(wKey!==lastWeaponKey){
+        lastWeaponKey=wKey;
+        elWeapon.textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon+' · '+sessionContext.arenaDefinitions[s.map].name;
+      }
+      const hCount=sessionContext.Progression.data.helmets;
+      if(hCount!==lastHelmets||s.earned!==lastEarned){
+        lastHelmets=hCount;lastEarned=s.earned;
+        elHelmets.textContent='ШЛЕМЫ: '+hCount+' (+'+s.earned+')';
+      }
       const boss=s.enemies.find(e=>e.boss);
-      show('bossbar',!!boss);
-      if(boss)sessionContext.$('bosshealth').style.width=`${boss.hp/boss.max*100}%`;
+      const bossActive=!!boss;
+      if(bossActive!==lastBossActive){
+        lastBossActive=bossActive;
+        show('bossbar',bossActive);
+      }
+      if(boss){
+        const bossPct=sessionContext.Math.round(boss.hp/boss.max*1000)/10;
+        if(bossPct!==lastBossHpPct){
+          lastBossHpPct=bossPct;
+          elBosshealth.style.width=`${bossPct}%`;
+        }
+      }
     }
 return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,hud};
 }};
