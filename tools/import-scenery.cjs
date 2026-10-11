@@ -21,7 +21,7 @@ async function main(){
  for(let y=top;y<bottom;y++)for(let x=left;x<right;x++){const p=y*info.width+x;let keep=owner.get(labels[p])===m.id;
  if(!labels[p]&&data[p*4+3])for(let dy=-1;dy<=1&&!keep;dy++)for(let dx=-1;dx<=1;dx++)if(owner.get(labels[(y+dy)*info.width+x+dx])===m.id)keep=true;
  if(keep)data.copy(pixels,((y-top)*width+x-left)*4,p*4,p*4+4);}
- await sharp(pixels,{raw:{width,height,channels:4}}).resize({width:600,withoutEnlargement:true}).png().toFile('assets/runtime/world/expansion/'+names[i]+'-v1.png');
+ await sharp(pixels,{raw:{width,height,channels:4}}).resize({width:600,withoutEnlargement:true}).png().toFile('assets/runtime/world/scenery/'+names[i]+'-v1.png');
  console.log(names[i],{left,top,width,height});
  }
 }

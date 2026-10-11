@@ -1,23 +1,8 @@
 [
   {
-    "json": "data/animations/animation-layout.json",
-    "module": "data/animations/animation-layout.js",
-    "name": "AnimationLayout"
-  },
-  {
-    "json": "data/animations/unit-layout.json",
-    "module": "data/animations/unit-layout.js",
-    "name": "UnitLayout"
-  },
-  {
     "json": "data/animations/villager-layout.json",
     "module": "data/animations/villager-layout.js",
     "name": "VillagerLayout"
-  },
-  {
-    "json": "data/animations/motion-v2-layout.json",
-    "module": "data/animations/motion-v2-layout.js",
-    "name": "MotionV2Layout"
   },
   {
     "json": "data/animations/menhir-layout.json",

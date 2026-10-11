@@ -15,24 +15,7 @@ Legion=(()=>{
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
  }
  function projectile(g,b){
-  // Reuse the actual release pose: no independently drawn imitation of the net
-  // or arrow. Crops contain only the airborne equipment, excluding hands/bows.
-  if(b.kind==='net'||b.kind==='arrow'){
-   const net=b.kind==='net',frame=UnitArt.get(net?'netter':'tower','attack',.5);
-   if(frame){
-    const crop=net?[183,172,64,44]:[185,109,33,10];
-    const progress=Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5));
-    const height=net?44:122+(40-122)*progress;
-    g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
-    g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return;
-   }
-  }
-  if(b.kind==='net'){
-    g.save();g.translate(b.x,b.y-44);g.rotate(Math.atan2(b.vy,b.vx));g.strokeStyle='#eee1a8';g.lineWidth=2;
-    for(let i=-12;i<=12;i+=6){g.beginPath();g.moveTo(i,-12);g.lineTo(i,12);g.moveTo(-12,i);g.lineTo(12,i);g.stroke();}g.restore();
-  }else if(b.kind==='arrow'){
-    g.save();g.translate(b.x,b.y-(122-82*Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5))));g.rotate(Math.atan2(b.vy,b.vx));g.fillStyle='#d7b784';g.fillRect(-17,-1,29,2);g.fillStyle='#e9ead6';g.fillRect(9,-3,6,6);g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();
-  }else ProjectileArt.drawPilum(g,b);
+  ProjectileArt.drawEnemyProjectile(g,b,(unit,action,progress)=>typeof UnitArt!=='undefined'?UnitArt.get(unit,action,progress):null);
  }
  function draw(g,e,sprite){
   const u=units[e.unit];

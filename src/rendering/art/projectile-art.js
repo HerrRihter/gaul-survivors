@@ -1,15 +1,15 @@
 import {AssetPaths} from '../asset-paths.js';
+import {projectileDefinitions} from '../../../data/projectiles/projectiles.js';
 export let ProjectileArt;
 'use strict';
 ProjectileArt=(()=>{
- // The release hand is 48 logical pixels above the foot anchor.
- const FISH_HEIGHT=48,art={};
- if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url('projectiles/projectiles-v2.png');}
- function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=(kind==='fish'?34:72)*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
+ const P=projectileDefinitions,art={};
+ if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url(P.fish.texture);}
+ function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const def=P[kind],b=def.box,w=def.width*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
  function drawFish(g,f){
-  const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
-  if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055))return;
-  g.save();g.translate(f.x,f.y-FISH_HEIGHT);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
+  const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx),yOff=P.fish.yOffset;
+  if(bitmap(g,'fish',f.x,f.y-yOff,angle+Math.sin(f.age*12)*.055))return;
+  g.save();g.translate(f.x,f.y-yOff);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
   g.lineWidth=1.7;g.lineJoin='round';g.lineCap='round';
   g.fillStyle='#50634c';g.strokeStyle='#202921';
   g.beginPath();g.moveTo(-22,0);g.lineTo(-34,-10);g.quadraticCurveTo(-31,-3,-30,0);g.quadraticCurveTo(-32,4,-35,9);g.lineTo(-21,5);g.closePath();g.fill();g.stroke();
@@ -28,8 +28,9 @@ ProjectileArt=(()=>{
   g.restore();
  }
  function drawPilum(g,b){
-  if(bitmap(g,'pilum',b.x,b.y-16,Math.atan2(b.vy,b.vx)))return;
-  g.save();g.translate(b.x,b.y-16);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
+  const yOff=P.pilum.yOffset;
+  if(bitmap(g,'pilum',b.x,b.y-yOff,Math.atan2(b.vy,b.vx)))return;
+  g.save();g.translate(b.x,b.y-yOff);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
   g.strokeStyle='#251c16';g.lineWidth=6;g.beginPath();g.moveTo(-31,0);g.lineTo(17,0);g.stroke();
   g.strokeStyle='#80552f';g.lineWidth=3.5;g.beginPath();g.moveTo(-30,0);g.lineTo(17,0);g.stroke();
   g.strokeStyle='#c19459';g.lineWidth=1;g.beginPath();g.moveTo(-24,-.8);g.lineTo(12,-.8);g.stroke();
@@ -40,5 +41,34 @@ ProjectileArt=(()=>{
   g.beginPath();g.moveTo(8,-2.8);g.lineTo(12,-2.8);g.lineTo(12,2.8);g.lineTo(8,2.8);g.closePath();g.fill();g.stroke();
   g.restore();
  }
- return {drawFish,drawPilum};
+ function drawNet(g,b,frame=null){
+  const def=P.net;
+  if(frame){
+   const crop=def.box;
+   g.save();g.translate(b.x,b.y-def.yOffset);g.rotate(Math.atan2(b.vy,b.vx));
+   g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return true;
+  }
+  g.save();g.translate(b.x,b.y-def.yOffset);g.rotate(Math.atan2(b.vy,b.vx));g.strokeStyle='#eee1a8';g.lineWidth=2;
+  for(let i=-12;i<=12;i+=6){g.beginPath();g.moveTo(i,-12);g.lineTo(i,12);g.moveTo(-12,i);g.lineTo(12,i);g.stroke();}
+  g.restore();return true;
+ }
+ function drawArrow(g,b,frame=null){
+  const def=P.arrow,progress=Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5));
+  const height=def.arcStart+(def.arcEnd-def.arcStart)*progress;
+  if(frame){
+   const crop=def.box;
+   g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
+   g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return true;
+  }
+  g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
+  g.fillStyle='#d7b784';g.fillRect(-17,-1,29,2);g.fillStyle='#e9ead6';g.fillRect(9,-3,6,6);
+  g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();return true;
+ }
+ function drawEnemyProjectile(g,b,getFrame=null){
+  if(b.kind==='net')return drawNet(g,b,getFrame?getFrame(P.net.unit,P.net.action,P.net.progress):null);
+  if(b.kind==='arrow')return drawArrow(g,b,getFrame?getFrame(P.arrow.unit,P.arrow.action,P.arrow.progress):null);
+  return drawPilum(g,b);
+ }
+ return {drawFish,drawPilum,drawNet,drawArrow,drawEnemyProjectile,definitions:P};
+
 })();

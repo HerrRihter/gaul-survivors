@@ -5,8 +5,7 @@ const factories = {
 "src/pages/legion-preview.js": function(require, exports){
 const {drawExpansion} = require("src/rendering/art/expansion-art.js");
 const {unitDefinitions} = require("data/enemies/units.js");
-const {waves} = require("data/enemies/waves.js");
-const {expansionSchedules} = require("data/enemies/expansion.js");
+const {waves,expansionSchedules} = require("data/enemies/waves.js");
 const {arenaDefinitions,createArenas} = require("src/world/arenas.js");
 const {CharacterFrameManifest} = require("data/animations/character-frames.js");
 const {CharacterBounds} = require("data/animations/character-bounds.js");
@@ -96,7 +95,7 @@ setInterval(drawMap,500);
 
 },
 "src/rendering/art/expansion-art.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/expansion.js");
+const {expansionUnits} = require("data/enemies/units.js");
 function drawExpansion(g,e){
   if(!expansionUnits[e.unit])return false;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));g.scale(Math.cos(e.heading)<0?-3:3,3);
@@ -165,8 +164,7 @@ Object.defineProperty(exports, "drawExpansion", {get: () => drawExpansion});
 Object.defineProperty(exports, "expansionTelegraph", {get: () => expansionTelegraph});
 Object.defineProperty(exports, "drawHazards", {get: () => drawHazards});
 },
-"data/enemies/expansion.js": function(require, exports){
-// Pixel prototypes: balance and map schedules are intentionally kept together.
+"data/enemies/units.js": function(require, exports){
 const expansionUnits={
   boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
   stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
@@ -176,16 +174,7 @@ const expansionUnits={
   caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
   wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
 };
-const expansionSchedules={
-  forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
-  camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
-};
 
-Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
-Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
-},
-"data/enemies/units.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/expansion.js");
 const unitDefinitions={
   ...expansionUnits,
   roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
@@ -195,9 +184,13 @@ const unitDefinitions={
   turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
   ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
   boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
- };
+};
 
+const units=unitDefinitions;
+
+Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
 Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
+Object.defineProperty(exports, "units", {get: () => units});
 },
 "data/enemies/waves.js": function(require, exports){
 const waves={
@@ -214,7 +207,20 @@ const waves={
   boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
 };
 
+const expansionSchedules={
+  forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
+  camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
+};
+
+const waveSchedules={
+  village:waves,
+  forest:expansionSchedules.forest,
+  camp:expansionSchedules.camp
+};
+
 Object.defineProperty(exports, "waves", {get: () => waves});
+Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
+Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
 },
 "src/world/arenas.js": function(require, exports){
 const {VillageCollision} = require("src/world/village/collision.js");
@@ -576,7 +582,7 @@ const SceneryArt={};
 if(typeof Image!=='undefined')for(const name of ['tent','tent-round','weapons','rocks','command','supplies','fire','standard']){
  const image=new Image();SceneryArt[name]={image,ready:false};
  image.onload=()=>SceneryArt[name].ready=true;
- image.src=AssetPaths.url('world/expansion/'+name+'-v1.png');
+ image.src=AssetPaths.url('world/scenery/'+name+'-v1.png');
 }
 
 Object.defineProperty(exports, "SceneryArt", {get: () => SceneryArt});

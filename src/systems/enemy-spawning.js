@@ -1,5 +1,5 @@
 import {prepareExpansion,scheduleExpansion} from './expansion.js';
-import {expansionUnits} from '../../data/enemies/expansion.js';
+import {expansionUnits} from '../../data/enemies/units.js';
 import {waves} from '../../data/enemies/waves.js';
 export let EnemySpawning;
 'use strict';

@@ -1,4 +1,5 @@
-import {expansionUnits,expansionSchedules} from '../../data/enemies/expansion.js';
+import {expansionUnits} from '../../data/enemies/units.js';
+import {expansionSchedules} from '../../data/enemies/waves.js';
 import {campLanes} from '../world/arenas.js';
 
 export function scheduleExpansion(c){

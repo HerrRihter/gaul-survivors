@@ -623,7 +623,7 @@ const SceneryArt={};
 if(typeof Image!=='undefined')for(const name of ['tent','tent-round','weapons','rocks','command','supplies','fire','standard']){
  const image=new Image();SceneryArt[name]={image,ready:false};
  image.onload=()=>SceneryArt[name].ready=true;
- image.src=AssetPaths.url('world/expansion/'+name+'-v1.png');
+ image.src=AssetPaths.url('world/scenery/'+name+'-v1.png');
 }
 
 Object.defineProperty(exports, "SceneryArt", {get: () => SceneryArt});
@@ -1170,11 +1170,24 @@ const waves={
   boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
 };
 
+const expansionSchedules={
+  forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
+  camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
+};
+
+const waveSchedules={
+  village:waves,
+  forest:expansionSchedules.forest,
+  camp:expansionSchedules.camp
+};
+
 Object.defineProperty(exports, "waves", {get: () => waves});
+Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
+Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
 },
 "src/systems/enemy-spawning.js": function(require, exports){
 const {prepareExpansion,scheduleExpansion} = require("src/systems/expansion.js");
-const {expansionUnits} = require("data/enemies/expansion.js");
+const {expansionUnits} = require("data/enemies/units.js");
 const {waves} = require("data/enemies/waves.js");
 let EnemySpawning;
 'use strict';
@@ -1239,7 +1252,8 @@ return {spawn,updateSpawning};
 Object.defineProperty(exports, "EnemySpawning", {get: () => EnemySpawning});
 },
 "src/systems/expansion.js": function(require, exports){
-const {expansionUnits,expansionSchedules} = require("data/enemies/expansion.js");
+const {expansionUnits} = require("data/enemies/units.js");
+const {expansionSchedules} = require("data/enemies/waves.js");
 const {campLanes} = require("src/world/arenas.js");
 function scheduleExpansion(c){
   const s=c.state;
@@ -1350,8 +1364,7 @@ Object.defineProperty(exports, "expansionDrop", {get: () => expansionDrop});
 Object.defineProperty(exports, "updateHazards", {get: () => updateHazards});
 Object.defineProperty(exports, "updateExpansion", {get: () => updateExpansion});
 },
-"data/enemies/expansion.js": function(require, exports){
-// Pixel prototypes: balance and map schedules are intentionally kept together.
+"data/enemies/units.js": function(require, exports){
 const expansionUnits={
   boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
   stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
@@ -1361,16 +1374,26 @@ const expansionUnits={
   caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
   wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
 };
-const expansionSchedules={
-  forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
-  camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
+
+const unitDefinitions={
+  ...expansionUnits,
+  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
+  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
+  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
+  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
+  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
+  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
+  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
 };
 
+const units=unitDefinitions;
+
 Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
-Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
+Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
+Object.defineProperty(exports, "units", {get: () => units});
 },
 "src/systems/combat.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/expansion.js");
+const {expansionUnits} = require("data/enemies/units.js");
 const {expansionDrop} = require("src/systems/expansion.js");
 const {advanceAction} = require("src/rendering/animation-player.js");
 let CombatSystem;
@@ -1895,7 +1918,7 @@ return {background,draw};
 Object.defineProperty(exports, "SceneRenderer", {get: () => SceneRenderer});
 },
 "src/rendering/art/expansion-art.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/expansion.js");
+const {expansionUnits} = require("data/enemies/units.js");
 function drawExpansion(g,e){
   if(!expansionUnits[e.unit])return false;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));g.scale(Math.cos(e.heading)<0?-3:3,3);
@@ -2134,17 +2157,17 @@ Object.defineProperty(exports, "VillageData", {get: () => VillageData});
 },
 "src/rendering/art/projectile-art.js": function(require, exports){
 const {AssetPaths} = require("src/rendering/asset-paths.js");
+const {projectileDefinitions} = require("data/projectiles/projectiles.js");
 let ProjectileArt;
 'use strict';
 ProjectileArt=(()=>{
- // The release hand is 48 logical pixels above the foot anchor.
- const FISH_HEIGHT=48,art={};
- if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url('projectiles/projectiles-v2.png');}
- function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const b=kind==='fish'?[426,185,680,300]:[110,748,1334,76],w=(kind==='fish'?34:72)*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
+ const P=projectileDefinitions,art={};
+ if(typeof Image!=='undefined'){const image=new Image();image.onload=()=>{art.image=image;};image.src=AssetPaths.url(P.fish.texture);}
+ function bitmap(g,kind,x,y,angle,scale=1){if(!art.image)return false;const def=P[kind],b=def.box,w=def.width*scale,h=w*b[3]/b[2];g.save();g.translate(x,y);g.rotate(angle);g.drawImage(art.image,...b,-w/2,-h/2,w,h);g.restore();return true;}
  function drawFish(g,f){
-  const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx);
-  if(bitmap(g,'fish',f.x,f.y-FISH_HEIGHT,angle+Math.sin(f.age*12)*.055))return;
-  g.save();g.translate(f.x,f.y-FISH_HEIGHT);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
+  const dx=f.vx??f.dx,dy=f.vy??f.dy,angle=Math.atan2(dy,dx),yOff=P.fish.yOffset;
+  if(bitmap(g,'fish',f.x,f.y-yOff,angle+Math.sin(f.age*12)*.055))return;
+  g.save();g.translate(f.x,f.y-yOff);g.rotate(angle+Math.sin(f.age*12)*.055);g.scale(1.15,1.15);
   g.lineWidth=1.7;g.lineJoin='round';g.lineCap='round';
   g.fillStyle='#50634c';g.strokeStyle='#202921';
   g.beginPath();g.moveTo(-22,0);g.lineTo(-34,-10);g.quadraticCurveTo(-31,-3,-30,0);g.quadraticCurveTo(-32,4,-35,9);g.lineTo(-21,5);g.closePath();g.fill();g.stroke();
@@ -2163,8 +2186,9 @@ ProjectileArt=(()=>{
   g.restore();
  }
  function drawPilum(g,b){
-  if(bitmap(g,'pilum',b.x,b.y-16,Math.atan2(b.vy,b.vx)))return;
-  g.save();g.translate(b.x,b.y-16);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
+  const yOff=P.pilum.yOffset;
+  if(bitmap(g,'pilum',b.x,b.y-yOff,Math.atan2(b.vy,b.vx)))return;
+  g.save();g.translate(b.x,b.y-yOff);g.rotate(Math.atan2(b.vy,b.vx));g.lineCap='round';g.lineJoin='round';
   g.strokeStyle='#251c16';g.lineWidth=6;g.beginPath();g.moveTo(-31,0);g.lineTo(17,0);g.stroke();
   g.strokeStyle='#80552f';g.lineWidth=3.5;g.beginPath();g.moveTo(-30,0);g.lineTo(17,0);g.stroke();
   g.strokeStyle='#c19459';g.lineWidth=1;g.beginPath();g.moveTo(-24,-.8);g.lineTo(12,-.8);g.stroke();
@@ -2175,10 +2199,53 @@ ProjectileArt=(()=>{
   g.beginPath();g.moveTo(8,-2.8);g.lineTo(12,-2.8);g.lineTo(12,2.8);g.lineTo(8,2.8);g.closePath();g.fill();g.stroke();
   g.restore();
  }
- return {drawFish,drawPilum};
+ function drawNet(g,b,frame=null){
+  const def=P.net;
+  if(frame){
+   const crop=def.box;
+   g.save();g.translate(b.x,b.y-def.yOffset);g.rotate(Math.atan2(b.vy,b.vx));
+   g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return true;
+  }
+  g.save();g.translate(b.x,b.y-def.yOffset);g.rotate(Math.atan2(b.vy,b.vx));g.strokeStyle='#eee1a8';g.lineWidth=2;
+  for(let i=-12;i<=12;i+=6){g.beginPath();g.moveTo(i,-12);g.lineTo(i,12);g.moveTo(-12,i);g.lineTo(12,i);g.stroke();}
+  g.restore();return true;
+ }
+ function drawArrow(g,b,frame=null){
+  const def=P.arrow,progress=Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5));
+  const height=def.arcStart+(def.arcEnd-def.arcStart)*progress;
+  if(frame){
+   const crop=def.box;
+   g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
+   g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return true;
+  }
+  g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
+  g.fillStyle='#d7b784';g.fillRect(-17,-1,29,2);g.fillStyle='#e9ead6';g.fillRect(9,-3,6,6);
+  g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();return true;
+ }
+ function drawEnemyProjectile(g,b,getFrame=null){
+  if(b.kind==='net')return drawNet(g,b,getFrame?getFrame(P.net.unit,P.net.action,P.net.progress):null);
+  if(b.kind==='arrow')return drawArrow(g,b,getFrame?getFrame(P.arrow.unit,P.arrow.action,P.arrow.progress):null);
+  return drawPilum(g,b);
+ }
+ return {drawFish,drawPilum,drawNet,drawArrow,drawEnemyProjectile,definitions:P};
+
 })();
 
 Object.defineProperty(exports, "ProjectileArt", {get: () => ProjectileArt});
+},
+"data/projectiles/projectiles.js": function(require, exports){
+const projectileDefinitions={
+  fish:{name:'Рыба',source:'atlas',texture:'projectiles/projectiles-v2.png',box:[426,185,680,300],width:34,yOffset:48},
+  pilum:{name:'Пилум',source:'atlas',texture:'projectiles/projectiles-v2.png',box:[110,748,1334,76],width:72,yOffset:16},
+  net:{name:'Сеть',source:'frame',unit:'netter',action:'attack',progress:.5,box:[183,172,64,44],yOffset:44},
+  arrow:{name:'Стрела',source:'frame',unit:'tower',action:'attack',progress:.5,box:[185,109,33,10],arcStart:122,arcEnd:40},
+  menhir:{name:'Менгир',source:'atlas',texture:'projectiles/menhir-flight-v2.png',box:[59,151,1567,706],targetSize:[124,72]}
+};
+
+const projectiles=projectileDefinitions;
+
+Object.defineProperty(exports, "projectileDefinitions", {get: () => projectileDefinitions});
+Object.defineProperty(exports, "projectiles", {get: () => projectiles});
 },
 "src/rendering/art/villager-art.js": function(require, exports){
 const {CharacterFrames} = require("src/rendering/character-frames.js");
@@ -2503,24 +2570,7 @@ Legion=(()=>{
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
  }
  function projectile(g,b){
-  // Reuse the actual release pose: no independently drawn imitation of the net
-  // or arrow. Crops contain only the airborne equipment, excluding hands/bows.
-  if(b.kind==='net'||b.kind==='arrow'){
-   const net=b.kind==='net',frame=UnitArt.get(net?'netter':'tower','attack',.5);
-   if(frame){
-    const crop=net?[183,172,64,44]:[185,109,33,10];
-    const progress=Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5));
-    const height=net?44:122+(40-122)*progress;
-    g.save();g.translate(b.x,b.y-height);g.rotate(Math.atan2(b.vy,b.vx));
-    g.drawImage(frame,...crop,-crop[2]/2,-crop[3]/2,crop[2],crop[3]);g.restore();return;
-   }
-  }
-  if(b.kind==='net'){
-    g.save();g.translate(b.x,b.y-44);g.rotate(Math.atan2(b.vy,b.vx));g.strokeStyle='#eee1a8';g.lineWidth=2;
-    for(let i=-12;i<=12;i+=6){g.beginPath();g.moveTo(i,-12);g.lineTo(i,12);g.moveTo(-12,i);g.lineTo(12,i);g.stroke();}g.restore();
-  }else if(b.kind==='arrow'){
-    g.save();g.translate(b.x,b.y-(122-82*Math.min(1,(b.age||0)/Math.max(.01,b.flightTime||2.5))));g.rotate(Math.atan2(b.vy,b.vx));g.fillStyle='#d7b784';g.fillRect(-17,-1,29,2);g.fillStyle='#e9ead6';g.fillRect(9,-3,6,6);g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();
-  }else ProjectileArt.drawPilum(g,b);
+  ProjectileArt.drawEnemyProjectile(g,b,(unit,action,progress)=>typeof UnitArt!=='undefined'?UnitArt.get(unit,action,progress):null);
  }
  function draw(g,e,sprite){
   const u=units[e.unit];
@@ -2545,21 +2595,6 @@ Legion=(()=>{
 })();
 
 Object.defineProperty(exports, "Legion", {get: () => Legion});
-},
-"data/enemies/units.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/expansion.js");
-const unitDefinitions={
-  ...expansionUnits,
-  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
-  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
-  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
-  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
-  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
-  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
-  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
- };
-
-Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
 },
 "src/rendering/art/unit-art.js": function(require, exports){
 const {CharacterFrames} = require("src/rendering/character-frames.js");

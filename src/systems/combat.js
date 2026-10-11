@@ -1,4 +1,4 @@
-import {expansionUnits} from '../../data/enemies/expansion.js';
+import {expansionUnits} from '../../data/enemies/units.js';
 import {expansionDrop} from './expansion.js';
 import {advanceAction} from '../rendering/animation-player.js';
 export let CombatSystem;

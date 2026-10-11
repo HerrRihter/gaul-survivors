@@ -1,4 +1,4 @@
-import {expansionUnits} from '../../../data/enemies/expansion.js';
+import {expansionUnits} from '../../../data/enemies/units.js';
 
 export function drawExpansion(g,e){
   if(!expansionUnits[e.unit])return false;
