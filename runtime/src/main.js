@@ -1619,7 +1619,8 @@ return {resetInput,bind};
 Object.defineProperty(exports, "InputSystem", {get: () => InputSystem});
 },
 "src/app/game-flow.js": function(require, exports){
-const {waves} = require("data/enemies/waves.js");
+const {waves,lutetiaWaves} = require("data/enemies/waves.js");
+const {seedCityCrowd} = require("src/systems/city-population.js");
 const {permanentUpgradeDefinitions} = require("data/upgrades.js");
 let GameFlow;
 'use strict';
@@ -1644,7 +1645,7 @@ function start(){
         enemies:[],
         corpses:[],
         enemyShots:[],
-        nextTurtle:waves.siege.turtle.first,
+        nextTurtle:sessionContext.selectedMap==='lutetia'?lutetiaWaves.turtle.first:waves.siege.turtle.first,
         nextRam:waves.siege.ram.first,
         shots:[],
         fish:[],
@@ -1688,6 +1689,7 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       for(const resident of sessionContext.Village.residents||[])sessionContext.spawn(resident.unit,false,resident);
+      seedCityCrowd(sessionContext);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));
@@ -1797,8 +1799,24 @@ const waves={
   boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
 };
 
+const lutetiaWaves={
+  stages:[
+    {time:0,interval:1.5,batch:1,cap:24,weights:[['roman',75],['auxiliary',25]]},
+    {time:40,interval:1.2,batch:1,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
+    {time:85,interval:1,batch:2,cap:50,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
+    {time:140,interval:.9,batch:2,cap:66,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
+    {time:210,interval:.8,batch:3,cap:84,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
+  ],
+  turtle:{first:125,every:70,cap:1,late:205,lateCap:2},
+  civilians:{initial:24,maximum:40,every:2.5}
+};
+function lutetiaStage(time){return [...lutetiaWaves.stages].reverse().find(s=>time>=s.time)||lutetiaWaves.stages[0];}
+function lutetiaWave(time,roll=Math.random()){
+ const weights=lutetiaStage(time).weights;let value=roll*weights.reduce((sum,[,weight])=>sum+weight,0);
+ for(const [unit,weight]of weights){value-=weight;if(value<0)return unit;}return weights.at(-1)[0];
+}
 const expansionSchedules={
-  lutetia:[{unit:'courtesan',first:8,every:17,cap:8}],
+  lutetia:[{unit:'courtesan',first:15,every:27,cap:4},{unit:'wine',first:70,every:42,cap:2}],
   forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
   camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
 };
@@ -1811,8 +1829,120 @@ const waveSchedules={
 };
 
 Object.defineProperty(exports, "waves", {get: () => waves});
+Object.defineProperty(exports, "lutetiaWaves", {get: () => lutetiaWaves});
+Object.defineProperty(exports, "lutetiaStage", {get: () => lutetiaStage});
+Object.defineProperty(exports, "lutetiaWave", {get: () => lutetiaWave});
 Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
 Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
+},
+"src/systems/city-population.js": function(require, exports){
+const {expansionUnits} = require("data/enemies/units.js");
+const {lutetiaWaves} = require("data/enemies/waves.js");
+const civilianTypes=['citizenBaker','citizenPorter','citizenMatron','citizenScribe'];
+function seedCityCrowd(c){
+ if(c.state.map!=='lutetia')return;
+ for(let i=0;i<lutetiaWaves.civilians.initial;i++){
+  const unit=civilianTypes[i%4];
+  for(let attempt=0;attempt<80;attempt++){
+   const p={x:c.rand(100,c.WORLD-100),y:c.rand(120,c.WORLD-100)};
+   if(c.dist(p,c.state.p)<140||c.Village.blocked(p.x,p.y,12))continue;
+   c.spawn(unit,false,p);break;
+  }
+ }
+ c.state.crowdNext=lutetiaWaves.civilians.every;
+}
+function replenishCityCrowd(c){
+ const s=c.state;if(s.map!=='lutetia'||s.t<(s.crowdNext||0))return;
+ s.crowdNext=s.t+lutetiaWaves.civilians.every;
+ const counts=civilianTypes.map(unit=>s.enemies.filter(e=>e.unit===unit&&e.hp>0).length);
+ const desired=Math.min(lutetiaWaves.civilians.maximum,24+Math.floor(s.t/15));
+ if(counts.reduce((a,b)=>a+b,0)<desired)c.spawn(civilianTypes[counts.indexOf(Math.min(...counts))]);
+}
+function updateCityPedestrian(e,c,dt){
+ const civilian=expansionUnits[e.unit]?.civilian;
+ if(!civilian&&e.unit!=='courtesan')return false;
+ const s=c.state,p=s.p;
+ e.action=null;e.moving=false;
+ const move=(angle,speed)=>{
+  // Choose a clear local step instead of constructing a flow field for every pedestrian.
+  let chosen=null;
+  for(const offset of [0,.6,-.6,1.2,-1.2,Math.PI]){
+   const a=angle+offset,q={x:e.x+Math.cos(a)*28,y:e.y+Math.sin(a)*28};
+   if(c.Village.clear(e,q,e.r)){chosen=a;break;}
+  }
+  if(chosen===null){e.roamUntil=0;return;}
+  e.heading=chosen;const ox=e.x,oy=e.y;
+  const step=speed*(1-(e.abilitySlow||0))*dt;
+  c.Village.move(e,Math.cos(chosen)*step+e.vx*dt,Math.sin(chosen)*step+e.vy*dt,e.r);
+  const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;e.walk=(e.walk||0)+travel/50;
+ };
+ const wander=()=>{
+  if(!e.roamUntil||s.t>=e.roamUntil){e.roamAngle=c.rand(-Math.PI,Math.PI);e.roamUntil=s.t+c.rand(.6,2.1);}
+  move(e.roamAngle,e.speed);
+ };
+ if(civilian){
+  if(c.dist(e,p)<e.r+14&&c.Village.clear(e,p,2))c.hurtPlayer(e);
+  wander();return true;
+ }
+ // Thieves never pursue or attack the hero. Grab nearby loot, then retreat.
+ let target=null,best=340;
+ if(!(e.fleeUntil>s.t))for(const list of [s.gems,s.pickups])for(const item of list){
+  if(item.dead)continue;const distance=c.dist(e,item);
+  if(distance<best&&c.Village.clear(e,item,e.r)){target=item;best=distance;}
+ }
+ if(target&&best<22){
+  target.dead=true;if(target.type==='food')e.hp=Math.min(e.max,e.hp+25);
+  e.fleeUntil=s.t+2.2;e.roamUntil=0;
+  if(s.texts.length<45)s.texts.push({x:e.x,y:e.y-50,v:target.type==='food'?'Перекус!':'Моё!',life:.8});
+ }
+ const distance=c.dist(e,p);
+ if(e.fleeUntil>s.t||distance<145){
+  const angle=distance<1?(e.roamAngle??c.rand(-Math.PI,Math.PI)):Math.atan2(e.y-p.y,e.x-p.x);
+  move(angle,e.speed*1.25);
+ }else if(target){move(Math.atan2(target.y-e.y,target.x-e.x),e.speed);}
+ else wander();
+ return true;
+}
+
+Object.defineProperty(exports, "civilianTypes", {get: () => civilianTypes});
+Object.defineProperty(exports, "seedCityCrowd", {get: () => seedCityCrowd});
+Object.defineProperty(exports, "replenishCityCrowd", {get: () => replenishCityCrowd});
+Object.defineProperty(exports, "updateCityPedestrian", {get: () => updateCityPedestrian});
+},
+"data/enemies/units.js": function(require, exports){
+const expansionUnits={
+  citizenBaker:{name:'Пекарь',hp:28,speed:104,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
+  citizenPorter:{name:'Носильщик',hp:32,speed:116,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#b2bd8b',civilian:true},
+  citizenMatron:{name:'Матрона',hp:26,speed:94,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#8fc6ba',civilian:true},
+  citizenScribe:{name:'Писец',hp:22,speed:124,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#e4c88b',civilian:true},
+  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
+  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
+  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
+  boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
+  stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
+  netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
+  tower:{labelHeight:180,name:'Осадная башня',hp:850,speed:19,damage:12,r:44,range:510,wind:1.7,cooldown:3.5,xp:20,color:'#d2ad75'},
+  cavalry:{labelHeight:140,name:'Конница',hp:180,speed:310,damage:30,r:26,range:2200,wind:1.5,cooldown:0,xp:5,color:'#e2c195'},
+  caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
+  wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
+};
+
+const unitDefinitions={
+  ...expansionUnits,
+  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
+  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
+  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
+  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
+  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
+  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
+  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
+};
+
+const units=unitDefinitions;
+
+Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
+Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
+Object.defineProperty(exports, "units", {get: () => units});
 },
 "data/upgrades.js": function(require, exports){
 const heroUnlockPrices = {
@@ -1860,7 +1990,8 @@ Object.defineProperty(exports, "permanentUpgrades", {get: () => permanentUpgrade
 "src/systems/enemy-spawning.js": function(require, exports){
 const {prepareExpansion,scheduleExpansion} = require("src/systems/expansion.js");
 const {expansionUnits} = require("data/enemies/units.js");
-const {waves} = require("data/enemies/waves.js");
+const {waves,lutetiaWaves,lutetiaStage,lutetiaWave} = require("data/enemies/waves.js");
+const {replenishCityCrowd} = require("src/systems/city-population.js");
 let EnemySpawning;
 'use strict';
 EnemySpawning={create(sessionContext){
@@ -1900,25 +2031,35 @@ function spawn(unit,boss=false,position=null){
     }
 function updateSpawning(dt){
   const s=sessionContext.state,n=waves.normal;
+  replenishCityCrowd(sessionContext);
   scheduleExpansion(sessionContext);
   s.spawn-=dt;
   if(s.spawn<=0){
-    s.spawn=sessionContext.Math.max(n.minInterval,n.interval-s.t*n.timeFactor);
-    const count=1+sessionContext.Math.floor(s.t/n.batchEvery);
-    for(let i=0;i<count&&s.enemies.length<n.cap;i++)spawn(s.map==='lutetia'?'auxiliary':sessionContext.Legion.wave(s.t));
+    const city=s.map==='lutetia',stage=city?lutetiaStage(s.t):null;
+    s.spawn=city?stage.interval:sessionContext.Math.max(n.minInterval,n.interval-s.t*n.timeFactor);
+    const count=city?stage.batch:1+sessionContext.Math.floor(s.t/n.batchEvery);
+    let population=s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length;
+    for(let i=0;i<count&&population<(city?stage.cap:n.cap);i++){
+      if(spawn(city?lutetiaWave(s.t,sessionContext.Math.random()):sessionContext.Legion.wave(s.t)))population++;
+    }
   }
   for(const [type,key]of [['turtle','nextTurtle'],['ram','nextRam']]){
-    if(s.map==='lutetia')continue;
-    const spec=waves.siege[type];
+    if(s.map==='lutetia'&&type==='ram')continue;
+    const spec=s.map==='lutetia'?lutetiaWaves.turtle:waves.siege[type];
     if(s.t>=s[key]){
       s[key]+=spec.every;
-      if(s.enemies.filter(e=>e.unit===type).length<spec.cap){spawn(type);sessionContext.toast(spec.message);}
+      const cap=spec.late&&s.t>=spec.late?spec.lateCap:spec.cap;
+      if(s.enemies.filter(e=>e.unit===type&&e.hp>0).length<cap){spawn(type);sessionContext.toast(spec.message||waves.siege[type].message);}
     }
   }
   if(s.t>=waves.boss.time&&!s.bossSpawned){
     s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.soundEffect('boss');
   }
-  if(s.map!=='lutetia')for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
+  if(s.map!=='lutetia'){
+    for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
+  }else{
+    for(const [time,message]of [[40,'ПИЛУМЫ · Метатели занимают улицы. Используй дома как укрытия.'],[85,'ВЕТЕРАНЫ · Тяжёлая пехота входит в город.'],[210,'ПОСЛЕДНИЙ НАТИСК · Легион усиливает наступление.']])if(s.t>=time&&s.t-dt<time)sessionContext.toast(message);
+  }
 }
 return {spawn,updateSpawning};
 }};
@@ -1929,6 +2070,7 @@ Object.defineProperty(exports, "EnemySpawning", {get: () => EnemySpawning});
 const {expansionUnits} = require("data/enemies/units.js");
 const {expansionSchedules} = require("data/enemies/waves.js");
 const {campLanes} = require("src/world/arenas.js");
+const {updateCityPedestrian} = require("src/systems/city-population.js");
 function scheduleExpansion(c){
   const s=c.state;
   for(const spec of expansionSchedules[s.map]||[]){
@@ -1936,7 +2078,7 @@ function scheduleExpansion(c){
     if(s.t<next)continue;
     const lateCavalry=spec.unit==='cavalry'&&s.t>=120;
     s.specialNext[spec.unit]=next+(lateCavalry?12:spec.every);
-    if(s.enemies.length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
+    if(s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
       c.spawn(spec.unit);c.toast(expansionUnits[spec.unit].name.toUpperCase()+' · '+tips[spec.unit]);
     }
   }
@@ -1974,29 +2116,10 @@ function updateHazards(c,dt){
 
 function updateExpansion(e,c,dt){
   const u=expansionUnits[e.unit];if(!u)return false;
+  if(updateCityPedestrian(e,c,dt))return true;
   const s=c.state,p=s.p,d=c.dist(e,p);e.moving=false;
   const advanceWalk=travel=>{if(travel>.01)e.walk=(e.walk||0)+(e.unit==='cavalry'?dt*2:travel/50);};
   const move=(x,y,speed)=>{speed*=1-(e.abilitySlow||0);const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
-  if(e.unit==='courtesan'&&!e.action){
-    // Only chase visible loot: avoid rebuilding a navigation field for each drop.
-    let target=null,best=340;
-    for(const list of [s.gems,s.pickups])for(const item of list){
-      if(item.dead)continue;
-      const distance=c.dist(e,item);
-      if(distance<best&&c.Village.clear(e,item,e.r)){target=item;best=distance;}
-    }
-    if(target){
-      if(best<22){
-        target.dead=true;
-        if(target.type==='food')e.hp=Math.min(e.max,e.hp+25);
-        s.texts.push({x:e.x,y:e.y-50,v:target.type==='food'?'Перекус!':'Моё!',life:.8});
-      }else{
-        e.heading=Math.atan2(target.y-e.y,target.x-e.x);
-        move(Math.cos(e.heading),Math.sin(e.heading),e.speed);
-      }
-      return true;
-    }
-  }
   if(e.unit==='caius'){
     const angle=s.t*.22+e.phase;e.heading=angle;move(Math.cos(angle),Math.sin(angle),e.speed);return true;
   }
@@ -2064,37 +2187,6 @@ Object.defineProperty(exports, "expansionDrop", {get: () => expansionDrop});
 Object.defineProperty(exports, "updateHazards", {get: () => updateHazards});
 Object.defineProperty(exports, "updateExpansion", {get: () => updateExpansion});
 },
-"data/enemies/units.js": function(require, exports){
-const expansionUnits={
-  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
-  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
-  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:74,damage:3,r:13,range:32,wind:.65,cooldown:1.6,xp:2,color:'#dca7d9'},
-  boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
-  stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
-  netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
-  tower:{labelHeight:180,name:'Осадная башня',hp:850,speed:19,damage:12,r:44,range:510,wind:1.7,cooldown:3.5,xp:20,color:'#d2ad75'},
-  cavalry:{labelHeight:140,name:'Конница',hp:180,speed:310,damage:30,r:26,range:2200,wind:1.5,cooldown:0,xp:5,color:'#e2c195'},
-  caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
-  wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
-};
-
-const unitDefinitions={
-  ...expansionUnits,
-  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
-  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
-  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
-  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
-  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
-  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
-  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
-};
-
-const units=unitDefinitions;
-
-Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
-Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
-Object.defineProperty(exports, "units", {get: () => units});
-},
 "src/systems/combat.js": function(require, exports){
 const {expansionUnits} = require("data/enemies/units.js");
 const {expansionDrop} = require("src/systems/expansion.js");
@@ -2126,6 +2218,8 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       if(e.hp<=0){
         sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
+        // The ambient crowd is not a source of XP, kill rewards or random loot.
+        if(sessionContext.Legion.units[e.unit].civilian)return;
         sessionContext.state.kills++;
         sessionContext.abilities?.onKill();
         sessionContext.state.earned+=sessionContext.Progression.kill();
@@ -3546,7 +3640,7 @@ Legion=(()=>{
    sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
    if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
   }
-  if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
+  if(e.unit!=='roman'&&!e.boss&&!u.civilian){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
  }
  return {units,wave,mitigation,telegraph,draw,projectile};
 })();

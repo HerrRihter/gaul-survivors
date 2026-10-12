@@ -16,7 +16,11 @@ const {fitCharacterPreview,drawCharacterPreview} = require("src/ui/character-pre
 const descriptions={
 auxiliary:['Лютеция · с начала боя','Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.'],
 merchant:['Лютеция · на карте изначально','Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.'],
-courtesan:['Лютеция · с 0:08','Небольшой урон, но подбирает ближайшие опыт и еду. Еда восстанавливает ей здоровье.'],
+courtesan:['Лютеция · с 0:15','Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.'],
+citizenBaker:['Лютеция · с начала боя','Горожанин. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenPorter:['Лютеция · с начала боя','Горожанин. Бегает с мешком по улицам, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenMatron:['Лютеция · с начала боя','Горожанка с корзиной. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenScribe:['Лютеция · с начала боя','Горожанин со свитком. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
 boar:['Лес · с 0:04','Кабан предупреждает о рывке и несётся по прямой.'],
 stoneSquad:['Лес · с 0:35','Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.'],
 netter:['Лес · с 0:18','Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.'],
@@ -29,7 +33,7 @@ const anchor=CharacterFrameManifest.anchor,previews=[];
 const arenas=createArenas(Village);
 const commonUnits=['roman',...waves.units.slice().sort((a,b)=>a.time-b.time).map(w=>w.type),...Object.keys(waves.siege),'boss'];
 const mapNotes={
- lutetia:'Кривые мощёные улицы, жилые кварталы, торговая площадь и пост стражи. Шесть торговцев стоят у прилавков с начала боя. Забирай опыт и еду раньше куртизанок.',
+ lutetia:'Легионеры и ауксиларии — с начала. Пилумы — 0:40, виночерпии — 1:10, ветераны — 1:25, черепаха — 2:05 (до 3:25 максимум одна, затем две). Центурион — 3:50. На улицах 24–40 гражданских без наград. Куртизанки воруют добычу и убегают.',
  village:'Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.',
  forest:'Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.',
  camp:'Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.'
@@ -51,12 +55,13 @@ function showLocation(){
  }
  previews.length=0;
  document.getElementById('cards').replaceChildren();
- const units=selectedMap==='lutetia'?['auxiliary','merchant','courtesan','boss']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
+ const units=selectedMap==='lutetia'?['roman','auxiliary','merchant','courtesan','pilum','wine','veteran','turtle','boss','citizenBaker','citizenPorter','citizenMatron','citizenScribe']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
  document.getElementById('rosterCount').textContent='Отряды в локации: '+units.length;
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const description=descriptions[unit]||['Новый отряд',''];
+ const description=[...(descriptions[unit]||['Новый отряд',''])];
+ if(selectedMap==='lutetia'&&({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit])description[0]=({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit];
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${description[0]}</p><p>${description[1]}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit;
@@ -170,9 +175,13 @@ Object.defineProperty(exports, "drawHazards", {get: () => drawHazards});
 },
 "data/enemies/units.js": function(require, exports){
 const expansionUnits={
+  citizenBaker:{name:'Пекарь',hp:28,speed:104,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
+  citizenPorter:{name:'Носильщик',hp:32,speed:116,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#b2bd8b',civilian:true},
+  citizenMatron:{name:'Матрона',hp:26,speed:94,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#8fc6ba',civilian:true},
+  citizenScribe:{name:'Писец',hp:22,speed:124,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#e4c88b',civilian:true},
   auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
   merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
-  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:74,damage:3,r:13,range:32,wind:.65,cooldown:1.6,xp:2,color:'#dca7d9'},
+  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
   boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
   stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
   netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
@@ -214,8 +223,24 @@ const waves={
   boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
 };
 
+const lutetiaWaves={
+  stages:[
+    {time:0,interval:1.5,batch:1,cap:24,weights:[['roman',75],['auxiliary',25]]},
+    {time:40,interval:1.2,batch:1,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
+    {time:85,interval:1,batch:2,cap:50,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
+    {time:140,interval:.9,batch:2,cap:66,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
+    {time:210,interval:.8,batch:3,cap:84,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
+  ],
+  turtle:{first:125,every:70,cap:1,late:205,lateCap:2},
+  civilians:{initial:24,maximum:40,every:2.5}
+};
+function lutetiaStage(time){return [...lutetiaWaves.stages].reverse().find(s=>time>=s.time)||lutetiaWaves.stages[0];}
+function lutetiaWave(time,roll=Math.random()){
+ const weights=lutetiaStage(time).weights;let value=roll*weights.reduce((sum,[,weight])=>sum+weight,0);
+ for(const [unit,weight]of weights){value-=weight;if(value<0)return unit;}return weights.at(-1)[0];
+}
 const expansionSchedules={
-  lutetia:[{unit:'courtesan',first:8,every:17,cap:8}],
+  lutetia:[{unit:'courtesan',first:15,every:27,cap:4},{unit:'wine',first:70,every:42,cap:2}],
   forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
   camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
 };
@@ -228,6 +253,9 @@ const waveSchedules={
 };
 
 Object.defineProperty(exports, "waves", {get: () => waves});
+Object.defineProperty(exports, "lutetiaWaves", {get: () => lutetiaWaves});
+Object.defineProperty(exports, "lutetiaStage", {get: () => lutetiaStage});
+Object.defineProperty(exports, "lutetiaWave", {get: () => lutetiaWave});
 Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
 Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
 },
