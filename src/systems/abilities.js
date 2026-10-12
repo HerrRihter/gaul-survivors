@@ -18,6 +18,7 @@ export const AbilitySystem={create(c){
   if(a.id==='volley')c.Villagers.fish(s,p.facing,{count:5+a.castRank+(st.fishCount||0),spread:Math.PI*70/180,damage:16});
   if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=brew?4+(st.poisonDuration||0):5;a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
   if(a.id==='elixir')p.poisoned=0;
+  c.Progression?.recordAbility?.();
   c.soundEffect('magic');hud();return true;
  }
  function update(dt){const s=c.state,p=s.p;for(const e of s.enemies){e.abilityStun=Math.max(0,(e.abilityStun||0)-dt);if(s.t>=(e.slowUntil||0))e.abilitySlow=0;}
@@ -33,7 +34,7 @@ export const AbilitySystem={create(c){
  // Avoid recreating text nodes and invalidating layout on every animation frame.
  let controls=null,buttons=null;
  function hud(){
-  const s=c.state,visible=!!s&&['play','pause','level'].includes(c.mode);
+  const s=c.state,visible=!!s&&c.mode==='play';
   controls??=c.$('abilities');
   if(controls.classList.contains('hidden')===visible)controls.classList.toggle('hidden',!visible);
   if(!s?.abilities)return;

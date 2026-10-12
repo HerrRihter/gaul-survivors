@@ -125,6 +125,9 @@ get renderRunHeroes(){return renderRunHeroes},
 get openRunHeroSelect(){return openRunHeroSelect},
 get renderShop(){return renderShop},
 get closeShop(){return closeShop},
+get renderAchievements(){return renderAchievements},
+get openAchievements(){return openAchievements},
+get closeAchievements(){return closeAchievements},
 get pause(){return pause},
 get levelUp(){return levelUp},
 get pickUpgrade(){return pickUpgrade},
@@ -169,7 +172,7 @@ get stop(){return stop}
     });
     const fitPortrait = portraits.fit;
     let menuPortraitPhase=-1;
-    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,hud}=GameUI.create(sessionContext);
+    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud}=GameUI.create(sessionContext);
     document.addEventListener('villager-art-ready',()=>{
       portraits.clear();
       menuPortraitPhase=-1;
@@ -191,6 +194,7 @@ get stop(){return stop}
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
     updateRecord();
+    ['runHeroSelect','shop','achievements'].forEach(id=>show(id,false));
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
@@ -216,6 +220,13 @@ get stop(){return stop}
     };
     
     $('shopClose').onclick=closeShop;
+
+    const achOpen=$('achievementsOpen'),achClose=$('achievementsClose');
+    if(achOpen)achOpen.onclick=()=>{
+      if(mode!=='menu')return;
+      openAchievements();
+    };
+    if(achClose)achClose.onclick=closeAchievements;
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;
@@ -799,6 +810,11 @@ function toast(text){
 function updateRecord(){
       sessionContext.$('wallet').textContent='ШЛЕМЫ: '+sessionContext.Progression.data.helmets;
       sessionContext.$('record').textContent=sessionContext.best.kills?`РЕКОРД: ${sessionContext.best.kills} врагов · ${sessionContext.clock(sessionContext.best.time)}`:'Легион ещё не знает, что его ждёт.';
+      const defs=sessionContext.Progression.achievements;
+      const data=sessionContext.Progression.data;
+      const unclaimed=defs?defs.filter(a=>a.getProgress(data,sessionContext.best)>=a.target&&!sessionContext.Progression.isClaimed(a.id)).length:0;
+      const btn=sessionContext.$('achievementsOpen');
+      if(btn)btn.textContent=unclaimed>0?`ДОСТИЖЕНИЯ (${unclaimed}!)`:'ДОСТИЖЕНИЯ';
     }
 function updateRunHeroStats(){
       const hero=sessionContext.Villagers.defs[sessionContext.pendingRunHero];
@@ -836,6 +852,7 @@ function renderRunHeroes(){
 function openRunHeroSelect(){
       renderRunHeroes();
       show('shop',false);
+      show('achievements',false);
       show('menu',false);
       show('runHeroSelect',true);
     }
@@ -856,7 +873,7 @@ function renderShop(){
         title.textContent=hero.name;
         card.append(title);
         const desc=sessionContext.document.createElement('p');
-        desc.textContent=hero.desc||(id==='asterix'?'Быстрый кулак: 25 урона, сектор 90°.':'Метает менгиры: 52 урона.');
+        desc.textContent=hero.desc;
         card.append(desc);
         const info=sessionContext.document.createElement('small');
         info.textContent=hero.hp+' HP · скорость '+hero.speed;
@@ -896,6 +913,149 @@ function renderShop(){
 function closeShop(){
       show('shop',false);
       show('menu',true);
+    }
+function renderAchievements(){
+      updateRecord();
+      const list=sessionContext.$('achievementsList'),summary=sessionContext.$('achievementsSummary');
+      if(!list||!summary)return;
+      list.replaceChildren();
+      summary.replaceChildren();
+      const defs=sessionContext.Progression.achievements;
+      const data=sessionContext.Progression.data;
+      let completedCount=0,claimedCount=0;
+      const cardsData=defs.map(ach=>{
+        const progress=ach.getProgress(data,sessionContext.best);
+        const isDone=progress>=ach.target;
+        const isClaimed=sessionContext.Progression.isClaimed(ach.id);
+        if(isDone)completedCount++;
+        if(isClaimed)claimedCount++;
+        return {ach,progress,isDone,isClaimed};
+      });
+      cardsData.sort((a,b)=>{
+        const scoreA=a.isClaimed?-1:(a.isDone?2:1);
+        const scoreB=b.isClaimed?-1:(b.isDone?2:1);
+        if(scoreA!==scoreB)return scoreB-scoreA;
+        return (b.progress/b.ach.target)-(a.progress/a.ach.target);
+      });
+      const total=defs.length;
+      const pct=total?Math.round((completedCount/total)*100):0;
+      const sumHead=sessionContext.document.createElement('div');
+      sumHead.className='achievements-summary-header';
+      const sumDoneSpan=sessionContext.document.createElement('span');
+      sumDoneSpan.textContent=`Выполнено: ${completedCount} из ${total} (${pct}%)`;
+      const sumClaimSpan=sessionContext.document.createElement('span');
+      sumClaimSpan.textContent=`Получено наград: ${claimedCount} / ${total}`;
+      sumHead.append(sumDoneSpan,sumClaimSpan);
+      const bar=sessionContext.document.createElement('div');
+      bar.className='achievements-bar';
+      const barFill=sessionContext.document.createElement('i');
+      barFill.style.width=`${pct}%`;
+      bar.append(barFill);
+      summary.append(sumHead,bar);
+      for(const {ach,progress,isDone,isClaimed} of cardsData){
+        const card=sessionContext.document.createElement('div');
+        card.className=`achievement-card${isDone?' completed':''}${isClaimed?' claimed':''}`;
+        const head=sessionContext.document.createElement('div');
+        head.className='achievement-head';
+        const icon=sessionContext.document.createElement('div');
+        icon.className='achievement-icon';
+        if(ach.icon && typeof ach.icon==='string' && (ach.icon.includes('/') || ach.icon.endsWith('.png'))){
+          const img=sessionContext.document.createElement('img');
+          img.src=ach.icon;
+          img.alt=ach.title;
+          img.className='achievement-icon-img';
+          img.loading='lazy';
+          img.onerror=()=>{ img.style.display='none'; icon.textContent='🏆'; };
+          icon.append(img);
+        }else{
+          icon.textContent=ach.icon||'🏆';
+        }
+        const info=sessionContext.document.createElement('div');
+        info.className='achievement-info';
+        const title=sessionContext.document.createElement('h3');
+        title.textContent=ach.title;
+        const desc=sessionContext.document.createElement('p');
+        desc.textContent=ach.desc;
+        info.append(title,desc);
+        head.append(icon,info);
+        const prog=sessionContext.document.createElement('div');
+        prog.className='achievement-progress';
+        const progInfo=sessionContext.document.createElement('div');
+        progInfo.className='achievement-progress-info';
+        const curFormatted=ach.format==='time'?sessionContext.clock(progress):progress;
+        const targetFormatted=ach.format==='time'?sessionContext.clock(ach.target):`${ach.target}${ach.unit?' '+ach.unit:''}`;
+        const itemPct=Math.min(100,Math.floor((progress/ach.target)*100));
+        const valSpan=sessionContext.document.createElement('span');
+        valSpan.textContent=`${curFormatted} / ${targetFormatted}`;
+        const pctSpan=sessionContext.document.createElement('span');
+        pctSpan.textContent=`${itemPct}%`;
+        progInfo.append(valSpan,pctSpan);
+        const itemBar=sessionContext.document.createElement('div');
+        itemBar.className='achievements-bar';
+        const itemBarFill=sessionContext.document.createElement('i');
+        itemBarFill.style.width=`${itemPct}%`;
+        itemBar.append(itemBarFill);
+        prog.append(progInfo,itemBar);
+        const foot=sessionContext.document.createElement('div');
+        foot.className='achievement-foot';
+        const isHelmet=!ach.rewardType||ach.rewardType==='helmets';
+        const reward=sessionContext.document.createElement('span');
+        reward.className='achievement-reward';
+        if(isHelmet){
+          reward.textContent=`+${ach.reward}`;
+          const hIcon=sessionContext.document.createElement('i');
+          hIcon.className='ach-helmet-icon';
+          if(hIcon.setAttribute)hIcon.setAttribute('aria-hidden','true');
+          reward.append(hIcon);
+        }else{
+          reward.textContent=`+${ach.reward} ${ach.rewardType}`;
+        }
+        foot.append(reward);
+        if(isClaimed){
+          const badge=sessionContext.document.createElement('span');
+          badge.className='ach-badge claimed';
+          badge.textContent='✓ ПОЛУЧЕНО';
+          foot.append(badge);
+        }else if(isDone){
+          const btn=sessionContext.document.createElement('button');
+          btn.className='primary ach-claim';
+          const btnText=sessionContext.document.createElement('span');
+          btnText.textContent=`ЗАБРАТЬ +${ach.reward}`;
+          btn.append(btnText);
+          if(isHelmet){
+            const hIcon=sessionContext.document.createElement('i');
+            hIcon.className='ach-helmet-icon';
+            if(hIcon.setAttribute)hIcon.setAttribute('aria-hidden','true');
+            btn.append(hIcon);
+          }
+          btn.onclick=()=>{
+            if(sessionContext.Progression.claimAchievement(ach.id,sessionContext.best)){
+              sessionContext.soundEffect?.('pickup');
+              renderAchievements();
+            }
+          };
+          foot.append(btn);
+        }else{
+          const badge=sessionContext.document.createElement('span');
+          badge.className='ach-badge in-progress';
+          badge.textContent='В ПРОЦЕССЕ';
+          foot.append(badge);
+        }
+        card.append(head,prog,foot);
+        list.append(card);
+      }
+    }
+function openAchievements(){
+      renderAchievements();
+      show('menu',false);
+      show('shop',false);
+      show('runHeroSelect',false);
+      show('achievements',true);
+    }
+function closeAchievements(){
+      show('achievements',false);
+      show('menu',true);
+      updateRecord();
     }
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
 let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
@@ -955,7 +1115,7 @@ function hud(){
         }
       }
     }
-return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,hud};
+return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud};
 }};
 
 Object.defineProperty(exports, "GameUI", {get: () => GameUI});
@@ -1011,6 +1171,7 @@ const AudioSystem = {create(c) {
     stone: ['stone.ogg'], pickup: ['pickup.ogg'], heal: ['heal.ogg'],
     level: ['level.ogg'], ui: ['ui.ogg'], boss: ['boss.ogg'], magic: ['magic.ogg'],
     death: ['death-1.ogg', 'death-2.ogg', 'death-3.ogg'], punchSwing: ['punch.mp3'],
+    punch: ['punch.mp3'],
   };
   const pools = new Map(), cooldowns = new Map(), tracks = new Map();
   let unlocked = false, stopped = false, result = 'defeat', current = null;
@@ -1047,7 +1208,7 @@ const AudioSystem = {create(c) {
   }
   function effect(name) {
     if (quiet() || !settings.effects || c.mode === 'pause') return;
-    const files = clips[name];
+    const files = clips[name] || clips.ui;
     if (!files) return;
     const now = c.performance.now();
     if (now - (cooldowns.get(name) ?? -Infinity) < (name === 'death' ? 180 : name === 'pickup' ? 100 : 65)) return;
@@ -1122,6 +1283,10 @@ sessionContext.window.addEventListener('keydown',e=>{
         sessionContext.closeShop();
         return;
       }
+      if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('achievements').classList.contains('hidden')){
+        sessionContext.closeAchievements();
+        return;
+      }
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('runHeroSelect').classList.contains('hidden')){
         sessionContext.show('runHeroSelect',false);
         sessionContext.show('menu',true);
@@ -1164,6 +1329,7 @@ Object.defineProperty(exports, "InputSystem", {get: () => InputSystem});
 },
 "src/app/game-flow.js": function(require, exports){
 const {waves} = require("data/enemies/waves.js");
+const {permanentUpgradeDefinitions} = require("data/upgrades.js");
 let GameFlow;
 'use strict';
 GameFlow={create(sessionContext){
@@ -1206,10 +1372,10 @@ function start(){
         shake:0,
         step:0,
         stats:{
-          damage:1+levels.power*.05,
+          damage:1+levels.power*permanentUpgradeDefinitions.power.factor,
           haste:1,
           range:1,
-          speed:1+levels.speed*.03,
+          speed:1+levels.speed*permanentUpgradeDefinitions.speed.factor,
           magnet:75,
           armor:0,
           regen:0,
@@ -1219,8 +1385,8 @@ function start(){
         p:{
           x:sessionContext.WORLD/2,
           y:sessionContext.WORLD/2,
-          hp:hero.hp+levels.health*10,
-          max:hero.hp+levels.health*10,
+          hp:hero.hp+levels.health*permanentUpgradeDefinitions.health.factor,
+          max:hero.hp+levels.health*permanentUpgradeDefinitions.health.factor,
           speed:hero.speed,
           inv:0,
           flip:false,
@@ -1231,7 +1397,7 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
-      ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
+      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements'].forEach(id=>sessionContext.show(id,false));
       ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
@@ -1239,12 +1405,16 @@ function start(){
       sessionContext.hud();
     }
 function menu(){
+      if(sessionContext.state?.t){
+        sessionContext.Progression?.recordTime?.(sessionContext.state.t);
+        sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
+      }
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
-      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>sessionContext.show(id,false));
+      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements'].forEach(id=>sessionContext.show(id,false));
       sessionContext.show('menu',true);
       sessionContext.renderShop();
       sessionContext.$('toast').style.opacity=0;
@@ -1291,6 +1461,8 @@ function pickUpgrade(i){
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
+      sessionContext.Progression?.recordTime?.(sessionContext.state.t);
+      sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';
@@ -1343,6 +1515,49 @@ const waveSchedules={
 Object.defineProperty(exports, "waves", {get: () => waves});
 Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
 Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
+},
+"data/upgrades.js": function(require, exports){
+const heroUnlockPrices = {
+  cacofonix: 60,
+  antisanitarix: 75,
+  automatix: 90,
+  panoramix: 100
+};
+
+const permanentUpgradeDefinitions = {
+  health: {name: 'Запас здоровья', desc: '+10 HP всем героям', max: 5, stat: 'hp', factor: 10},
+  power: {name: 'Сила деревни', desc: '+5% урона всем героям', max: 5, stat: 'damage', factor: 0.05},
+  speed: {name: 'Удобные сандалии', desc: '+3% скорости всем героям', max: 5, stat: 'speed', factor: 0.03},
+  haste: {name: 'Выносливость', desc: '+4% к темпу атак', max: 5, stat: 'haste', factor: 0.04},
+  range: {name: 'Размах', desc: '+4% к размеру атак', max: 5, stat: 'range', factor: 0.04},
+  magnet: {name: 'Сумка трофеев', desc: '+10 к радиусу сбора', max: 5, stat: 'magnet', factor: 10},
+  armor: {name: 'Крепкая кожа', desc: '−1 входящего урона; минимум 1', max: 3, stat: 'armor', factor: 1},
+  regen: {name: 'Травяной чай', desc: '+0,15 HP в секунду', max: 5, stat: 'regen', factor: 0.15}
+};
+
+const heroTrainingDefinitions = {
+  asterix: {name: 'Школа кулачного боя', desc: '+6% к темпу кулаков', max: 3, stat: 'punchTempo', factor: 0.06},
+  obelix: {name: 'Каменотёс', desc: '+8% к урону менгиров', max: 3, stat: 'stoneDamage', factor: 0.08},
+  cacofonix: {name: 'Уроки вокала', desc: '+6% к радиусу музыки', max: 3, stat: 'musicRange', factor: 0.06},
+  antisanitarix: {name: 'Выдержанный улов', desc: '+10% к урону возвращающейся рыбы', max: 3, stat: 'fishReturn', factor: 0.1},
+  automatix: {name: 'Секрет кузнеца', desc: '+10% к урону молота', max: 3, stat: 'hammerDamage', factor: 0.1},
+  panoramix: {name: 'Рецепт друида', desc: '+0,4 с к длительности яда', max: 3, stat: 'poisonDuration', factor: 0.4}
+};
+
+const permanentUpgrades = {
+  ...permanentUpgradeDefinitions,
+  ...Object.fromEntries(
+    Object.entries(heroTrainingDefinitions).map(([hero, def]) => [
+      'training_' + hero,
+      {name: def.name, desc: def.desc, max: def.max, hero, stat: def.stat, factor: def.factor}
+    ])
+  )
+};
+
+Object.defineProperty(exports, "heroUnlockPrices", {get: () => heroUnlockPrices});
+Object.defineProperty(exports, "permanentUpgradeDefinitions", {get: () => permanentUpgradeDefinitions});
+Object.defineProperty(exports, "heroTrainingDefinitions", {get: () => heroTrainingDefinitions});
+Object.defineProperty(exports, "permanentUpgrades", {get: () => permanentUpgrades});
 },
 "src/systems/enemy-spawning.js": function(require, exports){
 const {prepareExpansion,scheduleExpansion} = require("src/systems/expansion.js");
@@ -1602,6 +1817,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
           sessionContext.state.bossDead=true;
           sessionContext.toast('Центурион повержен! Продержись до пира.');
           sessionContext.soundEffect('boss');
+          sessionContext.Progression?.recordBossKill?.();
         }
       }
     }
@@ -2194,6 +2410,7 @@ const AbilitySystem={create(c){
   if(a.id==='volley')c.Villagers.fish(s,p.facing,{count:5+a.castRank+(st.fishCount||0),spread:Math.PI*70/180,damage:16});
   if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=brew?4+(st.poisonDuration||0):5;a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
   if(a.id==='elixir')p.poisoned=0;
+  c.Progression?.recordAbility?.();
   c.soundEffect('magic');hud();return true;
  }
  function update(dt){const s=c.state,p=s.p;for(const e of s.enemies){e.abilityStun=Math.max(0,(e.abilityStun||0)-dt);if(s.t>=(e.slowUntil||0))e.abilitySlow=0;}
@@ -2209,7 +2426,7 @@ const AbilitySystem={create(c){
  // Avoid recreating text nodes and invalidating layout on every animation frame.
  let controls=null,buttons=null;
  function hud(){
-  const s=c.state,visible=!!s&&['play','pause','level'].includes(c.mode);
+  const s=c.state,visible=!!s&&c.mode==='play';
   controls??=c.$('abilities');
   if(controls.classList.contains('hidden')===visible)controls.classList.toggle('hidden',!visible);
   if(!s?.abilities)return;
@@ -2326,8 +2543,8 @@ Object.defineProperty(exports, "Villagers", {get: () => Villagers});
 },
 "data/characters/heroes.js": function(require, exports){
 const heroDefinitions={
-  asterix:{name:'Астерикс',hp:110,speed:160,interval:.68,wind:.44,damage:25,half:Math.PI/4,weapon:'✦ ГАЛЛЬСКИЙ КУЛАК'},
-  obelix:{name:'Обеликс',hp:160,speed:133,interval:1.12,wind:.72,weapon:'◆ БОЕВОЙ МЕНГИР'},
+  asterix:{name:'Астерикс',hp:110,speed:160,interval:.68,wind:.44,damage:25,half:Math.PI/4,weapon:'✦ ГАЛЛЬСКИЙ КУЛАК',desc:'Быстрый кулак: 25 урона, сектор 90°.'},
+  obelix:{name:'Обеликс',hp:160,speed:133,interval:1.12,wind:.72,weapon:'◆ БОЕВОЙ МЕНГИР',desc:'Метает менгиры: 52 урона.'},
   cacofonix:{name:'Какафоникс',hp:100,speed:125,passive:true,weapon:'♫ НЕВЫНОСИМАЯ МУЗЫКА',desc:'Музыкальная аура вокруг героя: 12 урона каждые 0,6 с в радиусе 95.'},
   antisanitarix:{name:'Антисанитарикс',hp:110,speed:140,interval:1.2,wind:.5,weapon:'♧ ТУХЛАЯ РЫБА',desc:'Рыба-бумеранг: по 24 урона на вылете и возвращении. Летит по последнему шагу.'},
   automatix:{name:'Автоматикс',hp:150,speed:105,interval:1.1,wind:.6,damage:50,half:Math.PI/2,weapon:'⚒ ТЯЖЁЛЫЙ МОЛОТ',desc:'Медленный кузнец: 50 урона замахом на 180° перед собой.'},
@@ -2581,18 +2798,32 @@ const VillagerLayout={"automatix":[[35,22,261,312],[444,19,218,313],[775,21,255,
 Object.defineProperty(exports, "VillagerLayout", {get: () => VillagerLayout});
 },
 "src/systems/persistence.js": function(require, exports){
+const {heroUnlockPrices,permanentUpgrades} = require("data/upgrades.js");
+const {achievementDefinitions} = require("data/achievements.js");
 let Progression;
 'use strict';
 Progression=(()=>{
- const key='gaul-progression-v1',prices={cacofonix:60,antisanitarix:75,automatix:90,panoramix:100};
- const upgrades={health:{name:'Запас здоровья',desc:'+10 HP всем героям',max:5},power:{name:'Сила деревни',desc:'+5% урона всем героям',max:5},speed:{name:'Удобные сандалии',desc:'+3% скорости всем героям',max:5}};
- Object.assign(upgrades,{haste:{name:'Выносливость',desc:'+4% к темпу атак',max:5},range:{name:'Размах',desc:'+4% к размеру атак',max:5},magnet:{name:'Сумка трофеев',desc:'+10 к радиусу сбора',max:5},armor:{name:'Крепкая кожа',desc:'−1 входящего урона; минимум 1',max:3},regen:{name:'Травяной чай',desc:'+0,15 HP в секунду',max:5}});
- const training={asterix:['Школа кулачного боя','+6% к темпу кулаков'],obelix:['Каменотёс','+8% к урону менгиров'],cacofonix:['Уроки вокала','+6% к радиусу музыки'],antisanitarix:['Выдержанный улов','+10% к урону возвращающейся рыбы'],automatix:['Секрет кузнеца','+10% к урону молота'],panoramix:['Рецепт друида','+0,4 с к длительности яда']};
- for(const [hero,[name,desc]] of Object.entries(training))upgrades['training_'+hero]={name,desc,max:3,hero};
- let data={helmets:0,kills:0,unlocked:['asterix','obelix'],levels:{health:0,power:0,speed:0}},persistent=true;
+ const key='gaul-progression-v1',prices=heroUnlockPrices,upgrades=permanentUpgrades;
+ let data={helmets:0,kills:0,unlocked:['asterix','obelix'],levels:{health:0,power:0,speed:0},stats:{totalTime:0,maxTime:0,bossKills:0,abilitiesUsed:0,maxLevel:0},claimedAchievements:[]},persistent=true;
  for(const id of Object.keys(upgrades))data.levels[id]=0;
  const integer=(v,max=1e9)=>Number.isSafeInteger(v)&&v>=0?Math.min(max,v):0;
- try{const saved=JSON.parse(localStorage.getItem(key));if(saved&&typeof saved==='object'){data.helmets=integer(saved.helmets);data.kills=integer(saved.kills);if(Array.isArray(saved.unlocked))data.unlocked=[...new Set(['asterix','obelix',...saved.unlocked.filter(id=>Object.hasOwn(prices,id))])];for(const id of Object.keys(upgrades))data.levels[id]=integer(saved.levels?.[id],upgrades[id].max);}}catch{}
+ try{
+  const saved=JSON.parse(localStorage.getItem(key));
+  if(saved&&typeof saved==='object'){
+   data.helmets=integer(saved.helmets);
+   data.kills=integer(saved.kills);
+   if(Array.isArray(saved.unlocked))data.unlocked=[...new Set(['asterix','obelix',...saved.unlocked.filter(id=>Object.hasOwn(prices,id))])];
+   for(const id of Object.keys(upgrades))data.levels[id]=integer(saved.levels?.[id],upgrades[id].max);
+   if(saved.stats&&typeof saved.stats==='object'){
+    data.stats.totalTime=typeof saved.stats.totalTime==='number'&&saved.stats.totalTime>=0?saved.stats.totalTime:0;
+    data.stats.maxTime=typeof saved.stats.maxTime==='number'&&saved.stats.maxTime>=0?saved.stats.maxTime:0;
+    data.stats.bossKills=integer(saved.stats.bossKills);
+    data.stats.abilitiesUsed=integer(saved.stats.abilitiesUsed);
+    data.stats.maxLevel=integer(saved.stats.maxLevel);
+   }
+   if(Array.isArray(saved.claimedAchievements))data.claimedAchievements=[...new Set(saved.claimedAchievements.filter(id=>achievementDefinitions.some(a=>a.id===id)))];
+  }
+ }catch{}
  let dirty=false,pending=null,idle=null;
  function flush(){
   if(pending!==null){clearTimeout(pending);pending=null;}
@@ -2622,13 +2853,203 @@ Progression=(()=>{
  function buyHero(id){if(!Object.hasOwn(prices,id)||owned(id)||data.helmets<prices[id])return false;data.helmets-=prices[id];data.unlocked.push(id);save();return true;}
  function buyUpgrade(id){if(!Object.hasOwn(upgrades,id)||(upgrades[id].hero&&!owned(upgrades[id].hero))||data.levels[id]>=upgrades[id].max||data.helmets<cost(id))return false;data.helmets-=cost(id);data.levels[id]++;save();return true;}
  function grantArmorRank(){if(data.levels.armor>=upgrades.armor.max)return false;data.levels.armor++;deferSave();return true;}
- return {grantArmorRank,prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get helmets(){return data.helmets;},get armorRank(){return data.levels.armor;},get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
+ function recordTime(t){if(typeof t==='number'&&t>0){data.stats.totalTime+=t;data.stats.maxTime=Math.max(data.stats.maxTime,t);deferSave();}}
+ function recordBossKill(){data.stats.bossKills++;deferSave();}
+ function recordAbility(){data.stats.abilitiesUsed++;deferSave();}
+ function recordLevel(lvl){if(typeof lvl==='number'&&lvl>0){data.stats.maxLevel=Math.max(data.stats.maxLevel,lvl);deferSave();}}
+ function claimAchievement(id,best){
+  const a=achievementDefinitions.find(x=>x.id===id);
+  if(!a||data.claimedAchievements.includes(id))return false;
+  const progress=a.getProgress(data,best);
+  if(progress<a.target)return false;
+  data.claimedAchievements.push(id);
+  if(a.reward)data.helmets+=a.reward;
+  save();
+  return true;
+ }
+ const isClaimed=id=>data.claimedAchievements.includes(id);
+ return {grantArmorRank,prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,recordTime,recordBossKill,recordAbility,recordLevel,claimAchievement,isClaimed,get achievements(){return achievementDefinitions;},get stats(){return {...data.stats};},get claimedAchievements(){return [...data.claimedAchievements];},get helmets(){return data.helmets;},get armorRank(){return data.levels.armor;},get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
 })();
 
 Object.defineProperty(exports, "Progression", {get: () => Progression});
 },
+"data/achievements.js": function(require, exports){
+const achievementDefinitions = [
+  {
+    id: 'kills_10',
+    title: 'Первая стычка',
+    desc: 'Победить 10 римлян в боях',
+    icon: 'assets/ui/achivements/kills-10.png',
+    category: 'combat',
+    target: 10,
+    unit: 'врагов',
+    reward: 5,
+    rewardType: 'helmets',
+    getProgress: (data) => data.kills || 0
+  },
+  {
+    id: 'kills_100',
+    title: 'Гроза патрулей',
+    desc: 'Победить 100 римлян',
+    icon: 'assets/ui/achivements/kills-100.png',
+    category: 'combat',
+    target: 100,
+    unit: 'врагов',
+    reward: 15,
+    rewardType: 'helmets',
+    getProgress: (data) => data.kills || 0
+  },
+  {
+    id: 'kills_500',
+    title: 'Бич легиона',
+    desc: 'Победить 500 римлян',
+    icon: 'assets/ui/achivements/kills-500.png',
+    category: 'combat',
+    target: 500,
+    unit: 'врагов',
+    reward: 30,
+    rewardType: 'helmets',
+    getProgress: (data) => data.kills || 0
+  },
+  {
+    id: 'kills_1000',
+    title: 'Легенда Галлии',
+    desc: 'Убить 1000 римлян во славу деревни',
+    icon: 'assets/ui/achivements/kills-1000.png',
+    category: 'combat',
+    target: 1000,
+    unit: 'врагов',
+    reward: 50,
+    rewardType: 'helmets',
+    getProgress: (data) => data.kills || 0
+  },
+  {
+    id: 'kills_2500',
+    title: 'Кошмар Цезаря',
+    desc: 'Уничтожить 2500 захватчиков',
+    icon: 'assets/ui/achivements/kills-2500.png',
+    category: 'combat',
+    target: 2500,
+    unit: 'врагов',
+    reward: 100,
+    rewardType: 'helmets',
+    getProgress: (data) => data.kills || 0
+  },
+  {
+    id: 'survive_run_60',
+    title: 'Первый натиск',
+    desc: 'Продержаться в одном забеге 1 минуту',
+    icon: 'assets/ui/achivements/survive-run-60.png',
+    category: 'survival',
+    target: 60,
+    format: 'time',
+    reward: 5,
+    rewardType: 'helmets',
+    getProgress: (data, best) => Math.floor(Math.max(data.stats?.maxTime || 0, best?.time || 0))
+  },
+  {
+    id: 'survive_run_180',
+    title: 'Крепкий орешек',
+    desc: 'Продержаться в одном забеге 3 минуты',
+    icon: 'assets/ui/achivements/survive-run-180.png',
+    category: 'survival',
+    target: 180,
+    format: 'time',
+    reward: 15,
+    rewardType: 'helmets',
+    getProgress: (data, best) => Math.floor(Math.max(data.stats?.maxTime || 0, best?.time || 0))
+  },
+  {
+    id: 'survive_run_300',
+    title: 'Дожить до пира',
+    desc: 'Выстоять полные 5 минут до наступления победного пира',
+    icon: 'assets/ui/achivements/survive-run-300.png',
+    category: 'survival',
+    target: 300,
+    format: 'time',
+    reward: 35,
+    rewardType: 'helmets',
+    getProgress: (data, best) => Math.floor(Math.max(data.stats?.maxTime || 0, best?.time || 0))
+  },
+  {
+    id: 'survive_total_600',
+    title: 'Выжить 10 минут',
+    desc: 'Провести в боях против легиона 10 минут суммарно',
+    icon: 'assets/ui/achivements/survive-total-600.png',
+    category: 'survival',
+    target: 600,
+    format: 'time',
+    reward: 50,
+    rewardType: 'helmets',
+    getProgress: (data, best) => Math.floor(Math.max(data.stats?.totalTime || 0, data.stats?.maxTime || 0, best?.time || 0))
+  },
+  {
+    id: 'boss_centurion',
+    title: 'Падение Максимуса',
+    desc: 'Одолеть босса Центуриона Максимуса',
+    icon: 'assets/ui/achivements/boss-centurion.png',
+    category: 'combat',
+    target: 1,
+    unit: 'раз',
+    reward: 40,
+    rewardType: 'helmets',
+    getProgress: (data) => data.stats?.bossKills || 0
+  },
+  {
+    id: 'unlock_all_heroes',
+    title: 'Деревня в сборе',
+    desc: 'Разблокировать всех 6 героев в лавке',
+    icon: 'assets/ui/achivements/unlock-all-heroes.png',
+    category: 'progression',
+    target: 6,
+    unit: 'героев',
+    reward: 60,
+    rewardType: 'helmets',
+    getProgress: (data) => data.unlocked?.length || 2
+  },
+  {
+    id: 'helmets_100',
+    title: 'Трофейная казна',
+    desc: 'Накопить 100 римских шлемов в кошельке',
+    icon: 'assets/ui/achivements/helmets-100.png',
+    category: 'progression',
+    target: 100,
+    unit: 'шлемов',
+    reward: 25,
+    rewardType: 'helmets',
+    getProgress: (data) => data.helmets || 0
+  },
+  {
+    id: 'upgrades_10',
+    title: 'Кузница победы',
+    desc: 'Приобрести 10 улучшений в лавке',
+    icon: 'assets/ui/achivements/upgrades-10.png',
+    category: 'progression',
+    target: 10,
+    unit: 'улучшений',
+    reward: 30,
+    rewardType: 'helmets',
+    getProgress: (data) => Object.values(data.levels || {}).reduce((sum, lvl) => sum + (lvl || 0), 0)
+  },
+  {
+    id: 'abilities_25',
+    title: 'Сила друидов',
+    desc: 'Использовать активные умения (Q/E) 25 раз',
+    icon: 'assets/ui/achivements/abilities-25.png',
+    category: 'mastery',
+    target: 25,
+    unit: 'раз',
+    reward: 25,
+    rewardType: 'helmets',
+    getProgress: (data) => data.stats?.abilitiesUsed || 0
+  }
+];
+
+Object.defineProperty(exports, "achievementDefinitions", {get: () => achievementDefinitions});
+},
 "src/systems/upgrades.js": function(require, exports){
 const {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} = require("data/characters/abilities.js");
+const {permanentUpgradeDefinitions,heroTrainingDefinitions} = require("data/upgrades.js");
 const {Progression} = require("src/systems/persistence.js");
 let UpgradeSystem;
 'use strict';
@@ -2667,8 +3088,13 @@ UpgradeSystem=(()=>{
   for(const u of fallback){if(result.length===4)break;result.push({...u,group:'Припасы'});}return result;
  }
  function apply(u,s){if(u.available&&!u.available(s))return false;s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
- function permanent(s,hero,levels){for(const [key,factor] of [['haste',.04],['range',.04],['magnet',10],['armor',1],['regen',.15]])s.stats[key]+=(levels[key]||0)*factor;
-  const personal={asterix:['punchTempo',.06],obelix:['stoneDamage',.08],cacofonix:['musicRange',.06],antisanitarix:['fishReturn',.1],automatix:['hammerDamage',.1],panoramix:['poisonDuration',.4]}[hero];if(personal)add(...[personal[0],personal[1]*(levels['training_'+hero]||0)])(s);
+ function permanent(s,hero,levels){
+  for(const key of ['haste','range','magnet','armor','regen']){
+   const factor=permanentUpgradeDefinitions[key]?.factor;
+   if(factor!==undefined)s.stats[key]+=(levels[key]||0)*factor;
+  }
+  const training=heroTrainingDefinitions[hero];
+  if(training)add(training.stat,training.factor*(levels['training_'+hero]||0))(s);
  }
  return {common,heroes,abilities,pool,offer,apply,permanent};
 })();

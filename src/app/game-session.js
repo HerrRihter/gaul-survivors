@@ -88,6 +88,9 @@ get renderRunHeroes(){return renderRunHeroes},
 get openRunHeroSelect(){return openRunHeroSelect},
 get renderShop(){return renderShop},
 get closeShop(){return closeShop},
+get renderAchievements(){return renderAchievements},
+get openAchievements(){return openAchievements},
+get closeAchievements(){return closeAchievements},
 get pause(){return pause},
 get levelUp(){return levelUp},
 get pickUpgrade(){return pickUpgrade},
@@ -132,7 +135,7 @@ get stop(){return stop}
     });
     const fitPortrait = portraits.fit;
     let menuPortraitPhase=-1;
-    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,hud}=GameUI.create(sessionContext);
+    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud}=GameUI.create(sessionContext);
     document.addEventListener('villager-art-ready',()=>{
       portraits.clear();
       menuPortraitPhase=-1;
@@ -154,6 +157,7 @@ get stop(){return stop}
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
     updateRecord();
+    ['runHeroSelect','shop','achievements'].forEach(id=>show(id,false));
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
@@ -179,6 +183,13 @@ get stop(){return stop}
     };
     
     $('shopClose').onclick=closeShop;
+
+    const achOpen=$('achievementsOpen'),achClose=$('achievementsClose');
+    if(achOpen)achOpen.onclick=()=>{
+      if(mode!=='menu')return;
+      openAchievements();
+    };
+    if(achClose)achClose.onclick=closeAchievements;
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;

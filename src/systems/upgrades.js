@@ -1,4 +1,5 @@
 import {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} from '../../data/characters/abilities.js';
+import {permanentUpgradeDefinitions,heroTrainingDefinitions} from '../../data/upgrades.js';
 import {Progression} from './persistence.js';
 export let UpgradeSystem;
 'use strict';
@@ -37,8 +38,13 @@ UpgradeSystem=(()=>{
   for(const u of fallback){if(result.length===4)break;result.push({...u,group:'Припасы'});}return result;
  }
  function apply(u,s){if(u.available&&!u.available(s))return false;s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
- function permanent(s,hero,levels){for(const [key,factor] of [['haste',.04],['range',.04],['magnet',10],['armor',1],['regen',.15]])s.stats[key]+=(levels[key]||0)*factor;
-  const personal={asterix:['punchTempo',.06],obelix:['stoneDamage',.08],cacofonix:['musicRange',.06],antisanitarix:['fishReturn',.1],automatix:['hammerDamage',.1],panoramix:['poisonDuration',.4]}[hero];if(personal)add(...[personal[0],personal[1]*(levels['training_'+hero]||0)])(s);
+ function permanent(s,hero,levels){
+  for(const key of ['haste','range','magnet','armor','regen']){
+   const factor=permanentUpgradeDefinitions[key]?.factor;
+   if(factor!==undefined)s.stats[key]+=(levels[key]||0)*factor;
+  }
+  const training=heroTrainingDefinitions[hero];
+  if(training)add(training.stat,training.factor*(levels['training_'+hero]||0))(s);
  }
  return {common,heroes,abilities,pool,offer,apply,permanent};
 })();

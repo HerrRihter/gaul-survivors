@@ -113,6 +113,20 @@ for(const card of nodes.get('shopHeroes').children){const b=card.children[card.c
 listeners.keydown({code:'Escape',repeat:false,preventDefault:noop});assert(nodes.get('shop').classList.contains('hidden'));assert.equal(nodes.get('menu').classList.contains('hidden'),false);
 console.log('PASS: dedicated shop, owned hero labels and Escape returns to main menu.');
 
+nodes.get('achievementsOpen').onclick();
+assert(nodes.get('menu').classList.contains('hidden'), 'Achievements overlay replaces the main menu');
+assert(!nodes.get('achievements').classList.contains('hidden'), 'Achievements panel is visible');
+assert(nodes.get('achievementsList').children.length > 0, 'Achievements cards rendered');
+assert(nodes.get('achievementsSummary').children.length > 0, 'Achievements summary rendered');
+nodes.get('achievementsClose').onclick();
+assert(nodes.get('achievements').classList.contains('hidden'), 'Achievements closed');
+assert(!nodes.get('menu').classList.contains('hidden'), 'Returned to main menu');
+nodes.get('achievementsOpen').onclick();
+listeners.keydown({code:'Escape',repeat:false,preventDefault:noop});
+assert(nodes.get('achievements').classList.contains('hidden'), 'Escape closes achievements');
+assert(!nodes.get('menu').classList.contains('hidden'), 'Escape returns to main menu');
+console.log('PASS: achievements tab opens, renders cards, closes via button and Escape key.');
+
 // Weapon-specific bonuses are exercised through the live combat loop.
 function boost(hero,id){env.UpgradeSystem.apply(env.UpgradeSystem.heroes[hero].find(u=>u.id===id),t.state);}
 prepare('obelix');boost('obelix','stoneCount');boost('obelix','stoneDamage');boost('obelix','stoneSize');t.state.attack=0;for(let i=0;i<12;i++)t.update(.04);assert.equal(t.state.shots.length,2);assert(t.state.shots.every(b=>b.damage>52&&b.r>11));

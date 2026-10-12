@@ -28,7 +28,7 @@ module.exports={
         "src/rendering/asset-paths.js",
         "src/systems/upgrades.js",
         "src/systems/abilities.js", "data/characters/abilities.js",
-        "src/systems/persistence.js",
+        "src/systems/persistence.js", "data/upgrades.js", "data/achievements.js",
         "data/projectiles/projectiles.js",
         "src/rendering/art/projectile-art.js",
         "src/entities/heroes.js",
@@ -113,6 +113,28 @@ module.exports={
         "assets/runtime/projectiles/projectiles-v2.png",
         "assets/runtime/projectiles/menhir-flight-v2.png",
         "assets/runtime/ui/roman-helmet-v1.png"
+      ]
+    },
+    {
+      "purpose": "Player achievement badges and icons",
+      "consumers": [
+        "index.html"
+      ],
+      "files": [
+        "assets/ui/achivements/kills-10.png",
+        "assets/ui/achivements/kills-100.png",
+        "assets/ui/achivements/kills-500.png",
+        "assets/ui/achivements/kills-1000.png",
+        "assets/ui/achivements/kills-2500.png",
+        "assets/ui/achivements/survive-run-60.png",
+        "assets/ui/achivements/survive-run-180.png",
+        "assets/ui/achivements/survive-run-300.png",
+        "assets/ui/achivements/survive-total-600.png",
+        "assets/ui/achivements/boss-centurion.png",
+        "assets/ui/achivements/unlock-all-heroes.png",
+        "assets/ui/achivements/helmets-100.png",
+        "assets/ui/achivements/upgrades-10.png",
+        "assets/ui/achivements/abilities-25.png"
       ]
     }
   ]

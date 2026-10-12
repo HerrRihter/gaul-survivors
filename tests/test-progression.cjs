@@ -35,5 +35,30 @@ const savedWrites=writes;rewards.flush();assert.equal(writes,savedWrites,'Clean 
 const beforeRank=writes;assert(rewards.grantArmorRank());assert.equal(writes,beforeRank,'Active forge does not write storage in a combat frame');assert.equal(rewards.armorRank,1);events.pagehide();assert.equal(snapshot.levels.armor,1);assert.equal(rewards.helmets,snapshot.helmets);
 console.log('PASS: combat rewards coalesce into idle saves; lifecycle and purchases flush; failed saves can retry.');
 
+// Achievement system tests: definitions, tracking (1000 kills, 10 min survive), claiming and persistence
+const achs = rewards.achievements;
+assert(achs.length >= 10, 'Achievements catalog is loaded');
+const kill1000 = achs.find(a => a.id === 'kills_1000');
+assert(kill1000, 'Kill 1000 Romans achievement exists');
+assert.equal(kill1000.target, 1000);
+const surv10 = achs.find(a => a.id === 'survive_total_600');
+assert(surv10, 'Survive 10 minutes achievement exists');
+assert.equal(surv10.target, 600);
+assert(!rewards.isClaimed('kills_1000'), 'Not claimed yet');
+assert(!rewards.claimAchievement('kills_1000'), 'Cannot claim before reaching target');
+for(let i = 0; i < 900; i++) rewards.kill();
+rewards.recordTime(650);
+rewards.recordBossKill();
+rewards.recordAbility();
+assert(kill1000.getProgress(rewards.data) >= 1000, 'Kill 1000 requirement reached');
+assert(surv10.getProgress(rewards.data) >= 600, 'Survive 10 minutes requirement reached');
+const bankBefore = rewards.data.helmets;
+assert(rewards.claimAchievement('kills_1000'), 'Claiming completed achievement succeeds');
+assert.equal(rewards.data.helmets, bankBefore + kill1000.reward, 'Claiming awards helmets');
+assert(rewards.isClaimed('kills_1000'), 'Achievement is now claimed');
+assert(!rewards.claimAchievement('kills_1000'), 'Duplicate claim prevented');
+assert(rewards.claimAchievement('survive_total_600'), 'Claiming 10-minute survival achievement succeeds');
+console.log('PASS: achievement definitions, progress metrics, targets, rewards and duplicate prevention.');
+
 }
 main().catch(error=>{console.error(error);process.exitCode=1;});

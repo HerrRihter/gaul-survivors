@@ -1,4 +1,5 @@
 import {waves} from '../../data/enemies/waves.js';
+import {permanentUpgradeDefinitions} from '../../data/upgrades.js';
 export let GameFlow;
 'use strict';
 GameFlow={create(sessionContext){
@@ -41,10 +42,10 @@ function start(){
         shake:0,
         step:0,
         stats:{
-          damage:1+levels.power*.05,
+          damage:1+levels.power*permanentUpgradeDefinitions.power.factor,
           haste:1,
           range:1,
-          speed:1+levels.speed*.03,
+          speed:1+levels.speed*permanentUpgradeDefinitions.speed.factor,
           magnet:75,
           armor:0,
           regen:0,
@@ -54,8 +55,8 @@ function start(){
         p:{
           x:sessionContext.WORLD/2,
           y:sessionContext.WORLD/2,
-          hp:hero.hp+levels.health*10,
-          max:hero.hp+levels.health*10,
+          hp:hero.hp+levels.health*permanentUpgradeDefinitions.health.factor,
+          max:hero.hp+levels.health*permanentUpgradeDefinitions.health.factor,
           speed:hero.speed,
           inv:0,
           flip:false,
@@ -66,7 +67,7 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
-      ['menu','runHeroSelect','end','paused','levelup','bossbar'].forEach(id=>sessionContext.show(id,false));
+      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements'].forEach(id=>sessionContext.show(id,false));
       ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
@@ -74,12 +75,16 @@ function start(){
       sessionContext.hud();
     }
 function menu(){
+      if(sessionContext.state?.t){
+        sessionContext.Progression?.recordTime?.(sessionContext.state.t);
+        sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
+      }
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
-      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>sessionContext.show(id,false));
+      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements'].forEach(id=>sessionContext.show(id,false));
       sessionContext.show('menu',true);
       sessionContext.renderShop();
       sessionContext.$('toast').style.opacity=0;
@@ -126,6 +131,8 @@ function pickUpgrade(i){
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
+      sessionContext.Progression?.recordTime?.(sessionContext.state.t);
+      sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';

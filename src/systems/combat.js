@@ -48,6 +48,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
           sessionContext.state.bossDead=true;
           sessionContext.toast('Центурион повержен! Продержись до пира.');
           sessionContext.soundEffect('boss');
+          sessionContext.Progression?.recordBossKill?.();
         }
       }
     }

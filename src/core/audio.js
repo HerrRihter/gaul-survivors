@@ -13,6 +13,7 @@ export const AudioSystem = {create(c) {
     stone: ['stone.ogg'], pickup: ['pickup.ogg'], heal: ['heal.ogg'],
     level: ['level.ogg'], ui: ['ui.ogg'], boss: ['boss.ogg'], magic: ['magic.ogg'],
     death: ['death-1.ogg', 'death-2.ogg', 'death-3.ogg'], punchSwing: ['punch.mp3'],
+    punch: ['punch.mp3'],
   };
   const pools = new Map(), cooldowns = new Map(), tracks = new Map();
   let unlocked = false, stopped = false, result = 'defeat', current = null;
@@ -49,7 +50,7 @@ export const AudioSystem = {create(c) {
   }
   function effect(name) {
     if (quiet() || !settings.effects || c.mode === 'pause') return;
-    const files = clips[name];
+    const files = clips[name] || clips.ui;
     if (!files) return;
     const now = c.performance.now();
     if (now - (cooldowns.get(name) ?? -Infinity) < (name === 'death' ? 180 : name === 'pickup' ? 100 : 65)) return;

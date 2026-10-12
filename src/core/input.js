@@ -19,6 +19,10 @@ sessionContext.window.addEventListener('keydown',e=>{
         sessionContext.closeShop();
         return;
       }
+      if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('achievements').classList.contains('hidden')){
+        sessionContext.closeAchievements();
+        return;
+      }
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('runHeroSelect').classList.contains('hidden')){
         sessionContext.show('runHeroSelect',false);
         sessionContext.show('menu',true);

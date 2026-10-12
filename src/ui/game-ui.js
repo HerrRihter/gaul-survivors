@@ -19,6 +19,11 @@ function toast(text){
 function updateRecord(){
       sessionContext.$('wallet').textContent='ШЛЕМЫ: '+sessionContext.Progression.data.helmets;
       sessionContext.$('record').textContent=sessionContext.best.kills?`РЕКОРД: ${sessionContext.best.kills} врагов · ${sessionContext.clock(sessionContext.best.time)}`:'Легион ещё не знает, что его ждёт.';
+      const defs=sessionContext.Progression.achievements;
+      const data=sessionContext.Progression.data;
+      const unclaimed=defs?defs.filter(a=>a.getProgress(data,sessionContext.best)>=a.target&&!sessionContext.Progression.isClaimed(a.id)).length:0;
+      const btn=sessionContext.$('achievementsOpen');
+      if(btn)btn.textContent=unclaimed>0?`ДОСТИЖЕНИЯ (${unclaimed}!)`:'ДОСТИЖЕНИЯ';
     }
 function updateRunHeroStats(){
       const hero=sessionContext.Villagers.defs[sessionContext.pendingRunHero];
@@ -56,6 +61,7 @@ function renderRunHeroes(){
 function openRunHeroSelect(){
       renderRunHeroes();
       show('shop',false);
+      show('achievements',false);
       show('menu',false);
       show('runHeroSelect',true);
     }
@@ -76,7 +82,7 @@ function renderShop(){
         title.textContent=hero.name;
         card.append(title);
         const desc=sessionContext.document.createElement('p');
-        desc.textContent=hero.desc||(id==='asterix'?'Быстрый кулак: 25 урона, сектор 90°.':'Метает менгиры: 52 урона.');
+        desc.textContent=hero.desc;
         card.append(desc);
         const info=sessionContext.document.createElement('small');
         info.textContent=hero.hp+' HP · скорость '+hero.speed;
@@ -116,6 +122,149 @@ function renderShop(){
 function closeShop(){
       show('shop',false);
       show('menu',true);
+    }
+function renderAchievements(){
+      updateRecord();
+      const list=sessionContext.$('achievementsList'),summary=sessionContext.$('achievementsSummary');
+      if(!list||!summary)return;
+      list.replaceChildren();
+      summary.replaceChildren();
+      const defs=sessionContext.Progression.achievements;
+      const data=sessionContext.Progression.data;
+      let completedCount=0,claimedCount=0;
+      const cardsData=defs.map(ach=>{
+        const progress=ach.getProgress(data,sessionContext.best);
+        const isDone=progress>=ach.target;
+        const isClaimed=sessionContext.Progression.isClaimed(ach.id);
+        if(isDone)completedCount++;
+        if(isClaimed)claimedCount++;
+        return {ach,progress,isDone,isClaimed};
+      });
+      cardsData.sort((a,b)=>{
+        const scoreA=a.isClaimed?-1:(a.isDone?2:1);
+        const scoreB=b.isClaimed?-1:(b.isDone?2:1);
+        if(scoreA!==scoreB)return scoreB-scoreA;
+        return (b.progress/b.ach.target)-(a.progress/a.ach.target);
+      });
+      const total=defs.length;
+      const pct=total?Math.round((completedCount/total)*100):0;
+      const sumHead=sessionContext.document.createElement('div');
+      sumHead.className='achievements-summary-header';
+      const sumDoneSpan=sessionContext.document.createElement('span');
+      sumDoneSpan.textContent=`Выполнено: ${completedCount} из ${total} (${pct}%)`;
+      const sumClaimSpan=sessionContext.document.createElement('span');
+      sumClaimSpan.textContent=`Получено наград: ${claimedCount} / ${total}`;
+      sumHead.append(sumDoneSpan,sumClaimSpan);
+      const bar=sessionContext.document.createElement('div');
+      bar.className='achievements-bar';
+      const barFill=sessionContext.document.createElement('i');
+      barFill.style.width=`${pct}%`;
+      bar.append(barFill);
+      summary.append(sumHead,bar);
+      for(const {ach,progress,isDone,isClaimed} of cardsData){
+        const card=sessionContext.document.createElement('div');
+        card.className=`achievement-card${isDone?' completed':''}${isClaimed?' claimed':''}`;
+        const head=sessionContext.document.createElement('div');
+        head.className='achievement-head';
+        const icon=sessionContext.document.createElement('div');
+        icon.className='achievement-icon';
+        if(ach.icon && typeof ach.icon==='string' && (ach.icon.includes('/') || ach.icon.endsWith('.png'))){
+          const img=sessionContext.document.createElement('img');
+          img.src=ach.icon;
+          img.alt=ach.title;
+          img.className='achievement-icon-img';
+          img.loading='lazy';
+          img.onerror=()=>{ img.style.display='none'; icon.textContent='🏆'; };
+          icon.append(img);
+        }else{
+          icon.textContent=ach.icon||'🏆';
+        }
+        const info=sessionContext.document.createElement('div');
+        info.className='achievement-info';
+        const title=sessionContext.document.createElement('h3');
+        title.textContent=ach.title;
+        const desc=sessionContext.document.createElement('p');
+        desc.textContent=ach.desc;
+        info.append(title,desc);
+        head.append(icon,info);
+        const prog=sessionContext.document.createElement('div');
+        prog.className='achievement-progress';
+        const progInfo=sessionContext.document.createElement('div');
+        progInfo.className='achievement-progress-info';
+        const curFormatted=ach.format==='time'?sessionContext.clock(progress):progress;
+        const targetFormatted=ach.format==='time'?sessionContext.clock(ach.target):`${ach.target}${ach.unit?' '+ach.unit:''}`;
+        const itemPct=Math.min(100,Math.floor((progress/ach.target)*100));
+        const valSpan=sessionContext.document.createElement('span');
+        valSpan.textContent=`${curFormatted} / ${targetFormatted}`;
+        const pctSpan=sessionContext.document.createElement('span');
+        pctSpan.textContent=`${itemPct}%`;
+        progInfo.append(valSpan,pctSpan);
+        const itemBar=sessionContext.document.createElement('div');
+        itemBar.className='achievements-bar';
+        const itemBarFill=sessionContext.document.createElement('i');
+        itemBarFill.style.width=`${itemPct}%`;
+        itemBar.append(itemBarFill);
+        prog.append(progInfo,itemBar);
+        const foot=sessionContext.document.createElement('div');
+        foot.className='achievement-foot';
+        const isHelmet=!ach.rewardType||ach.rewardType==='helmets';
+        const reward=sessionContext.document.createElement('span');
+        reward.className='achievement-reward';
+        if(isHelmet){
+          reward.textContent=`+${ach.reward}`;
+          const hIcon=sessionContext.document.createElement('i');
+          hIcon.className='ach-helmet-icon';
+          if(hIcon.setAttribute)hIcon.setAttribute('aria-hidden','true');
+          reward.append(hIcon);
+        }else{
+          reward.textContent=`+${ach.reward} ${ach.rewardType}`;
+        }
+        foot.append(reward);
+        if(isClaimed){
+          const badge=sessionContext.document.createElement('span');
+          badge.className='ach-badge claimed';
+          badge.textContent='✓ ПОЛУЧЕНО';
+          foot.append(badge);
+        }else if(isDone){
+          const btn=sessionContext.document.createElement('button');
+          btn.className='primary ach-claim';
+          const btnText=sessionContext.document.createElement('span');
+          btnText.textContent=`ЗАБРАТЬ +${ach.reward}`;
+          btn.append(btnText);
+          if(isHelmet){
+            const hIcon=sessionContext.document.createElement('i');
+            hIcon.className='ach-helmet-icon';
+            if(hIcon.setAttribute)hIcon.setAttribute('aria-hidden','true');
+            btn.append(hIcon);
+          }
+          btn.onclick=()=>{
+            if(sessionContext.Progression.claimAchievement(ach.id,sessionContext.best)){
+              sessionContext.soundEffect?.('pickup');
+              renderAchievements();
+            }
+          };
+          foot.append(btn);
+        }else{
+          const badge=sessionContext.document.createElement('span');
+          badge.className='ach-badge in-progress';
+          badge.textContent='В ПРОЦЕССЕ';
+          foot.append(badge);
+        }
+        card.append(head,prog,foot);
+        list.append(card);
+      }
+    }
+function openAchievements(){
+      renderAchievements();
+      show('menu',false);
+      show('shop',false);
+      show('runHeroSelect',false);
+      show('achievements',true);
+    }
+function closeAchievements(){
+      show('achievements',false);
+      show('menu',true);
+      updateRecord();
     }
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
 let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
@@ -175,5 +324,5 @@ function hud(){
         }
       }
     }
-return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,hud};
+return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud};
 }};
