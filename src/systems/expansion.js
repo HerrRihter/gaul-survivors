@@ -1,6 +1,7 @@
 import {expansionUnits} from '../../data/enemies/units.js';
 import {expansionSchedules} from '../../data/enemies/waves.js';
 import {campLanes} from '../world/arenas.js';
+import {updateCityPedestrian} from './city-population.js';
 
 export function scheduleExpansion(c){
   const s=c.state;
@@ -9,12 +10,12 @@ export function scheduleExpansion(c){
     if(s.t<next)continue;
     const lateCavalry=spec.unit==='cavalry'&&s.t>=120;
     s.specialNext[spec.unit]=next+(lateCavalry?12:spec.every);
-    if(s.enemies.length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
+    if(s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
       c.spawn(spec.unit);c.toast(expansionUnits[spec.unit].name.toUpperCase()+' · '+tips[spec.unit]);
     }
   }
 }
-const tips={boar:'Уйди с линии рывка.',stoneSquad:'Разбег и падение камня. Держись подальше!',netter:'Сеть оглушает. Уклоняйся от броска.',tower:'Залп из трёх стрел. Используй укрытия.',cavalry:'Проход через всю карту. Уйди с дороги!',caius:'Не атакует. При ударах теряет опыт и шлемы.',wine:'Не наступай на винный след.'};
+const tips={courtesan:'Подбирает опыт и еду. Не оставляй добычу на мостовой.',boar:'Уйди с линии рывка.',stoneSquad:'Разбег и падение камня. Держись подальше!',netter:'Сеть оглушает. Уклоняйся от броска.',tower:'Залп из трёх стрел. Используй укрытия.',cavalry:'Проход через всю карту. Уйди с дороги!',caius:'Не атакует. При ударах теряет опыт и шлемы.',wine:'Не наступай на винный след.'};
 
 export function prepareExpansion(e,c){
   if(e.unit==='cavalry'){
@@ -47,6 +48,7 @@ export function updateHazards(c,dt){
 
 export function updateExpansion(e,c,dt){
   const u=expansionUnits[e.unit];if(!u)return false;
+  if(updateCityPedestrian(e,c,dt))return true;
   const s=c.state,p=s.p,d=c.dist(e,p);e.moving=false;
   const advanceWalk=travel=>{if(travel>.01)e.walk=(e.walk||0)+(e.unit==='cavalry'?dt*2:travel/50);};
   const move=(x,y,speed)=>{speed*=1-(e.abilitySlow||0);const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
@@ -88,14 +90,20 @@ export function updateExpansion(e,c,dt){
     if(['boar','stoneSquad','cavalry'].includes(e.unit)){e.charge={x,y,left:e.unit==='cavalry'?8:1.2};}
     else if(e.unit==='netter'||e.unit==='tower'){
       for(const offset of e.unit==='tower'?[-.13,0,.13]:[0])s.enemyShots.push({x:e.x,y:e.y,vx:Math.cos(angle+offset)*250,vy:Math.sin(angle+offset)*250,life:2.5,age:0,flightTime:Math.max(.01,Math.hypot(a.aim.x-e.x,a.aim.y-e.y)/250),damage:e.damage,kind:e.unit==='netter'?'net':'arrow'});
-    }else if(d<u.range+10)c.hurtPlayer(e);
+    }else if(e.unit==='merchant'){
+      s.enemyShots.push({x:e.x,y:e.y,vx:x*215,vy:y*215,life:2,age:0,damage:e.damage,kind:'goods',goods:(e.throws||0)%3});
+      e.throws=(e.throws||0)+1;c.soundEffect('throw');
+    }else if(e.unit==='auxiliary'){
+      const px=p.x-e.x,py=p.y-e.y;
+      if(px*x+py*y>=-8&&px*x+py*y<u.range+14&&Math.abs(px*y-py*x)<24&&c.Village.clear(e,p,2))c.hurtPlayer(e);
+    }else if(d<u.range+10&&c.Village.clear(e,p,2))c.hurtPlayer(e);
   });
   if(e.unit==='cavalry')return true;
   e.hidden=e.unit==='netter'&&d>u.range;
   if(!e.action&&e.cd<=0&&d<u.range&&c.Village.clear(e,p,2)){
     c.beginAction(e,u.wind,p);e.cd=u.cooldown;e.heading=Math.atan2(p.y-e.y,p.x-e.x);
   }
-  if(!e.action&&!e.hidden&&d>(e.unit==='tower'?390:e.unit==='netter'?180:e.r+12)){
+  if(e.unit!=='merchant'&&!e.action&&!e.hidden&&d>(e.unit==='tower'?390:e.unit==='netter'?180:e.r+12)){
     const dir=c.Village.direction(e,p,e.r);e.heading=Math.atan2(dir.y,dir.x);move(dir.x,dir.y,e.speed);
   }
   if(e.unit==='wine'){

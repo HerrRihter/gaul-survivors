@@ -65,6 +65,15 @@ ProjectileArt=(()=>{
   g.fillStyle='#b75845';g.fillRect(-18,-4,7,3);g.fillRect(-18,1,7,3);g.restore();return true;
  }
  function drawEnemyProjectile(g,b,getFrame=null){
+  if(b.kind==='goods'){
+   g.save();g.translate(b.x,b.y-14);g.rotate((b.age||0)*7);g.strokeStyle='#382e23';g.lineWidth=2;
+   g.fillStyle=b.goods===0?'#cc503c':b.goods===1?'#ddae62':'#b97349';
+   g.beginPath();g.ellipse(0,0,b.goods===1?12:8,b.goods===2?11:7,0,0,Math.PI*2);g.fill();g.stroke();
+   if(b.goods===0){g.fillStyle='#648048';g.fillRect(-1,-11,4,5);}
+   else if(b.goods===1){g.strokeStyle='#f8d392';g.beginPath();g.moveTo(-5,-4);g.lineTo(-2,3);g.moveTo(2,-4);g.lineTo(5,3);g.stroke();}
+   else{g.fillStyle='#855132';g.fillRect(-4,-14,8,6);g.strokeRect(-4,-14,8,6);}
+   g.restore();return true;
+  }
   if(b.kind==='net')return drawNet(g,b,getFrame?getFrame(P.net.unit,P.net.action,P.net.progress):null);
   if(b.kind==='arrow')return drawArrow(g,b,getFrame?getFrame(P.arrow.unit,P.arrow.action,P.arrow.progress):null);
   return drawPilum(g,b);

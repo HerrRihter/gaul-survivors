@@ -10,6 +10,13 @@ import {Village} from '../world/village/village.js';
 import {fitCharacterPreview,drawCharacterPreview} from '../ui/character-preview.js';
 
 const descriptions={
+auxiliary:['Лютеция · с начала боя','Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.'],
+merchant:['Лютеция · на карте изначально','Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.'],
+courtesan:['Лютеция · с 0:15','Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.'],
+citizenBaker:['Лютеция · с начала боя','Горожанин. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenPorter:['Лютеция · с начала боя','Горожанин. Бегает с мешком по улицам, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenMatron:['Лютеция · с начала боя','Горожанка с корзиной. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
+citizenScribe:['Лютеция · с начала боя','Горожанин со свитком. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
 boar:['Лес · с 0:04','Кабан предупреждает о рывке и несётся по прямой.'],
 stoneSquad:['Лес · с 0:35','Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.'],
 netter:['Лес · с 0:18','Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.'],
@@ -22,6 +29,7 @@ const anchor=CharacterFrameManifest.anchor,previews=[];
 const arenas=createArenas(Village);
 const commonUnits=['roman',...waves.units.slice().sort((a,b)=>a.time-b.time).map(w=>w.type),...Object.keys(waves.siege),'boss'];
 const mapNotes={
+ lutetia:'Легионеры и ауксиларии — с начала. Пилумы — 0:40, виночерпии — 1:10, ветераны — 1:25, черепаха — 2:05 (до 3:25 максимум одна, затем две). Центурион — 3:50. На улицах 24–40 гражданских без наград. Куртизанки воруют добычу и убегают.',
  village:'Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.',
  forest:'Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.',
  camp:'Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.'
@@ -43,12 +51,13 @@ function showLocation(){
  }
  previews.length=0;
  document.getElementById('cards').replaceChildren();
- const units=[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
+ const units=selectedMap==='lutetia'?['roman','auxiliary','merchant','courtesan','pilum','wine','veteran','turtle','boss','citizenBaker','citizenPorter','citizenMatron','citizenScribe']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
  document.getElementById('rosterCount').textContent='Отряды в локации: '+units.length;
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const description=descriptions[unit]||['Новый отряд',''];
+ const description=[...(descriptions[unit]||['Новый отряд',''])];
+ if(selectedMap==='lutetia'&&({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit])description[0]=({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit];
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${description[0]}</p><p>${description[1]}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit;

@@ -1,4 +1,5 @@
-import {waves} from '../../data/enemies/waves.js';
+import {waves,lutetiaWaves} from '../../data/enemies/waves.js';
+import {seedCityCrowd} from '../systems/city-population.js';
 import {permanentUpgradeDefinitions} from '../../data/upgrades.js';
 export let GameFlow;
 'use strict';
@@ -23,7 +24,7 @@ function start(){
         enemies:[],
         corpses:[],
         enemyShots:[],
-        nextTurtle:waves.siege.turtle.first,
+        nextTurtle:sessionContext.selectedMap==='lutetia'?lutetiaWaves.turtle.first:waves.siege.turtle.first,
         nextRam:waves.siege.ram.first,
         shots:[],
         fish:[],
@@ -66,6 +67,8 @@ function start(){
       sessionContext.abilities.init();
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
+      for(const resident of sessionContext.Village.residents||[])sessionContext.spawn(resident.unit,false,resident);
+      seedCityCrowd(sessionContext);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));

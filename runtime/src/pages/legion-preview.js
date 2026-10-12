@@ -14,6 +14,9 @@ const {UnitArt} = require("src/rendering/art/unit-art.js");
 const {Village} = require("src/world/village/village.js");
 const {fitCharacterPreview,drawCharacterPreview} = require("src/ui/character-preview.js");
 const descriptions={
+auxiliary:['Лютеция · с начала боя','Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.'],
+merchant:['Лютеция · на карте изначально','Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.'],
+courtesan:['Лютеция · с 0:08','Небольшой урон, но подбирает ближайшие опыт и еду. Еда восстанавливает ей здоровье.'],
 boar:['Лес · с 0:04','Кабан предупреждает о рывке и несётся по прямой.'],
 stoneSquad:['Лес · с 0:35','Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.'],
 netter:['Лес · с 0:18','Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.'],
@@ -26,6 +29,7 @@ const anchor=CharacterFrameManifest.anchor,previews=[];
 const arenas=createArenas(Village);
 const commonUnits=['roman',...waves.units.slice().sort((a,b)=>a.time-b.time).map(w=>w.type),...Object.keys(waves.siege),'boss'];
 const mapNotes={
+ lutetia:'Кривые мощёные улицы, жилые кварталы, торговая площадь и пост стражи. Шесть торговцев стоят у прилавков с начала боя. Забирай опыт и еду раньше куртизанок.',
  village:'Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.',
  forest:'Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.',
  camp:'Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.'
@@ -47,7 +51,7 @@ function showLocation(){
  }
  previews.length=0;
  document.getElementById('cards').replaceChildren();
- const units=[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
+ const units=selectedMap==='lutetia'?['auxiliary','merchant','courtesan','boss']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
  document.getElementById('rosterCount').textContent='Отряды в локации: '+units.length;
  for(const unit of units){
  const u=unitDefinitions[unit];
@@ -166,6 +170,9 @@ Object.defineProperty(exports, "drawHazards", {get: () => drawHazards});
 },
 "data/enemies/units.js": function(require, exports){
 const expansionUnits={
+  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
+  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
+  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:74,damage:3,r:13,range:32,wind:.65,cooldown:1.6,xp:2,color:'#dca7d9'},
   boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
   stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
   netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
@@ -208,6 +215,7 @@ const waves={
 };
 
 const expansionSchedules={
+  lutetia:[{unit:'courtesan',first:8,every:17,cap:8}],
   forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
   camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
 };
@@ -215,7 +223,8 @@ const expansionSchedules={
 const waveSchedules={
   village:waves,
   forest:expansionSchedules.forest,
-  camp:expansionSchedules.camp
+  camp:expansionSchedules.camp,
+  lutetia:expansionSchedules.lutetia
 };
 
 Object.defineProperty(exports, "waves", {get: () => waves});
@@ -228,10 +237,12 @@ const {VillageNavigation} = require("src/world/village/navigation.js");
 const {VillageRenderer,sceneryVisible} = require("src/world/village/village-renderer.js");
 const {VillageArt} = require("src/rendering/art/village-art.js");
 const {SceneryArt} = require("src/rendering/art/scenery-art.js");
+const {createLutetia} = require("src/world/lutetia.js");
 const arenaDefinitions={
  village:{name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
  forest:{name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
- camp:{name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'}
+ camp:{name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'},
+ lutetia:{name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду.'}
 };
 const campLanes=[180,640,1100,1560,2020];
 const scenery=SceneryArt;
@@ -239,6 +250,7 @@ function createArenas(village){
  const cache={village};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=createArena(id));}};
 }
 function createArena(id){
+ if(id==='lutetia')return createLutetia();
  const size=2200,objects=[],roads=[];let seed=id==='forest'?731:192;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const add=(x,y,art,width,footprint)=>objects.push({x,y,kind:art,art,width,...(footprint?{footprint}:{})});
@@ -619,30 +631,109 @@ if(typeof Image!=='undefined')for(const name of ['tent','tent-round','weapons','
 
 Object.defineProperty(exports, "SceneryArt", {get: () => SceneryArt});
 },
-"data/animations/character-frames.js": function(require, exports){
-// Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
-const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/frames/boar/walk/0.png","characters/frames/boar/walk/1.png","characters/frames/boar/walk/2.png","characters/frames/boar/walk/3.png"],"attack":["characters/frames/boar/attack/0.png","characters/frames/boar/attack/1.png","characters/frames/boar/attack/2.png","characters/frames/boar/attack/3.png"],"hurt":["characters/frames/boar/hurt/0.png","characters/frames/boar/hurt/1.png","characters/frames/boar/hurt/2.png","characters/frames/boar/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/frames/stone-squad/walk/0.png","characters/frames/stone-squad/walk/1.png","characters/frames/stone-squad/walk/2.png","characters/frames/stone-squad/walk/3.png"],"attack":["characters/frames/stone-squad/attack/0.png","characters/frames/stone-squad/attack/1.png","characters/frames/stone-squad/attack/2.png","characters/frames/stone-squad/attack/3.png"],"hurt":["characters/frames/stone-squad/hurt/0.png","characters/frames/stone-squad/hurt/1.png","characters/frames/stone-squad/hurt/2.png","characters/frames/stone-squad/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/frames/netter/walk/0.png","characters/frames/netter/walk/1.png","characters/frames/netter/walk/2.png","characters/frames/netter/walk/3.png"],"attack":["characters/frames/netter/attack/0.png","characters/frames/netter/attack/1.png","characters/frames/netter/attack/2.png","characters/frames/netter/attack/3.png"],"hurt":["characters/frames/netter/hurt/0.png","characters/frames/netter/hurt/1.png","characters/frames/netter/hurt/2.png","characters/frames/netter/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/frames/tower/walk/0.png","characters/frames/tower/walk/1.png","characters/frames/tower/walk/2.png","characters/frames/tower/walk/3.png"],"attack":["characters/frames/tower/attack/0.png","characters/frames/tower/attack/1.png","characters/frames/tower/attack/2.png","characters/frames/tower/attack/3.png"],"hurt":["characters/frames/tower/hurt/0.png","characters/frames/tower/hurt/1.png","characters/frames/tower/hurt/2.png","characters/frames/tower/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/frames/cavalry/walk/0.png","characters/frames/cavalry/walk/1.png","characters/frames/cavalry/walk/2.png","characters/frames/cavalry/walk/3.png"],"attack":["characters/frames/cavalry/attack/0.png","characters/frames/cavalry/attack/1.png","characters/frames/cavalry/attack/2.png","characters/frames/cavalry/attack/3.png"],"hurt":["characters/frames/cavalry/hurt/0.png","characters/frames/cavalry/hurt/1.png","characters/frames/cavalry/hurt/2.png","characters/frames/cavalry/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/frames/caius/walk/0.png","characters/frames/caius/walk/1.png","characters/frames/caius/walk/2.png","characters/frames/caius/walk/3.png"],"attack":["characters/frames/caius/attack/0.png","characters/frames/caius/attack/1.png","characters/frames/caius/attack/2.png","characters/frames/caius/attack/3.png"],"hurt":["characters/frames/caius/hurt/0.png","characters/frames/caius/hurt/1.png","characters/frames/caius/hurt/2.png","characters/frames/caius/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/frames/wine/walk/0.png","characters/frames/wine/walk/1.png","characters/frames/wine/walk/2.png","characters/frames/wine/walk/3.png"],"attack":["characters/frames/wine/attack/0.png","characters/frames/wine/attack/1.png","characters/frames/wine/attack/2.png","characters/frames/wine/attack/3.png"],"hurt":["characters/frames/wine/hurt/0.png","characters/frames/wine/hurt/1.png","characters/frames/wine/hurt/2.png","characters/frames/wine/hurt/3.png"]},"idle":{"action":"attack","index":3}}}};
+"src/world/lutetia.js": function(require, exports){
+const {VillageCollision} = require("src/world/village/collision.js");
+const {VillageNavigation} = require("src/world/village/navigation.js");
+const {sceneryVisible} = require("src/world/village/village-renderer.js");
+const {LutetiaArt} = require("src/rendering/art/lutetia-art.js");
+const {UnitArt} = require("src/rendering/art/unit-art.js");
+function createLutetia(){
+ const size=2200,objects=[];
+ const roads=[
+  [0,450,620,280,1420,650,2200,420,190],
+  [0,1150,650,940,1400,1270,2200,1050,210],
+  [0,1840,700,1980,1450,1600,2200,1810,185],
+  [440,0,220,730,690,1420,360,2200,185],
+  [1110,0,1390,650,870,1500,1170,2200,200],
+  [1820,0,1580,700,2080,1500,1750,2200,185]
+ ];
+ for(const [row,y] of [310,830,1560,2110].entries())for(const [col,x] of [180,750,1440,2040].entries()){
+  if(row===1&&col===2)continue;
+  const width=310+(row+col)%3*18;
+  objects.push({x:x+Math.sin(row*3+col)*28,y,art:(row+col)%2?'townhouseOchre':'townhouse',width,footprint:[-width*.35,-width*.36,width*.7,width*.34]});
+ }
+ objects.push({x:1440,y:825,art:'guardpost',width:330,footprint:[-115,-119,230,115]});
+ // Stalls occupy the market perimeter, leaving the centre and four exits open.
+ const residents=[{unit:'merchant',x:880,y:900},{unit:'merchant',x:1130,y:890},{unit:'merchant',x:1360,y:945},{unit:'merchant',x:830,y:1275},{unit:'merchant',x:1290,y:1330},{unit:'merchant',x:1560,y:1770}];
+ const collision=VillageCollision.create(objects,size);
+ const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
+ const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
+ let ground=null;
+ function paint(g){
+  g.fillStyle='#a4977b';g.fillRect(0,0,size,size);
+  for(let i=0;i<3500;i++){g.fillStyle=i%2?'#746d5520':'#e2d2a02a';g.fillRect(i*397%size,i*673%size,3+i%8,2);}
+  let paving='#b7ad96';
+  if(typeof document!=='undefined'){
+   const tile=document.createElement('canvas');tile.width=96;tile.height=64;const t=tile.getContext('2d');
+   t.fillStyle='#79786c';t.fillRect(0,0,96,64);
+   for(let y=0;y<4;y++)for(let x=-1;x<6;x++){
+    const px=x*20+(y%2)*10,py=y*16,variation=(x+y+8)%4;
+    t.fillStyle=['#aaa997','#a1a38f','#b5b09d','#989d8c'][variation];
+    t.beginPath();t.roundRect(px+1,py+1,18,14,[3,4,3,2]);t.fill();
+    t.strokeStyle='#d8d0b43a';t.lineWidth=1;t.beginPath();t.moveTo(px+4,py+3);t.lineTo(px+15,py+3);t.stroke();
+    t.fillStyle='#62695722';t.fillRect(px+5+variation,py+7,2,1);
+   }
+   paving=g.createPattern(tile,'repeat');
+  }
+  g.lineCap='round';g.lineJoin='round';
+  for(const [extra,color] of [[14,'#6e7467'],[7,'#d0c5a4'],[0,paving]])for(const [x,y,a,b,c,d,e,f,w] of roads){g.strokeStyle=color;g.lineWidth=w+extra;g.beginPath();g.moveTo(x,y);g.bezierCurveTo(a,b,c,d,e,f);g.stroke();}
+  g.fillStyle=paving;g.beginPath();g.ellipse(1100,1110,365,290,0,0,Math.PI*2);g.fill();
+  g.strokeStyle='#d2c8ae';g.lineWidth=4;g.beginPath();g.ellipse(1100,1110,155,116,0,0,Math.PI*2);g.stroke();
+ }
+ function drawGround(g){
+  if(!ground&&typeof document!=='undefined'){ground=document.createElement('canvas');ground.width=ground.height=size;paint(ground.getContext('2d'));}
+  if(ground)g.drawImage(ground,0,0);else paint(g);
+ }
+ function drawObject(g,o,p,view){
+  if(!sceneryVisible(o,o.width,view))return;
+  g.save();if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.45)g.globalAlpha=.45;
+  if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.35,o.y-o.width*.7,o.width*.7,o.width*.7);}
+  g.restore();
+ }
+ return {size,objects,roads,residents,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);for(const o of depthObjects)drawObject(g,o);for(const e of residents)UnitArt.draw(g,{...e,heading:0});}};
+}
 
-Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
+Object.defineProperty(exports, "createLutetia", {get: () => createLutetia});
 },
-"data/animations/character-bounds.js": function(require, exports){
-// Generated from all character poses; run npm run generate after changing PNGs.
-const CharacterBounds={"asterix":{"left":96,"top":171,"right":164,"bottom":237},"obelix":{"left":69,"top":129,"right":194,"bottom":237},"roman-0":{"left":83,"top":155,"right":180,"bottom":237},"roman-1":{"left":80,"top":160,"right":180,"bottom":237},"roman-2":{"left":79,"top":152,"right":180,"bottom":237},"boss":{"left":81,"top":141,"right":181,"bottom":237},"cacofonix":{"left":87,"top":152,"right":169,"bottom":237},"antisanitarix":{"left":78,"top":153,"right":178,"bottom":237},"automatix":{"left":71,"top":142,"right":185,"bottom":237},"panoramix":{"left":79,"top":144,"right":177,"bottom":239},"spear":{"left":83,"top":151,"right":189,"bottom":237},"pilum":{"left":81,"top":151,"right":184,"bottom":237},"veteran":{"left":84,"top":155,"right":185,"bottom":237},"turtle":{"left":50,"top":124,"right":209,"bottom":238},"ram":{"left":17,"top":113,"right":232,"bottom":237},"boar":{"left":53,"top":172,"right":177,"bottom":237},"stoneSquad":{"left":43,"top":116,"right":197,"bottom":237},"netter":{"left":78,"top":161,"right":247,"bottom":237},"tower":{"left":60,"top":76,"right":217,"bottom":237},"cavalry":{"left":9,"top":118,"right":242,"bottom":237},"caius":{"left":71,"top":141,"right":180,"bottom":237},"wine":{"left":82,"top":148,"right":209,"bottom":237}};
-
-Object.defineProperty(exports, "CharacterBounds", {get: () => CharacterBounds});
-},
-"src/rendering/art/animation-art.js": function(require, exports){
-const {CharacterFrames} = require("src/rendering/character-frames.js");
-const ids=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='animation');
-const AnimationArt={
- status:CharacterFrames.register(ids,'animation-art-ready'),
- get(name,variant=0,action='walk',progress=0){
-  const id=name==='roman'?'roman-'+((Math.floor(variant)%3+3)%3):name;
-  return ids.includes(id)?CharacterFrames.get(id,action,progress):null;
- },
+"src/rendering/art/lutetia-art.js": function(require, exports){
+const {AssetPaths} = require("src/rendering/asset-paths.js");
+// Only the architecture row is used. Characters use the game's shared frame loader.
+const cells={townhouse:[0,1],townhouseOchre:[1,1],guardpost:[2,1]};
+let atlas=null;
+if(typeof Image!=='undefined'){
+ const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('lutetia/atlas-v1.png');
+}
+const LutetiaArt={
+ draw(g,kind,x,y,width,flip=false){
+  const cell=cells[kind];if(!cell||!atlas)return false;
+  const w=atlas.naturalWidth/3,h=atlas.naturalHeight/2;
+  g.save();g.translate(x,y);if(flip)g.scale(-1,1);
+  g.drawImage(atlas,cell[0]*w,cell[1]*h,w,h,-width/2,-width*.97,width,width);
+  g.restore();return true;
+ }
 };
 
-Object.defineProperty(exports, "AnimationArt", {get: () => AnimationArt});
+Object.defineProperty(exports, "LutetiaArt", {get: () => LutetiaArt});
+},
+"src/rendering/art/unit-art.js": function(require, exports){
+const {CharacterFrames} = require("src/rendering/character-frames.js");
+const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
+function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
+ function draw(g,e){
+  const reaction=e.hurt||e.visualHurt,attack=e.action?.warning?null:e.action;
+  const ramImpact=e.unit==='ram'&&e.charge&&e.charge.left>1.14;
+  const strike=e.strike;
+  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
+  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:e.walk||0;
+  const frame=get(e.unit,action,progress);if(!frame)return false;
+  const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
+  g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
+  g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
+ }
+
+const UnitArt={status:CharacterFrames.register(names,'unit-art-ready'),get,draw};
+
+Object.defineProperty(exports, "UnitArt", {get: () => UnitArt});
 },
 "src/rendering/character-frames.js": function(require, exports){
 const {CharacterFrameManifest} = require("data/animations/character-frames.js");
@@ -716,25 +807,30 @@ const CharacterFrames={
 
 Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
 },
-"src/rendering/art/unit-art.js": function(require, exports){
+"data/animations/character-frames.js": function(require, exports){
+// Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/frames/boar/walk/0.png","characters/frames/boar/walk/1.png","characters/frames/boar/walk/2.png","characters/frames/boar/walk/3.png"],"attack":["characters/frames/boar/attack/0.png","characters/frames/boar/attack/1.png","characters/frames/boar/attack/2.png","characters/frames/boar/attack/3.png"],"hurt":["characters/frames/boar/hurt/0.png","characters/frames/boar/hurt/1.png","characters/frames/boar/hurt/2.png","characters/frames/boar/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/frames/stone-squad/walk/0.png","characters/frames/stone-squad/walk/1.png","characters/frames/stone-squad/walk/2.png","characters/frames/stone-squad/walk/3.png"],"attack":["characters/frames/stone-squad/attack/0.png","characters/frames/stone-squad/attack/1.png","characters/frames/stone-squad/attack/2.png","characters/frames/stone-squad/attack/3.png"],"hurt":["characters/frames/stone-squad/hurt/0.png","characters/frames/stone-squad/hurt/1.png","characters/frames/stone-squad/hurt/2.png","characters/frames/stone-squad/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/frames/netter/walk/0.png","characters/frames/netter/walk/1.png","characters/frames/netter/walk/2.png","characters/frames/netter/walk/3.png"],"attack":["characters/frames/netter/attack/0.png","characters/frames/netter/attack/1.png","characters/frames/netter/attack/2.png","characters/frames/netter/attack/3.png"],"hurt":["characters/frames/netter/hurt/0.png","characters/frames/netter/hurt/1.png","characters/frames/netter/hurt/2.png","characters/frames/netter/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/frames/tower/walk/0.png","characters/frames/tower/walk/1.png","characters/frames/tower/walk/2.png","characters/frames/tower/walk/3.png"],"attack":["characters/frames/tower/attack/0.png","characters/frames/tower/attack/1.png","characters/frames/tower/attack/2.png","characters/frames/tower/attack/3.png"],"hurt":["characters/frames/tower/hurt/0.png","characters/frames/tower/hurt/1.png","characters/frames/tower/hurt/2.png","characters/frames/tower/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/frames/cavalry/walk/0.png","characters/frames/cavalry/walk/1.png","characters/frames/cavalry/walk/2.png","characters/frames/cavalry/walk/3.png"],"attack":["characters/frames/cavalry/attack/0.png","characters/frames/cavalry/attack/1.png","characters/frames/cavalry/attack/2.png","characters/frames/cavalry/attack/3.png"],"hurt":["characters/frames/cavalry/hurt/0.png","characters/frames/cavalry/hurt/1.png","characters/frames/cavalry/hurt/2.png","characters/frames/cavalry/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/frames/caius/walk/0.png","characters/frames/caius/walk/1.png","characters/frames/caius/walk/2.png","characters/frames/caius/walk/3.png"],"attack":["characters/frames/caius/attack/0.png","characters/frames/caius/attack/1.png","characters/frames/caius/attack/2.png","characters/frames/caius/attack/3.png"],"hurt":["characters/frames/caius/hurt/0.png","characters/frames/caius/hurt/1.png","characters/frames/caius/hurt/2.png","characters/frames/caius/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/frames/wine/walk/0.png","characters/frames/wine/walk/1.png","characters/frames/wine/walk/2.png","characters/frames/wine/walk/3.png"],"attack":["characters/frames/wine/attack/0.png","characters/frames/wine/attack/1.png","characters/frames/wine/attack/2.png","characters/frames/wine/attack/3.png"],"hurt":["characters/frames/wine/hurt/0.png","characters/frames/wine/hurt/1.png","characters/frames/wine/hurt/2.png","characters/frames/wine/hurt/3.png"]},"idle":{"action":"attack","index":3}},"auxiliary":{"renderer":"unit","actions":{"walk":["characters/frames/auxiliary/walk/0.png","characters/frames/auxiliary/walk/1.png","characters/frames/auxiliary/walk/2.png","characters/frames/auxiliary/walk/3.png"],"attack":["characters/frames/auxiliary/attack/0.png","characters/frames/auxiliary/attack/1.png","characters/frames/auxiliary/attack/2.png","characters/frames/auxiliary/attack/3.png"],"hurt":["characters/frames/auxiliary/hurt/0.png","characters/frames/auxiliary/hurt/1.png","characters/frames/auxiliary/hurt/2.png","characters/frames/auxiliary/hurt/3.png"]},"idle":{"action":"attack","index":3}},"merchant":{"renderer":"unit","actions":{"walk":["characters/frames/merchant/walk/0.png","characters/frames/merchant/walk/1.png","characters/frames/merchant/walk/2.png","characters/frames/merchant/walk/3.png"],"attack":["characters/frames/merchant/attack/0.png","characters/frames/merchant/attack/1.png","characters/frames/merchant/attack/2.png","characters/frames/merchant/attack/3.png"],"hurt":["characters/frames/merchant/hurt/0.png","characters/frames/merchant/hurt/1.png","characters/frames/merchant/hurt/2.png","characters/frames/merchant/hurt/3.png"]},"idle":{"action":"walk","index":0}},"courtesan":{"renderer":"unit","actions":{"walk":["characters/frames/courtesan/walk/0.png","characters/frames/courtesan/walk/1.png","characters/frames/courtesan/walk/2.png","characters/frames/courtesan/walk/3.png"],"attack":["characters/frames/courtesan/attack/0.png","characters/frames/courtesan/attack/1.png","characters/frames/courtesan/attack/2.png","characters/frames/courtesan/attack/3.png"],"hurt":["characters/frames/courtesan/hurt/0.png","characters/frames/courtesan/hurt/1.png","characters/frames/courtesan/hurt/2.png","characters/frames/courtesan/hurt/3.png"]},"idle":{"action":"attack","index":3}}}};
+
+Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
+},
+"data/animations/character-bounds.js": function(require, exports){
+// Generated from all character poses; run npm run generate after changing PNGs.
+const CharacterBounds={"asterix":{"left":96,"top":171,"right":164,"bottom":237},"obelix":{"left":69,"top":129,"right":194,"bottom":237},"roman-0":{"left":83,"top":155,"right":180,"bottom":237},"roman-1":{"left":80,"top":160,"right":180,"bottom":237},"roman-2":{"left":79,"top":152,"right":180,"bottom":237},"boss":{"left":81,"top":141,"right":181,"bottom":237},"cacofonix":{"left":87,"top":152,"right":169,"bottom":237},"antisanitarix":{"left":78,"top":153,"right":178,"bottom":237},"automatix":{"left":71,"top":142,"right":185,"bottom":237},"panoramix":{"left":79,"top":144,"right":177,"bottom":239},"spear":{"left":83,"top":151,"right":189,"bottom":237},"pilum":{"left":81,"top":151,"right":184,"bottom":237},"veteran":{"left":84,"top":155,"right":185,"bottom":237},"turtle":{"left":50,"top":124,"right":209,"bottom":238},"ram":{"left":17,"top":113,"right":232,"bottom":237},"boar":{"left":53,"top":172,"right":177,"bottom":237},"stoneSquad":{"left":43,"top":116,"right":197,"bottom":237},"netter":{"left":78,"top":161,"right":247,"bottom":237},"tower":{"left":60,"top":76,"right":217,"bottom":237},"cavalry":{"left":9,"top":118,"right":242,"bottom":237},"caius":{"left":71,"top":141,"right":180,"bottom":237},"wine":{"left":82,"top":148,"right":209,"bottom":237},"auxiliary":{"left":86,"top":148,"right":209,"bottom":237},"merchant":{"left":51,"top":114,"right":216,"bottom":237},"courtesan":{"left":92,"top":157,"right":180,"bottom":237}};
+
+Object.defineProperty(exports, "CharacterBounds", {get: () => CharacterBounds});
+},
+"src/rendering/art/animation-art.js": function(require, exports){
 const {CharacterFrames} = require("src/rendering/character-frames.js");
-const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
-function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
- function draw(g,e){
-  const reaction=e.hurt||e.visualHurt,attack=e.action?.warning?null:e.action;
-  const ramImpact=e.unit==='ram'&&e.charge&&e.charge.left>1.14;
-  const strike=e.strike;
-  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
-  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:e.walk||0;
-  const frame=get(e.unit,action,progress);if(!frame)return false;
-  const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
-  g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
-  g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
- }
+const ids=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='animation');
+const AnimationArt={
+ status:CharacterFrames.register(ids,'animation-art-ready'),
+ get(name,variant=0,action='walk',progress=0){
+  const id=name==='roman'?'roman-'+((Math.floor(variant)%3+3)%3):name;
+  return ids.includes(id)?CharacterFrames.get(id,action,progress):null;
+ },
+};
 
-const UnitArt={status:CharacterFrames.register(names,'unit-art-ready'),get,draw};
-
-Object.defineProperty(exports, "UnitArt", {get: () => UnitArt});
+Object.defineProperty(exports, "AnimationArt", {get: () => AnimationArt});
 },
 "src/world/village/village.js": function(require, exports){
 const {VillageData} = require("src/world/village/village-data.js");

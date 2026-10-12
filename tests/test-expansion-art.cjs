@@ -3,7 +3,7 @@ const assert=require('node:assert/strict'),fs=require('node:fs'),path=require('n
 const manifest=require('../data/animations/character-frames.json');
 const {frameHarness}=require('./helpers/frame-harness.cjs');
 const {loadModule}=require('./helpers/load-modules.cjs');
-const ids=['boar','stoneSquad','netter','tower','cavalry','caius','wine'];
+const ids=['boar','stoneSquad','netter','tower','cavalry','caius','wine','auxiliary','merchant','courtesan'];
 (async()=>{
  const h=await frameHarness('src/rendering/art/unit-art.js');h.images.forEach(i=>i.onload());
  const U=h.env.UnitArt;
@@ -30,7 +30,7 @@ const ids=['boar','stoneSquad','netter','tower','cavalry','caius','wine'];
  let raster=0,pixels=0;
  const g=new Proxy({save(){},restore(){},translate(){},scale(){},drawImage(){raster++;},fillRect(){pixels++;},fillText(){}},{get:(o,k)=>o[k]||(()=>{})});
  for(const id of ids)h.env.Legion.draw(g,{unit:id,x:0,y:0,heading:0,moving:false},()=>{throw Error('Unexpected legacy sprite')});
- assert.equal(raster,7,'Game uses raster frames before pixel fallback');assert.equal(pixels,0);
+ assert.equal(raster,ids.length,'Game uses raster frames before pixel fallback');assert.equal(pixels,0);
  // Flying weapons are literal crops of their release frames, at the same scale.
  for(const [kind,id,crop,height]of [['net','netter',[183,172,64,44],44],['arrow','tower',[185,109,33,10],122]]){
   for(const [vx,vy]of [[250,0],[-250,0],[0,250]]){
@@ -44,5 +44,5 @@ const ids=['boar','stoneSquad','netter','tower','cavalry','caius','wine'];
  }
  let arrivalY;h.env.Legion.projectile({save(){},restore(){},rotate(){},drawImage(){},translate(x,y){arrivalY=y;}},{kind:'arrow',x:100,y:200,vx:250,vy:0,age:1,flightTime:1});assert.equal(arrivalY,160,'Tower arrows descend from archer platform to hero height');
  const broken=await frameHarness('src/rendering/art/unit-art.js');broken.images.find(i=>i.url.includes('/boar/')).onerror();assert.equal(broken.env.UnitArt.get('boar'),null,'Load errors retain pixel fallback');
- console.log('PASS: 84 distinct transparent frames, seven raster-first units, animation/reaction/charge selection, facing and load fallback.');
+ console.log('PASS: 120 distinct transparent frames, ten raster-first units, animation/reaction/charge selection, facing and load fallback.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

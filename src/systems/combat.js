@@ -28,6 +28,8 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
       if(e.hp<=0){
         sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
+        // The ambient crowd is not a source of XP, kill rewards or random loot.
+        if(sessionContext.Legion.units[e.unit].civilian)return;
         sessionContext.state.kills++;
         sessionContext.abilities?.onKill();
         sessionContext.state.earned+=sessionContext.Progression.kill();

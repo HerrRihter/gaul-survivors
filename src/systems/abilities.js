@@ -45,6 +45,11 @@ export const AbilitySystem={create(c){
    const text=`${i?'E':'Q'} · ${a.name} · ${abilityRank(s,a.id)}/${abilityUpgradeMax}\n${max?'Максимум':a.left>0?'Активно '+a.left.toFixed(1)+' с':a.cd>0?Math.ceil(a.cd)+' с':'Готово'}`;
    const disabled=c.mode!=='play'||a.cd>0||a.left>0||max||s.p.stun>0;
    if(b.textContent!==text)b.textContent=text;
+   // Keep the touch face compact while preserving the full keyboard label.
+   const status=max?'Максимум':a.left>0?'Активно':a.cd>0?Math.ceil(a.cd)+' с':'Готово';
+   if(b.dataset.name!==a.name)b.dataset.name=a.name;
+   if(b.dataset.status!==status)b.dataset.status=status;
+   b.setAttribute?.('aria-label',`${a.name}: ${status}`);
    const title=a.description+' Улучшение: '+abilityUpgradeDescriptions[a.id];
    if(b.title!==title)b.title=title;
    if(b.disabled!==disabled)b.disabled=disabled;

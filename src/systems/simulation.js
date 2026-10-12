@@ -173,6 +173,7 @@ function update(dt){
       s.helmets=s.helmets.filter(h=>!h.dead);
       const mag=st.magnet;
       for(const gem of s.gems){
+        if(gem.dead)continue;
         const dx=p.x-gem.x,dy=p.y-gem.y;
         if(sessionContext.Math.abs(dx)>mag||sessionContext.Math.abs(dy)>mag)continue;
         const d=sessionContext.Math.hypot(dx,dy);
@@ -200,7 +201,7 @@ function update(dt){
         }
         s.gems=[...grid.values()];
       }
-      for(const item of s.pickups)if(sessionContext.dist(item,p)<25){
+      for(const item of s.pickups)if(!item.dead&&sessionContext.dist(item,p)<25){
         p.hp=sessionContext.Math.min(p.max,p.hp+25);
         item.dead=true;
         s.texts.push({x:p.x,y:p.y-30,v:'+25 ♥',life:1});

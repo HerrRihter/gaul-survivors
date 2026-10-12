@@ -7,6 +7,7 @@ module.exports={
     "village-preview.html"
   ],
   "groups": [
+    {purpose:'Lutetia city architecture, population and layout',consumers:['index.html','legion-preview.html','village-preview.html'],files:['src/world/lutetia.js','src/rendering/art/lutetia-art.js','src/systems/city-population.js','assets/runtime/lutetia/atlas-v1.png']},
     {purpose:'Local CC0 music, effects and source credits',consumers:['index.html'],files:[
       'assets/audio/CREDITS.md', 'assets/audio/Kenney-Impact-LICENSE.txt', 'assets/audio/Kenney-RPG-LICENSE.txt',
       ...['tavern','battle','victory','defeat'].map(name=>'assets/audio/music/'+name+'.mp3'),

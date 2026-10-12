@@ -1,4 +1,11 @@
 export const expansionUnits={
+  citizenBaker:{name:'Пекарь',hp:28,speed:104,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
+  citizenPorter:{name:'Носильщик',hp:32,speed:116,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#b2bd8b',civilian:true},
+  citizenMatron:{name:'Матрона',hp:26,speed:94,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#8fc6ba',civilian:true},
+  citizenScribe:{name:'Писец',hp:22,speed:124,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#e4c88b',civilian:true},
+  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
+  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
+  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
   boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
   stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
   netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},

@@ -4,7 +4,7 @@
 const fs=require('node:fs'),path=require('node:path');
 const sharp=require(process.env.SHARP_MODULE||'sharp');
 const root=path.resolve(__dirname,'..');
-const specs={boar:{height:52},stoneSquad:{folder:'stone-squad',height:116},netter:{height:84},tower:{height:158},cavalry:{height:116},caius:{height:94},wine:{height:86}};
+const specs={auxiliary:{height:86},merchant:{height:105},courtesan:{height:78},boar:{height:52},stoneSquad:{folder:'stone-squad',height:116},netter:{height:84},tower:{height:158},cavalry:{height:116},caius:{height:94},wine:{height:86}};
 async function bounds(buffer){
  const {data,info}=await sharp(buffer).ensureAlpha().raw().toBuffer({resolveWithObject:true});
  let left=info.width,top=info.height,right=0,bottom=0,count=0;

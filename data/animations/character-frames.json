@@ -584,6 +584,87 @@
         "action": "attack",
         "index": 3
       }
+    },
+    "auxiliary": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/auxiliary/walk/0.png",
+          "characters/frames/auxiliary/walk/1.png",
+          "characters/frames/auxiliary/walk/2.png",
+          "characters/frames/auxiliary/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/auxiliary/attack/0.png",
+          "characters/frames/auxiliary/attack/1.png",
+          "characters/frames/auxiliary/attack/2.png",
+          "characters/frames/auxiliary/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/auxiliary/hurt/0.png",
+          "characters/frames/auxiliary/hurt/1.png",
+          "characters/frames/auxiliary/hurt/2.png",
+          "characters/frames/auxiliary/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
+    },
+    "merchant": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/merchant/walk/0.png",
+          "characters/frames/merchant/walk/1.png",
+          "characters/frames/merchant/walk/2.png",
+          "characters/frames/merchant/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/merchant/attack/0.png",
+          "characters/frames/merchant/attack/1.png",
+          "characters/frames/merchant/attack/2.png",
+          "characters/frames/merchant/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/merchant/hurt/0.png",
+          "characters/frames/merchant/hurt/1.png",
+          "characters/frames/merchant/hurt/2.png",
+          "characters/frames/merchant/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      }
+    },
+    "courtesan": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/courtesan/walk/0.png",
+          "characters/frames/courtesan/walk/1.png",
+          "characters/frames/courtesan/walk/2.png",
+          "characters/frames/courtesan/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/courtesan/attack/0.png",
+          "characters/frames/courtesan/attack/1.png",
+          "characters/frames/courtesan/attack/2.png",
+          "characters/frames/courtesan/attack/3.png"
+        ],
+        "hurt": [
+          "characters/frames/courtesan/hurt/0.png",
+          "characters/frames/courtesan/hurt/1.png",
+          "characters/frames/courtesan/hurt/2.png",
+          "characters/frames/courtesan/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "attack",
+        "index": 3
+      }
     }
   }
 }

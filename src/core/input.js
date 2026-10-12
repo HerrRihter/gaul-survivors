@@ -8,6 +8,8 @@ function resetInput(){
       sessionContext.$('stick').style.left='';
       sessionContext.$('stick').style.top='';
       sessionContext.$('stick').style.bottom='';
+      sessionContext.$('stick').style.right='';
+      sessionContext.$('stick').classList.toggle('engaged',false);
     }
 function bind(){
 [0,1].forEach(i=>{const b=sessionContext.$('ability'+i);b.onclick=()=>sessionContext.abilities.activate(i);b.addEventListener('pointerdown',e=>e.stopPropagation());});
@@ -52,6 +54,8 @@ sessionContext.canvas.addEventListener('pointerdown',e=>{
       control.style.left=`${e.clientX-size/2}px`;
       control.style.top=`${e.clientY-size/2}px`;
       control.style.bottom='auto';
+      control.style.right='auto';
+      control.classList.toggle('engaged',true);
       sessionContext.canvas.setPointerCapture(e.pointerId);
     });
 sessionContext.canvas.addEventListener('pointermove',e=>{

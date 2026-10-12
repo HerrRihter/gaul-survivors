@@ -34,7 +34,7 @@ Legion=(()=>{
    sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
    if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
   }
-  if(e.unit!=='roman'&&!e.boss){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
+  if(e.unit!=='roman'&&!e.boss&&!u.civilian){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
  }
  return {units,wave,mitigation,telegraph,draw,projectile};
 })();
