@@ -62,6 +62,7 @@ function start(){
           facing:{x:1,y:0}
         }
       };
+      sessionContext.abilities.init();
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
@@ -75,6 +76,7 @@ function start(){
 function menu(){
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
+      sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
       ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>sessionContext.show(id,false));
@@ -89,9 +91,11 @@ function pause(){
         sessionContext.mode='pause';
         sessionContext.resetInput();
         sessionContext.show('paused',true);
+        sessionContext.abilities.hud();
       }else if(sessionContext.mode==='pause'){
         sessionContext.mode='play';
         sessionContext.show('paused',false);
+        sessionContext.abilities.hud();
       }
     }
 function levelUp(){
@@ -125,6 +129,7 @@ function finish(win){
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';
+      sessionContext.abilities.hud();
       sessionContext.resetInput();
       sessionContext.show('end',true);
       sessionContext.show('pause',false);

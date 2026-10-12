@@ -31,7 +31,7 @@ function draw(){
         const minX=cx-50,maxX=cx+sessionContext.W+50,minY=cy-50,maxY=cy+sessionContext.H+50;
         const sceneryView={minX,maxX,minY,maxY};
         drawHazards(sessionContext.ctx,s);
-        sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
+        sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected,sessionContext.abilities.effectiveStats());
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
         for(const h of s.helmets){
           if(h.x<minX||h.x>maxX||h.y<minY||h.y>maxY)continue;
@@ -64,6 +64,7 @@ function draw(){
           if(e.x<minX-70||e.x>maxX+70||e.y<minY-70||e.y>maxY+70)continue;
           sessionContext.Legion.telegraph(sessionContext.ctx,e);
         }
+        sessionContext.abilities.draw(sessionContext.ctx);
         const actors=orderActors(sessionContext.Village.depthObjects,s.enemies,p,sessionContext.selected);
         for(const e of actors){
           if(e.scenery){
@@ -77,7 +78,7 @@ function draw(){
           sessionContext.ctx.ellipse(e.x,e.y,12*size/2,4*size/2,0,0,sessionContext.Math.PI*2);
           sessionContext.ctx.fill();
           const bob=e.player?(p.moving?sessionContext.Math.sin(s.step*15)*1.7:0):sessionContext.Math.sin(s.step*9+e.phase)*1.4;
-          if(e.player)sessionContext.sprite(sessionContext.ctx,e.type,e.x,e.y,size,e.flip,bob,p.inv>0&&sessionContext.Math.floor(p.inv*15)%2===0,e.phase||0,e);else sessionContext.Legion.draw(sessionContext.ctx,e,sessionContext.sprite);
+          if(e.player)sessionContext.sprite(sessionContext.ctx,e.type,e.x,e.y-(p.jumpHeight||0),size,e.flip,bob,p.inv>0&&sessionContext.Math.floor(p.inv*15)%2===0,e.phase||0,e);else sessionContext.Legion.draw(sessionContext.ctx,e,sessionContext.sprite);
           if(e.player){
             const aim=p.action?.direction||p.facing;
             sessionContext.ctx.save();

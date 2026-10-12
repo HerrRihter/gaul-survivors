@@ -38,7 +38,7 @@ export function updateHazards(c,dt){
   const s=c.state,p=s.p;
   p.stun=Math.max(0,(p.stun||0)-dt);p.netGrace=Math.max(0,(p.netGrace||0)-dt);
   p.poisoned=Math.max(0,(p.poisoned||0)-dt);
-  for(const h of s.winePools){h.life-=dt;if(Math.hypot(p.x-h.x,p.y-h.y)<32)p.poisoned=2.5;}
+  for(const h of s.winePools){h.life-=dt;if(!c.abilities?.active('elixir')&&Math.hypot(p.x-h.x,p.y-h.y)<32)p.poisoned=2.5;}
   s.winePools=s.winePools.filter(h=>h.life>0);
   p.poisonClock=Math.max(0,(p.poisonClock||0)-dt);
   if(p.poisoned>0&&p.poisonClock<=0){c.hurtPlayer({damage:5});p.poisonClock=.85;}
@@ -49,7 +49,7 @@ export function updateExpansion(e,c,dt){
   const u=expansionUnits[e.unit];if(!u)return false;
   const s=c.state,p=s.p,d=c.dist(e,p);e.moving=false;
   const advanceWalk=travel=>{if(travel>.01)e.walk=(e.walk||0)+(e.unit==='cavalry'?dt*2:travel/50);};
-  const move=(x,y,speed)=>{const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
+  const move=(x,y,speed)=>{speed*=1-(e.abilitySlow||0);const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
   if(e.unit==='caius'){
     const angle=s.t*.22+e.phase;e.heading=angle;move(Math.cos(angle),Math.sin(angle),e.speed);return true;
   }
@@ -59,7 +59,7 @@ export function updateExpansion(e,c,dt){
     return true;
   }
   if(e.charge){
-    const q=e.charge,speed=e.unit==='cavalry'?u.speed:340;
+    const q=e.charge,speed=(e.unit==='cavalry'?u.speed:340)*(1-(e.abilitySlow||0));
     // Sweep contact checks so a charge cannot tunnel through the hero.
     const steps=Math.max(1,Math.ceil(speed*dt/10));let travel=0;
     for(let i=0;i<steps;i++){

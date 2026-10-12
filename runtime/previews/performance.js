@@ -83,6 +83,7 @@ const {EnemySpawning} = require("src/systems/enemy-spawning.js");
 const {CombatSystem} = require("src/systems/combat.js");
 const {Simulation} = require("src/systems/simulation.js");
 const {SceneRenderer} = require("src/rendering/scene-renderer.js");
+const {AbilitySystem} = require("src/systems/abilities.js");
 const {GameLoop} = require("src/core/game-loop.js");
 let GameSession;
 'use strict';
@@ -96,6 +97,7 @@ const arenas=createArenas(Village);
 let selectedMap='village';
 let audioController=null;
 const sessionContext={
+get abilities(){return abilities},
 get selectedMap(){return selectedMap},
 get arenaDefinitions(){return arenaDefinitions},
 get document(){return document},
@@ -220,6 +222,7 @@ get stop(){return stop}
 
     audioController=AudioSystem.create(sessionContext);
 
+    const abilities=AbilitySystem.create(sessionContext);
     const {resetInput,bind:bindInput}=InputSystem.create(sessionContext);
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
@@ -266,6 +269,7 @@ get stop(){return stop}
 
     return {
       start,
+      activateAbility: abilities.activate,
       update,
       draw,
       pause,
@@ -598,15 +602,22 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   }
   if(roughRoads){
    g.save();g.beginPath();for(const points of lanes)roadOutline(g,points,0);g.clip();
+   // Rasterize the detail layer without the complex lane clip. Clipping every
+   // ellipse separately makes GPU rasterization stall despite a short JS frame.
+   const detail=document?.createElement('canvas');
+   if(detail){detail.width=size;detail.height=size;}
+   const ink=detail?detail.getContext('2d'):g;
+   ink.lineCap='round';ink.lineJoin='round';
    // Cached, deterministic dirt mottling, stones and broken wheel ruts.
    for(let i=0;i<15000;i++){
     const x=i*397.31%size,y=i*673.73%size;
-    g.fillStyle=i%3?'#6f573526':'#fff0c436';g.beginPath();g.ellipse(x,y,2+i%13,1+i%5,i*.7,0,Math.PI*2);g.fill();
+    ink.fillStyle=i%3?'#6f573526':'#fff0c436';ink.beginPath();ink.ellipse(x,y,2+i%13,1+i%5,i*.7,0,Math.PI*2);ink.fill();
    }
    for(const points of lanes)for(const side of [-1,1])for(let i=1;i<points.length;i++){
     if(i%7<2)continue;const p=points[i],q=points[i-1],offset=side*25;
-    g.strokeStyle='#71593730';g.lineWidth=2+i%3;g.beginPath();g.moveTo(q.x+q.nx*offset,q.y+q.ny*offset);g.lineTo(p.x+p.nx*offset,p.y+p.ny*offset);g.stroke();
+    ink.strokeStyle='#71593730';ink.lineWidth=2+i%3;ink.beginPath();ink.moveTo(q.x+q.nx*offset,q.y+q.ny*offset);ink.lineTo(p.x+p.nx*offset,p.y+p.ny*offset);ink.stroke();
    }
+   if(detail)g.drawImage(detail,0,0);
    g.restore();
   }
   if(plaza){g.fillStyle=dirt;g.beginPath();g.ellipse(1120,1170,255,175,-.1,0,Math.PI*2);g.fill();}
@@ -803,6 +814,7 @@ const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"chara
 Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
 },
 "src/ui/game-ui.js": function(require, exports){
+const {abilityDefinitions} = require("data/characters/abilities.js");
 let GameUI;
 'use strict';
 GameUI={create(sessionContext){
@@ -826,7 +838,7 @@ function updateRecord(){
     }
 function updateRunHeroStats(){
       const hero=sessionContext.Villagers.defs[sessionContext.pendingRunHero];
-      sessionContext.$('runHeroStats').textContent=hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`;
+      sessionContext.$('runHeroStats').textContent=(hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`)+'\n'+abilityDefinitions[sessionContext.pendingRunHero].map((a,i)=>`${i?'E':'Q'} · ${a.name}: ${a.description} Перезарядка ${a.cooldown} с.`).join('\n');
     }
 function renderRunHeroes(){
       const list=sessionContext.$('runHeroes'),heroes=Object.keys(sessionContext.Villagers.defs).filter(id=>sessionContext.Progression.owned(id));
@@ -922,8 +934,9 @@ function closeShop(){
       show('menu',true);
     }
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
-let lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
+let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
 function hud(){
+      sessionContext.abilities.hud();
       if(!sessionContext.state)return;
       const s=sessionContext.state;
       elHealth??=sessionContext.$('health');
@@ -935,10 +948,10 @@ function hud(){
       elHelmets??=sessionContext.$('helmets');
       elBosshealth??=sessionContext.$('bosshealth');
 
-      const hp=s.p.hp,max=s.p.max;
+      const hp=sessionContext.Math.ceil(s.p.hp),max=s.p.max,healthPct=sessionContext.Math.round(s.p.hp/max*1000)/10;
+      if(healthPct!==lastHealthPct){lastHealthPct=healthPct;elHealth.style.width=`${healthPct}%`;}
       if(hp!==lastHp||max!==lastMax||s.level!==lastLevel){
         lastHp=hp;lastMax=max;lastLevel=s.level;
-        elHealth.style.width=`${hp/max*100}%`;
         elLevel.textContent=`УР. ${s.level}  ·  ${sessionContext.Math.ceil(hp)} / ${max} HP`;
       }
       if(s.xp!==lastXp||s.need!==lastNeed){
@@ -959,7 +972,7 @@ function hud(){
         lastWeaponKey=wKey;
         elWeapon.textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon+' · '+sessionContext.arenaDefinitions[s.map].name;
       }
-      const hCount=sessionContext.Progression.data.helmets;
+      const hCount=sessionContext.Progression.helmets;
       if(hCount!==lastHelmets||s.earned!==lastEarned){
         lastHelmets=hCount;lastEarned=s.earned;
         elHelmets.textContent='ШЛЕМЫ: '+hCount+' (+'+s.earned+')';
@@ -982,6 +995,41 @@ return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,o
 }};
 
 Object.defineProperty(exports, "GameUI", {get: () => GameUI});
+},
+"data/characters/abilities.js": function(require, exports){
+const abilityDefinitions = {
+ asterix:[{id:'dash',name:'Галльский прорыв',cooldown:10,duration:.22,description:'Рывок: 35 урона и отталкивание.'},{id:'potion',name:'Волшебное зелье',cooldown:26,duration:6,description:'6 с: быстрее удары и движение.'}],
+ obelix:[{id:'jump',name:'Галльский обвал',cooldown:14,duration:.55,description:'Прыжок: 65 урона вокруг приземления.'},{id:'appetite',name:'Боевой аппетит',cooldown:30,duration:7,description:'7 с: каждое убийство восстанавливает 2 HP.'}],
+ automatix:[{id:'forge',name:'Кузнечная закалка',cooldown:24,duration:0,description:'Навсегда повысить Крепкую кожу на 1 ранг (макс. 3). Бесплатно.'},{id:'spin',name:'Кузнечный вихрь',cooldown:20,duration:3,description:'3 с: круговые удары молотом, движение медленнее.'}],
+ cacofonix:[{id:'note',name:'Высокая нота',cooldown:18,duration:0,description:'Звуковая волна: урон, толчок и оглушение.'},{id:'concert',name:'Сольный концерт',cooldown:28,duration:3,radiusMultiplier:3,radiusPerRank:.5,description:'3 с: радиус музыкальной ауры ×3.'}],
+ antisanitarix:[{id:'volley',name:'Рыбный развал',cooldown:16,duration:0,description:'Веер из пяти рыб-бумерангов.'},{id:'cloud',name:'Несвежий товар',cooldown:24,duration:5,description:'Облако: урон и замедление на 5 с.'}],
+ panoramix:[{id:'brew',name:'Бурлящий настой',cooldown:18,duration:4,description:'Большая ядовитая область впереди.'},{id:'elixir',name:'Дубовый эликсир',cooldown:30,duration:5,description:'Восстановить 20 HP за 5 с и защититься от отравления.'}]
+};
+
+// Ranks belong to the current run; activation snapshots them for running effects.
+const abilityUpgradeDescriptions = {
+ dash:'+25% к базовому урону рывка за ранг.',
+ potion:'Зелье действует на 1 секунду дольше за ранг.',
+ jump:'+25% к базовому урону приземления за ранг.',
+ appetite:'+1 HP за убийство во время аппетита за ранг.',
+ forge:'−6 секунд перезарядки закалки за ранг. Применение по-прежнему даёт 1 ранг Крепкой кожи.',
+ spin:'+25% к базовому урону каждого удара вихря за ранг.',
+ note:'+25% к базовому урону и +0,3 с оглушения высокой ноты за ранг.',
+ concert:'Ещё +0,5 к множителю радиуса концерта за ранг: ×3,5 / ×4 / ×4,5. Длительность — 3 с.',
+ volley:'Ещё одна рыба в активном залпе за ранг.',
+ cloud:'+25% к базовому урону и +10% к базовому радиусу облака за ранг.',
+ brew:'+25% к базовому урону и +10% к базовому радиусу настоя за ранг.',
+ elixir:'+1 HP в секунду лечения эликсиром за ранг.'
+};
+const abilityUpgradeMax=3;
+const abilityUpgradeId=id=>'ability_'+id;
+const abilityRank=(state,id)=>state.upgradeRanks?.[abilityUpgradeId(id)]||0;
+
+Object.defineProperty(exports, "abilityDefinitions", {get: () => abilityDefinitions});
+Object.defineProperty(exports, "abilityUpgradeDescriptions", {get: () => abilityUpgradeDescriptions});
+Object.defineProperty(exports, "abilityUpgradeMax", {get: () => abilityUpgradeMax});
+Object.defineProperty(exports, "abilityUpgradeId", {get: () => abilityUpgradeId});
+Object.defineProperty(exports, "abilityRank", {get: () => abilityRank});
 },
 "src/core/audio.js": function(require, exports){
 const AudioSystem = {create(c) {
@@ -1101,9 +1149,11 @@ function resetInput(){
       sessionContext.$('stick').style.bottom='';
     }
 function bind(){
+[0,1].forEach(i=>{const b=sessionContext.$('ability'+i);b.onclick=()=>sessionContext.abilities.activate(i);b.addEventListener('pointerdown',e=>e.stopPropagation());});
 sessionContext.window.addEventListener('keydown',e=>{
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(e.repeat)return;
+      if(e.code==='KeyQ'||e.code==='KeyE'){e.preventDefault();sessionContext.abilities.activate(e.code==='KeyQ'?0:1);return;}
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('shop').classList.contains('hidden')){
         sessionContext.closeShop();
         return;
@@ -1114,7 +1164,7 @@ sessionContext.window.addEventListener('keydown',e=>{
         return;
       }
       if(e.code==='Escape'||e.code==='KeyP')sessionContext.pause();
-      if(sessionContext.mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))sessionContext.pickUpgrade(+e.code.slice(-1)-1);
+      if(sessionContext.mode==='level'&&['Digit1','Digit2','Digit3','Digit4'].includes(e.code))sessionContext.pickUpgrade(+e.code.slice(-1)-1);
       sessionContext.keys.add(e.code);
     });
 sessionContext.window.addEventListener('keyup',e=>sessionContext.keys.delete(e.code));
@@ -1127,7 +1177,7 @@ sessionContext.document.addEventListener('visibilitychange',()=>{
     });
 sessionContext.canvas.style.touchAction='none';
 sessionContext.canvas.addEventListener('pointerdown',e=>{
-      if(sessionContext.mode!=='play'||e.pointerType==='mouse')return;
+      if(sessionContext.mode!=='play'||e.pointerType==='mouse'||sessionContext.pointer)return;
       sessionContext.pointer={id:e.pointerId,x:e.clientX,y:e.clientY};
       const control=sessionContext.$('stick'),size=control.offsetWidth||88;
       control.style.left=`${e.clientX-size/2}px`;
@@ -1141,7 +1191,7 @@ sessionContext.canvas.addEventListener('pointermove',e=>{
       sessionContext.stick={x:dx/sessionContext.Math.max(35,l),y:dy/sessionContext.Math.max(35,l)};
       sessionContext.$('knob').style.transform=`translate(${sessionContext.stick.x*24}px,${sessionContext.stick.y*24}px)`;
     });
-['pointerup','pointercancel','lostpointercapture'].forEach(ev=>sessionContext.canvas.addEventListener(ev,sessionContext.resetInput));
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>sessionContext.canvas.addEventListener(ev,e=>{if(!e||sessionContext.pointer?.id===e.pointerId)sessionContext.resetInput();}));
 }
 return {resetInput,bind};
 }};
@@ -1213,6 +1263,7 @@ function start(){
           facing:{x:1,y:0}
         }
       };
+      sessionContext.abilities.init();
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
@@ -1226,6 +1277,7 @@ function start(){
 function menu(){
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
+      sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
       ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop'].forEach(id=>sessionContext.show(id,false));
@@ -1240,9 +1292,11 @@ function pause(){
         sessionContext.mode='pause';
         sessionContext.resetInput();
         sessionContext.show('paused',true);
+        sessionContext.abilities.hud();
       }else if(sessionContext.mode==='pause'){
         sessionContext.mode='play';
         sessionContext.show('paused',false);
+        sessionContext.abilities.hud();
       }
     }
 function levelUp(){
@@ -1276,6 +1330,7 @@ function finish(win){
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';
+      sessionContext.abilities.hud();
       sessionContext.resetInput();
       sessionContext.show('end',true);
       sessionContext.show('pause',false);
@@ -1431,7 +1486,7 @@ function updateHazards(c,dt){
   const s=c.state,p=s.p;
   p.stun=Math.max(0,(p.stun||0)-dt);p.netGrace=Math.max(0,(p.netGrace||0)-dt);
   p.poisoned=Math.max(0,(p.poisoned||0)-dt);
-  for(const h of s.winePools){h.life-=dt;if(Math.hypot(p.x-h.x,p.y-h.y)<32)p.poisoned=2.5;}
+  for(const h of s.winePools){h.life-=dt;if(!c.abilities?.active('elixir')&&Math.hypot(p.x-h.x,p.y-h.y)<32)p.poisoned=2.5;}
   s.winePools=s.winePools.filter(h=>h.life>0);
   p.poisonClock=Math.max(0,(p.poisonClock||0)-dt);
   if(p.poisoned>0&&p.poisonClock<=0){c.hurtPlayer({damage:5});p.poisonClock=.85;}
@@ -1442,7 +1497,7 @@ function updateExpansion(e,c,dt){
   const u=expansionUnits[e.unit];if(!u)return false;
   const s=c.state,p=s.p,d=c.dist(e,p);e.moving=false;
   const advanceWalk=travel=>{if(travel>.01)e.walk=(e.walk||0)+(e.unit==='cavalry'?dt*2:travel/50);};
-  const move=(x,y,speed)=>{const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
+  const move=(x,y,speed)=>{speed*=1-(e.abilitySlow||0);const ox=e.x,oy=e.y;c.Village.move(e,x*speed*dt,y*speed*dt,e.r);const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;advanceWalk(travel);return travel;};
   if(e.unit==='caius'){
     const angle=s.t*.22+e.phase;e.heading=angle;move(Math.cos(angle),Math.sin(angle),e.speed);return true;
   }
@@ -1452,7 +1507,7 @@ function updateExpansion(e,c,dt){
     return true;
   }
   if(e.charge){
-    const q=e.charge,speed=e.unit==='cavalry'?u.speed:340;
+    const q=e.charge,speed=(e.unit==='cavalry'?u.speed:340)*(1-(e.abilitySlow||0));
     // Sweep contact checks so a charge cannot tunnel through the hero.
     const steps=Math.max(1,Math.ceil(speed*dt/10));let travel=0;
     for(let i=0;i<steps;i++){
@@ -1564,6 +1619,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
         sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
         sessionContext.state.kills++;
+        sessionContext.abilities?.onKill();
         sessionContext.state.earned+=sessionContext.Progression.kill();
         if(sessionContext.Math.random()<.05)sessionContext.state.helmets.push({x:e.x,y:e.y,value:3});
         sessionContext.state.gems.push({x:e.x,y:e.y,v:sessionContext.Legion.units[e.unit].xp});
@@ -1610,7 +1666,7 @@ function beginAction(actor,duration,target){
     }
 function hurtPlayer(e){
       const p=sessionContext.state.p;
-      if(p.inv>0)return;
+      if(p.hp<=0||p.inv>0||sessionContext.abilities?.protectedMove())return;
       p.hp-=sessionContext.Math.max(1,e.damage-sessionContext.state.stats.armor);
       p.inv=.7;
       p.hurt={elapsed:0,duration:.34,flip:p.flip};
@@ -1619,7 +1675,7 @@ function hurtPlayer(e){
       sessionContext.state.fx.push({kind:'hurt',x:p.x,y:p.y,r:25,life:.25,max:.25});
     }
 function heroImpact(a){
-      const s=sessionContext.state,p=s.p,dir=a.direction;
+      const s={...sessionContext.state,stats:(sessionContext.abilities?.effectiveStats()||sessionContext.state.stats)},p=s.p,dir=a.direction;
       if(sessionContext.selected==='obelix'){
         throwStones(1+(s.stats.stoneCount||0),52*(1+(s.stats.stoneDamage||0)),dir);
         return;
@@ -1679,8 +1735,11 @@ let Simulation;
 'use strict';
 Simulation={create(sessionContext){
 function update(dt){
-      const s=sessionContext.state,p=s.p,st=s.stats;
+      const s=sessionContext.state,p=s.p;
+      const abilityMoving=sessionContext.abilities.protectedMove();
       s.t+=dt;
+      sessionContext.abilities.update(dt);
+      const st=sessionContext.abilities.effectiveStats();
       s.step+=dt;
       s.corpses=sessionContext.Corpses.update(s.corpses,dt);
       s.shake=sessionContext.Math.max(0,s.shake-dt*20);
@@ -1688,7 +1747,7 @@ function update(dt){
       p.hp=sessionContext.Math.min(p.max,p.hp+st.regen*dt);
       let mx=(sessionContext.keys.has('KeyD')||sessionContext.keys.has('ArrowRight')?1:0)-(sessionContext.keys.has('KeyA')||sessionContext.keys.has('ArrowLeft')?1:0)+sessionContext.stick.x,my=(sessionContext.keys.has('KeyS')||sessionContext.keys.has('ArrowDown')?1:0)-(sessionContext.keys.has('KeyW')||sessionContext.keys.has('ArrowUp')?1:0)+sessionContext.stick.y;
       updateHazards(sessionContext,dt);
-      if(p.stun>0){mx=0;my=0;}
+      if(p.stun>0||abilityMoving){mx=0;my=0;}
       const ml=sessionContext.Math.hypot(mx,my);
       if(ml>1){
         mx/=ml;
@@ -1717,7 +1776,7 @@ function update(dt){
       sessionContext.advanceAction(p,dt,sessionContext.heroImpact);
       const heroSpec=sessionContext.Villagers.defs[sessionContext.selected];
       s.attack-=dt;
-      if(!heroSpec.passive&&s.attack<=0&&!p.action&&!(p.stun>0)){
+      if(!sessionContext.abilities.blocksAttack()&&!heroSpec.passive&&s.attack<=0&&!p.action&&!(p.stun>0)){
         s.attack=sessionContext.Math.max(.22,heroSpec.interval/(st.haste*(1+(st.punchTempo||0))));
         const dir={...p.facing};
         sessionContext.beginAction(p,sessionContext.Math.max(.18,heroSpec.wind/(st.haste*(1+(st.punchTempo||0)))),{x:p.x+dir.x,y:p.y+dir.y});
@@ -1739,9 +1798,9 @@ function update(dt){
           sessionContext.soundEffect('magic');
         }
       }
-      sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage,sessionContext.Village);
+      sessionContext.Villagers.update(s,sessionContext.selected,dt,sessionContext.damage,sessionContext.Village,st);
       for(const e of s.enemies){
-        if(e.hp<=0)continue;
+        if(e.hp<=0||e.abilityStun>0)continue;
         const u=sessionContext.Legion.units[e.unit],d=sessionContext.dist(e,p);
         e.hit=sessionContext.Math.max(0,e.hit-dt);
         if(e.visualHurt){
@@ -1776,11 +1835,11 @@ function update(dt){
   else if(sessionContext.dist(e,p)<u.range+8&&along>=-8&&sessionContext.Village.clear(e,p,2))sessionContext.hurtPlayer(e);
         });
         if(e.charge){
-          const q=e.charge,ox=e.x,oy=e.y;
-          sessionContext.Village.move(e,q.x*320*dt,q.y*320*dt,e.r);
+          const q=e.charge,ox=e.x,oy=e.y,chargeSpeed=320*(1-(e.abilitySlow||0));
+          sessionContext.Village.move(e,q.x*chargeSpeed*dt,q.y*chargeSpeed*dt,e.r);
           q.left-=dt;
           if(sessionContext.dist(e,p)<e.r+14)sessionContext.hurtPlayer(e);
-          if(sessionContext.Math.hypot(e.x-ox,e.y-oy)<320*dt*.8||q.left<=0){
+          if(sessionContext.Math.hypot(e.x-ox,e.y-oy)<chargeSpeed*dt*.8||q.left<=0){
             e.charge=null;
             e.action=null;
             e.cd=2;
@@ -1795,7 +1854,7 @@ function update(dt){
           e.cd=u.cooldown;
           e.heading=sessionContext.Math.atan2(p.y-e.y,p.x-e.x);
         }
-        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
+        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800)*(1-(e.abilitySlow||0)),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
         sessionContext.Village.move(e,(moving?dir.x*speed*dt:0)+e.vx*dt,(moving?dir.y*speed*dt:0)+e.vy*dt,e.r);
         const travel=sessionContext.Math.hypot(e.x-ox,e.y-oy);
         e.moving=travel>.01;
@@ -1808,7 +1867,7 @@ function update(dt){
           b.x+=b.vx*dt/n;
           b.y+=b.vy*dt/n;
           if(sessionContext.Village.blocked(b.x,b.y,2))b.life=0;else if(sessionContext.dist(b,p)<17){
-            if(b.kind==='net'&&!(p.netGrace>0)&&p.inv<=0){p.stun=1.25;p.netGrace=4;p.action=null;}
+            if(b.kind==='net'&&!sessionContext.abilities.protectedMove()&&!(p.netGrace>0)&&p.inv<=0){p.stun=1.25;p.netGrace=4;p.action=null;}
             sessionContext.hurtPlayer(b);
             b.life=0;
           }
@@ -1939,7 +1998,7 @@ function draw(){
         const minX=cx-50,maxX=cx+sessionContext.W+50,minY=cy-50,maxY=cy+sessionContext.H+50;
         const sceneryView={minX,maxX,minY,maxY};
         drawHazards(sessionContext.ctx,s);
-        sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected);
+        sessionContext.Villagers.ground(sessionContext.ctx,s,sessionContext.selected,sessionContext.abilities.effectiveStats());
         sessionContext.Corpses.draw(sessionContext.ctx,s.corpses,cx,cy,sessionContext.W,sessionContext.H);
         for(const h of s.helmets){
           if(h.x<minX||h.x>maxX||h.y<minY||h.y>maxY)continue;
@@ -1972,6 +2031,7 @@ function draw(){
           if(e.x<minX-70||e.x>maxX+70||e.y<minY-70||e.y>maxY+70)continue;
           sessionContext.Legion.telegraph(sessionContext.ctx,e);
         }
+        sessionContext.abilities.draw(sessionContext.ctx);
         const actors=orderActors(sessionContext.Village.depthObjects,s.enemies,p,sessionContext.selected);
         for(const e of actors){
           if(e.scenery){
@@ -1985,7 +2045,7 @@ function draw(){
           sessionContext.ctx.ellipse(e.x,e.y,12*size/2,4*size/2,0,0,sessionContext.Math.PI*2);
           sessionContext.ctx.fill();
           const bob=e.player?(p.moving?sessionContext.Math.sin(s.step*15)*1.7:0):sessionContext.Math.sin(s.step*9+e.phase)*1.4;
-          if(e.player)sessionContext.sprite(sessionContext.ctx,e.type,e.x,e.y,size,e.flip,bob,p.inv>0&&sessionContext.Math.floor(p.inv*15)%2===0,e.phase||0,e);else sessionContext.Legion.draw(sessionContext.ctx,e,sessionContext.sprite);
+          if(e.player)sessionContext.sprite(sessionContext.ctx,e.type,e.x,e.y-(p.jumpHeight||0),size,e.flip,bob,p.inv>0&&sessionContext.Math.floor(p.inv*15)%2===0,e.phase||0,e);else sessionContext.Legion.draw(sessionContext.ctx,e,sessionContext.sprite);
           if(e.player){
             const aim=p.action?.direction||p.facing;
             sessionContext.ctx.save();
@@ -2149,6 +2209,65 @@ function orderActors(staticObjects, enemies, player, selected) {
 
 Object.defineProperty(exports, "orderActors", {get: () => orderActors});
 },
+"src/systems/abilities.js": function(require, exports){
+const {abilityDefinitions,abilityRank,abilityUpgradeMax,abilityUpgradeDescriptions} = require("data/characters/abilities.js");
+const AbilitySystem={create(c){
+ const active=id=>c.state?.abilities?.some(a=>a.id===id&&a.left>0&&c.state.t<a.endsAt);
+ const protectedMove=()=>active('dash')||active('jump');
+ const blocksAttack=()=>protectedMove()||active('spin');
+ function effectiveStats(){const s=c.state;if(!active('potion')&&!active('spin')&&!active('concert'))return s.stats;const st={...s.stats};if(active('potion')){st.haste*=1.6;st.speed*=1.15;st.punchForce=((st.punchForce||0)+145)*1.5-145;}if(active('spin'))st.speed*=.75;if(active('concert')){const a=s.abilities.find(a=>a.id==='concert');st.musicRange=(1+(st.musicRange||0))*(a.radiusMultiplier+a.radiusPerRank*a.castRank)-1;}return st;}
+ function init(){c.state.abilities=abilityDefinitions[c.selected].map(d=>({...d,cd:0,left:0}));c.state.abilityZones=[];}
+ function control(e,slow=0,stun=0){const heavy=e.boss||['turtle','ram','tower','stoneSquad','cavalry'].includes(e.unit);e.abilitySlow=Math.max(e.abilitySlow||0,heavy?Math.min(.15,slow):slow);e.slowUntil=c.state.t+.8;if(stun&&!heavy){e.abilityStun=Math.max(e.abilityStun||0,stun);e.action=null;e.charge=null;}}
+ function area(origin,r,damage,push=0,slow=0,stun=0,seen=null){for(const e of c.state.enemies){const dx=e.x-origin.x,dy=e.y-origin.y,d=Math.hypot(dx,dy);if(e.hp<=0||d>=r+e.r||seen?.has(e)||!c.Village.clear(origin,e,2))continue;seen?.add(e);c.damage(e,damage,dx/Math.max(1,d)*push,dy/Math.max(1,d)*push,origin);if(e.hp>0&&(slow||stun))control(e,slow,stun);}}
+ function ring(p,r){c.state.fx.push({kind:'ring',x:p.x,y:p.y,r,life:.4,max:.4});}
+ function activate(slot){if(c.mode!=='play'||!c.state||c.state.p.hp<=0||c.state.p.stun>0)return false;const s=c.state,a=s.abilities[slot],p=s.p,st=effectiveStats();if(!a||a.cd>0||a.left>0)return false;
+  if(a.id==='forge'){if(!c.Progression.grantArmorRank())return false;s.stats.armor++;}
+  if(a.id==='dash'){const probe={x:p.x,y:p.y};c.Village.move(probe,p.facing.x*6,p.facing.y*6,14);if(Math.hypot(probe.x-p.x,probe.y-p.y)<.01)return false;}
+  a.castRank=abilityRank(s,a.id);a.cd=a.cooldown-(a.id==='forge'?6*a.castRank:0);a.left=a.duration+(a.id==='potion'?a.castRank:0);a.endsAt=s.t+a.left;a.elapsed=0;a.tick=0;a.direction={...p.facing};a.hit=new Set();
+  if(a.id==='dash'||a.id==='jump'){p.action=null;a.start={x:p.x,y:p.y};}
+  if(a.id==='spin')p.action=null;
+  if(a.id==='note'){area(p,150*st.range,20*st.damage*(1+.25*a.castRank),220,0,1.2+.3*a.castRank);ring(p,150*st.range);}
+  if(a.id==='volley')c.Villagers.fish(s,p.facing,{count:5+a.castRank+(st.fishCount||0),spread:Math.PI*70/180,damage:16});
+  if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=brew?4+(st.poisonDuration||0):5;a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
+  if(a.id==='elixir')p.poisoned=0;
+  c.soundEffect('magic');hud();return true;
+ }
+ function update(dt){const s=c.state,p=s.p;for(const e of s.enemies){e.abilityStun=Math.max(0,(e.abilityStun||0)-dt);if(s.t>=(e.slowUntil||0))e.abilitySlow=0;}
+  for(const a of s.abilities){a.cd=Math.max(0,a.cd-dt);if(a.left<=0)continue;const step=Math.min(dt,a.left),st=effectiveStats();a.elapsed+=step;a.left=Math.max(0,a.left-step);if(a.left<1e-9)a.left=0;
+   if(a.id==='dash'||a.id==='jump'){const distance=a.id==='dash'?180:160,n=Math.max(1,Math.ceil(distance*step/a.duration/6));if(p.stun>0)a.left=0;else for(let i=0;i<n;i++){c.Village.move(p,a.direction.x*distance*step/a.duration/n,a.direction.y*distance*step/a.duration/n,14);if(a.id==='dash')area(p,22*st.range,35*st.damage*(1+.25*a.castRank),180,0,0,a.hit);}p.jumpHeight=a.id==='jump'&&a.left>0?Math.sin(a.elapsed/a.duration*Math.PI)*55:0;if(a.id==='jump'&&a.left===0){area(p,110*st.range,65*st.damage*(1+.25*a.castRank),360);ring(p,110*st.range);}}
+   if(a.id==='spin'){if(p.stun>0){a.left=0;continue;}a.tick+=step;while(a.tick>=.3-1e-9){a.tick-=.3;area(p,(85+(st.hammerReach||0))*st.range,18*st.damage*(1+(st.hammerDamage||0))*(1+.25*a.castRank),45+(st.hammerForce||0)*.25);ring(p,(85+(st.hammerReach||0))*st.range);}}
+   if(a.id==='elixir'&&p.hp>0){p.hp=Math.min(p.max,p.hp+(4+a.castRank)*step);p.poisoned=0;}
+  }
+  for(const q of s.abilityZones){const step=Math.min(dt,q.left);q.left-=step;if(q.left<1e-9)q.left=0;q.tick+=step;while(q.tick>=.5-1e-9){q.tick-=.5;area(q,q.r,q.damage,0,q.kind==='cloud'?.4:0);}}s.abilityZones=s.abilityZones.filter(q=>q.left>0);
+ }
+ function onKill(){if(active('appetite')&&c.state.p.hp>0)c.state.p.hp=Math.min(c.state.p.max,c.state.p.hp+2+(c.state.abilities.find(a=>a.id==='appetite').castRank||0));}
+
+ // Avoid recreating text nodes and invalidating layout on every animation frame.
+ let controls=null,buttons=null;
+ function hud(){
+  const s=c.state,visible=!!s&&['play','pause','level'].includes(c.mode);
+  controls??=c.$('abilities');
+  if(controls.classList.contains('hidden')===visible)controls.classList.toggle('hidden',!visible);
+  if(!s?.abilities)return;
+  buttons??=[c.$('ability0'),c.$('ability1')];
+  for(let i=0;i<2;i++){
+   const a=s.abilities[i],b=buttons[i];
+   const max=a.id==='forge'&&c.Progression.armorRank>=c.Progression.upgrades.armor.max;
+   const text=`${i?'E':'Q'} · ${a.name} · ${abilityRank(s,a.id)}/${abilityUpgradeMax}\n${max?'Максимум':a.left>0?'Активно '+a.left.toFixed(1)+' с':a.cd>0?Math.ceil(a.cd)+' с':'Готово'}`;
+   const disabled=c.mode!=='play'||a.cd>0||a.left>0||max||s.p.stun>0;
+   if(b.textContent!==text)b.textContent=text;
+   const title=a.description+' Улучшение: '+abilityUpgradeDescriptions[a.id];
+   if(b.title!==title)b.title=title;
+   if(b.disabled!==disabled)b.disabled=disabled;
+  }
+ }
+
+ function draw(g){const s=c.state;if(!s)return;for(const q of s.abilityZones){g.fillStyle=q.kind==='cloud'?'#a3a65855':'#71da6555';g.beginPath();g.arc(q.x,q.y,q.r,0,Math.PI*2);g.fill();}for(const a of s.abilities)if(a.left>0&&!['cloud','brew','dash','jump'].includes(a.id)){g.strokeStyle=a.id==='appetite'?'#ed856d':'#ebdc81';g.lineWidth=3;g.beginPath();g.arc(s.p.x,s.p.y,32,0,Math.PI*2);g.stroke();if(a.id==='spin'){const angle=a.elapsed*15;g.save();g.translate(s.p.x,s.p.y);g.rotate(angle);g.fillStyle='#b19b74';g.fillRect(0,-3,70,6);g.fillStyle='#c8d2d8';g.fillRect(60,-13,22,26);g.restore();}}}
+ return {init,activate,update,active,protectedMove,blocksAttack,effectiveStats,onKill,control,hud,draw};
+}};
+
+Object.defineProperty(exports, "AbilitySystem", {get: () => AbilitySystem});
+},
 "src/core/game-loop.js": function(require, exports){
 let GameLoop;
 GameLoop={create(sessionContext){
@@ -2206,9 +2325,9 @@ Villagers=(()=>{
   if(id==='automatix'){g.fillStyle='#422f28';g.fillRect(-5,-18,11,4);g.fillStyle='#967045';g.fillRect(9,-19,3,15);g.fillStyle='#9daaa5';g.fillRect(6,-23,10,7);}
   g.restore();return true;
  }
- function fish(s,dir){const count=1+(s.stats.fishCount||0),angle=Math.atan2(dir.y,dir.x);for(let i=0;i<count;i++){const a=angle+(i-(count-1)/2)*.22;s.fish.push({x:s.p.x,y:s.p.y,dx:Math.cos(a),dy:Math.sin(a),age:0,back:false,hit:new Set(),r:12*s.stats.range});}}
- function update(s,id,dt,hit,world=Village){
-  const p=s.p,st=s.stats;if(p.visualAction){p.visualAction.elapsed+=dt;if(p.visualAction.elapsed>=p.visualAction.duration)p.visualAction=null;}
+ function fish(s,dir,options={}){const count=options.count??1+(s.stats.fishCount||0),angle=Math.atan2(dir.y,dir.x);for(let i=0;i<count;i++){const a=angle+(i-(count-1)/2)*(options.spread?options.spread/Math.max(1,count-1):.22);s.fish.push({x:s.p.x,y:s.p.y,dx:Math.cos(a),dy:Math.sin(a),age:0,damage:options.damage??24,back:false,hit:new Set(),r:12*s.stats.range});}}
+ function update(s,id,dt,hit,world=Village,effective=s.stats){
+  const p=s.p,st=effective;if(p.visualAction){p.visualAction.elapsed+=dt;if(p.visualAction.elapsed>=p.visualAction.duration)p.visualAction=null;}
   if(id==='cacofonix'&&!(p.stun>0)){
    s.music-=dt;if(s.music<=0){s.music=.6/st.haste;p.visualAction={elapsed:0,duration:.5/st.haste,flip:p.flip};s.fx.push({kind:'ring',x:p.x,y:p.y,r:95*st.range*(1+(st.musicRange||0)),life:.45,max:.45});
     for(const e of s.enemies)if(e.hp>0&&Math.hypot(e.x-p.x,e.y-p.y)<95*st.range*(1+(st.musicRange||0))+e.r&&world.clear(p,e,2)){const d=Math.max(1,Math.hypot(e.x-p.x,e.y-p.y)),push=st.musicPush||0;hit(e,12*st.damage*(1+(st.musicDamage||0)),(e.x-p.x)/d*push,(e.y-p.y)/d*push,p);}
@@ -2225,13 +2344,14 @@ Villagers=(()=>{
    for(let i=0;i<n&&!f.dead;i++){const next={x:f.x+vx*dt/n,y:f.y+vy*dt/n};
     if(!world.clear(f,next,3)){if(f.back)f.dead=true;else{f.back=true;f.hit.clear();}break;}
     f.x=next.x;f.y=next.y;
-    for(const e of s.enemies)if(e.hp>0&&!f.hit.has(e)&&Math.hypot(e.x-f.x,e.y-f.y)<e.r+f.r){f.hit.add(e);hit(e,24*st.damage*(f.back?1+(st.fishReturn||0):1),vx*.12,vy*.12,f);}
+    for(const e of s.enemies)if(e.hp>0&&!f.hit.has(e)&&Math.hypot(e.x-f.x,e.y-f.y)<e.r+f.r){f.hit.add(e);hit(e,(f.damage??24)*st.damage*(f.back?1+(st.fishReturn||0):1),vx*.12,vy*.12,f);}
    }if(f.age>3)f.dead=true;
   }s.fish=s.fish.filter(f=>!f.dead);
  }
- function ground(g,s,id){
+ function ground(g,s,id,effective=s.stats){
+  const st=effective;
   for(const q of s.poison){g.fillStyle='#79a74455';g.beginPath();g.ellipse(q.x,q.y,q.r,q.r*.6,0,0,Math.PI*2);g.fill();g.fillStyle='#bfdc7755';g.fillRect(q.x-5,q.y-3,4,3);}
-  if(id==='cacofonix'){g.strokeStyle='#e8c67255';g.lineWidth=2;g.beginPath();g.arc(s.p.x,s.p.y,95*s.stats.range*(1+(s.stats.musicRange||0)),0,Math.PI*2);g.stroke();g.font='18px serif';g.fillStyle='#f4d778';for(let i=0;i<5;i++){const a=s.step*1.3+i*Math.PI*2/5;g.fillText('♫',s.p.x+Math.cos(a)*75,s.p.y+Math.sin(a)*55-15);}}
+  if(id==='cacofonix'){const radius=95*st.range*(1+(st.musicRange||0));g.strokeStyle='#e8c67255';g.lineWidth=2;g.beginPath();g.arc(s.p.x,s.p.y,radius,0,Math.PI*2);g.stroke();g.font='18px serif';g.fillStyle='#f4d778';for(let i=0;i<5;i++){const a=s.step*1.3+i*Math.PI*2/5;g.fillText('♫',s.p.x+Math.cos(a)*radius*.79,s.p.y+Math.sin(a)*radius*.58-15);}}
  }
  function projectiles(g,s){for(const f of s.fish)ProjectileArt.drawFish(g,f);}
  function helmet(g,x,y,scale=1){if(typeof HelmetArt!=='undefined'&&HelmetArt.draw(g,x,y,scale))return;g.save();g.translate(x,y);g.scale(scale,scale);g.fillStyle='#273b32';g.fillRect(-9,4,19,4);g.fillStyle='#b8c5c7';g.beginPath();g.arc(0,0,8,Math.PI,0);g.lineTo(8,3);g.lineTo(-8,3);g.fill();g.fillStyle='#e1e7de';g.fillRect(-5,-5,3,5);g.fillStyle='#718d95';g.fillRect(-10,2,20,3);g.fillRect(4,4,4,5);g.restore();}
@@ -2537,12 +2657,14 @@ Progression=(()=>{
  const cost=id=>Object.hasOwn(upgrades,id)?(upgrades[id].hero?50:30)*(data.levels[id]+1):prices[id];
  function buyHero(id){if(!Object.hasOwn(prices,id)||owned(id)||data.helmets<prices[id])return false;data.helmets-=prices[id];data.unlocked.push(id);save();return true;}
  function buyUpgrade(id){if(!Object.hasOwn(upgrades,id)||(upgrades[id].hero&&!owned(upgrades[id].hero))||data.levels[id]>=upgrades[id].max||data.helmets<cost(id))return false;data.helmets-=cost(id);data.levels[id]++;save();return true;}
- return {prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
+ function grantArmorRank(){if(data.levels.armor>=upgrades.armor.max)return false;data.levels.armor++;deferSave();return true;}
+ return {grantArmorRank,prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get helmets(){return data.helmets;},get armorRank(){return data.levels.armor;},get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
 })();
 
 Object.defineProperty(exports, "Progression", {get: () => Progression});
 },
 "src/systems/upgrades.js": function(require, exports){
+const {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} = require("data/characters/abilities.js");
 const {Progression} = require("src/systems/persistence.js");
 let UpgradeSystem;
 'use strict';
@@ -2567,18 +2689,24 @@ UpgradeSystem=(()=>{
   automatix:[item('hammerDamage','Закалённый молот','+25% к базовому урону молота.','hammerDamage',.25),item('hammerReach','Длинная рукоять','+12 к дальности удара молотом. Сектор остаётся 180°.','hammerReach',12),item('hammerForce','Кузнечный размах','+65 к силе отбрасывания молотом.','hammerForce',65)],
   panoramix:[item('poisonDuration','Стойкий настой','Ядовитые лужи живут на 1 секунду дольше.','poisonDuration',1),item('poisonRange','Полная фляга','+20% к радиусу ядовитых луж.','poisonRange',.2),item('poisonDamage','Крепкое варево','+25% к базовому урону яда.','poisonDamage',.25)]
  };
- const fallback=[{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
- function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max);}
+ const abilities=Object.fromEntries(Object.entries(abilityDefinitions).map(([hero,defs])=>[hero,defs.map(a=>({
+  id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:abilityUpgradeDescriptions[a.id],icon:'◆',max:abilityUpgradeMax,
+  available:()=>a.id!=='forge'||Progression.armorRank<Progression.upgrades.armor.max,
+  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-6);}}
+ }))]));
+ const fallback=[{id:'herbs',name:'Травяной запас',desc:'+0,1 HP регенерации в секунду.',icon:'♥',apply:add('regen',.1)},{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
+ function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'})),...(abilities[hero]||[]).map(u=>({...u,group:'Активное умение'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&(!u.available||u.available(s)));}
  function offer(hero,s,random=Math.random){const all=pool(hero,s),special=all.filter(u=>u.group==='Оружие героя'),result=[];
   if(special.length)result.push(special[Math.floor(random()*special.length)]);
-  const rest=all.filter(u=>!result.includes(u));for(let i=rest.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}result.push(...rest.slice(0,3-result.length));
-  for(const u of fallback){if(result.length===3)break;result.push({...u,group:'Припасы'});}return result;
+  const active=all.filter(u=>u.group==='Активное умение');if(active.length)result.push(active[Math.floor(random()*active.length)]);
+  const rest=all.filter(u=>!result.includes(u));for(let i=rest.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}result.push(...rest.slice(0,4-result.length));
+  for(const u of fallback){if(result.length===4)break;result.push({...u,group:'Припасы'});}return result;
  }
- function apply(u,s){s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
+ function apply(u,s){if(u.available&&!u.available(s))return false;s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
  function permanent(s,hero,levels){for(const [key,factor] of [['haste',.04],['range',.04],['magnet',10],['armor',1],['regen',.15]])s.stats[key]+=(levels[key]||0)*factor;
   const personal={asterix:['punchTempo',.06],obelix:['stoneDamage',.08],cacofonix:['musicRange',.06],antisanitarix:['fishReturn',.1],automatix:['hammerDamage',.1],panoramix:['poisonDuration',.4]}[hero];if(personal)add(...[personal[0],personal[1]*(levels['training_'+hero]||0)])(s);
  }
- return {common,heroes,pool,offer,apply,permanent};
+ return {common,heroes,abilities,pool,offer,apply,permanent};
 })();
 
 Object.defineProperty(exports, "UpgradeSystem", {get: () => UpgradeSystem});

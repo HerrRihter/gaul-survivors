@@ -1,3 +1,4 @@
+import {abilityDefinitions} from '../../data/characters/abilities.js';
 export let GameUI;
 'use strict';
 GameUI={create(sessionContext){
@@ -21,7 +22,7 @@ function updateRecord(){
     }
 function updateRunHeroStats(){
       const hero=sessionContext.Villagers.defs[sessionContext.pendingRunHero];
-      sessionContext.$('runHeroStats').textContent=hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`;
+      sessionContext.$('runHeroStats').textContent=(hero.desc||`Здоровье: ${hero.hp} · Скорость: ${hero.speed}`)+'\n'+abilityDefinitions[sessionContext.pendingRunHero].map((a,i)=>`${i?'E':'Q'} · ${a.name}: ${a.description} Перезарядка ${a.cooldown} с.`).join('\n');
     }
 function renderRunHeroes(){
       const list=sessionContext.$('runHeroes'),heroes=Object.keys(sessionContext.Villagers.defs).filter(id=>sessionContext.Progression.owned(id));
@@ -117,8 +118,9 @@ function closeShop(){
       show('menu',true);
     }
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
-let lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
+let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
 function hud(){
+      sessionContext.abilities.hud();
       if(!sessionContext.state)return;
       const s=sessionContext.state;
       elHealth??=sessionContext.$('health');
@@ -130,10 +132,10 @@ function hud(){
       elHelmets??=sessionContext.$('helmets');
       elBosshealth??=sessionContext.$('bosshealth');
 
-      const hp=s.p.hp,max=s.p.max;
+      const hp=sessionContext.Math.ceil(s.p.hp),max=s.p.max,healthPct=sessionContext.Math.round(s.p.hp/max*1000)/10;
+      if(healthPct!==lastHealthPct){lastHealthPct=healthPct;elHealth.style.width=`${healthPct}%`;}
       if(hp!==lastHp||max!==lastMax||s.level!==lastLevel){
         lastHp=hp;lastMax=max;lastLevel=s.level;
-        elHealth.style.width=`${hp/max*100}%`;
         elLevel.textContent=`УР. ${s.level}  ·  ${sessionContext.Math.ceil(hp)} / ${max} HP`;
       }
       if(s.xp!==lastXp||s.need!==lastNeed){
@@ -154,7 +156,7 @@ function hud(){
         lastWeaponKey=wKey;
         elWeapon.textContent=sessionContext.Villagers.defs[sessionContext.selected].weapon+' · '+sessionContext.arenaDefinitions[s.map].name;
       }
-      const hCount=sessionContext.Progression.data.helmets;
+      const hCount=sessionContext.Progression.helmets;
       if(hCount!==lastHelmets||s.earned!==lastEarned){
         lastHelmets=hCount;lastEarned=s.earned;
         elHelmets.textContent='ШЛЕМЫ: '+hCount+' (+'+s.earned+')';

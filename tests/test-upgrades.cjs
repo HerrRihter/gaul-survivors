@@ -7,15 +7,16 @@ e.AssetPaths={url:relative=>'assets/runtime/'+relative};vm.createContext(e);for(
 const U=e.UpgradeSystem,P=e.Progression;
 const state=()=>({stats:{damage:1,haste:1,range:1,speed:1,magnet:75,regen:0,armor:0},p:{max:100,hp:50},earned:0});
 for(const hero of Object.keys(U.heroes)){
- const s=state();assert.equal(U.pool(hero,s).length,11);
+ const s=state();assert.equal(U.pool(hero,s).length,13);
  for(let n=0;n<80;n++){
-  const choices=U.offer(hero,s);assert.equal(choices.length,3);assert.equal(new Set(choices.map(u=>u.id)).size,3);
-  for(const c of choices)assert(U.common.some(u=>u.id===c.id)||U.heroes[hero].some(u=>u.id===c.id)||!c.max,'No other hero weapon offered');
+  const choices=U.offer(hero,s);assert.equal(choices.length,4);assert.equal(new Set(choices.map(u=>u.id)).size,4);
+  for(const c of choices)assert(U.common.some(u=>u.id===c.id)||U.heroes[hero].some(u=>u.id===c.id)||U.abilities[hero].some(u=>u.id===c.id)||!c.max,'No other hero weapon offered');
   if(U.heroes[hero].some(u=>(s.upgradeRanks?.[u.id]||0)<u.max))assert(choices.some(c=>c.group==='Оружие героя'));
+  if(U.abilities[hero].some(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&u.available(s)))assert(choices.some(u=>u.group==='Активное умение'));
   U.apply(choices[0],s);
  }
- for(const u of [...U.common,...U.heroes[hero]]){while((s.upgradeRanks?.[u.id]||0)<u.max)assert(U.apply(u,s));assert(!U.apply(u,s));}
- assert(U.offer(hero,s).every(u=>!u.max));assert.equal(U.pool(hero,state()).length,11,'New run resets rank caps');
+ for(const u of [...U.common,...U.heroes[hero],...U.abilities[hero]]){while((s.upgradeRanks?.[u.id]||0)<u.max)assert(U.apply(u,s));assert(!U.apply(u,s));}
+ assert(U.offer(hero,s).every(u=>!u.max));assert.equal(U.pool(hero,state()).length,13,'New run resets rank caps');
 }
 P.earn(1000);assert(!P.buyUpgrade('training_panoramix'),'Cannot train locked hero');assert(P.buyUpgrade('training_asterix'));
 const a=state(),o=state();U.permanent(a,'asterix',P.data.levels);U.permanent(o,'obelix',P.data.levels);assert.equal(a.stats.punchTempo,.06);assert.equal(o.stats.punchTempo,undefined);

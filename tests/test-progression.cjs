@@ -32,6 +32,7 @@ rewards.earn(100);assert(rewards.buyHero('cacofonix'));assert.equal(snapshot.hel
 rewards.kill();timers.values().next().value();timers.clear();assert.equal(idleJobs.size,1);rewards.flush();assert.equal(idleJobs.size,0);
 rewards.kill();fail=true;rewards.flush();assert.equal(rewards.persistent,false);fail=false;rewards.flush();assert.equal(snapshot.kills,103);assert.equal(rewards.persistent,true);
 const savedWrites=writes;rewards.flush();assert.equal(writes,savedWrites,'Clean flush does not write');
+const beforeRank=writes;assert(rewards.grantArmorRank());assert.equal(writes,beforeRank,'Active forge does not write storage in a combat frame');assert.equal(rewards.armorRank,1);events.pagehide();assert.equal(snapshot.levels.armor,1);assert.equal(rewards.helmets,snapshot.helmets);
 console.log('PASS: combat rewards coalesce into idle saves; lifecycle and purchases flush; failed saves can retry.');
 
 }

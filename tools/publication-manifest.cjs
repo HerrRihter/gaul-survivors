@@ -27,6 +27,7 @@ module.exports={
         "runtime/src/pages/village-preview.js",
         "src/rendering/asset-paths.js",
         "src/systems/upgrades.js",
+        "src/systems/abilities.js", "data/characters/abilities.js",
         "src/systems/persistence.js",
         "data/projectiles/projectiles.js",
         "src/rendering/art/projectile-art.js",

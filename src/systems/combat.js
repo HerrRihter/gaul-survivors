@@ -29,6 +29,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
         sessionContext.soundEffect('death');
         sessionContext.Corpses.add(sessionContext.state.corpses,e,sessionContext.sprite,sessionContext.Math.hypot(dx,dy)>0?{x:dx,y:dy}:{x:e.x-source.x,y:e.y-source.y});
         sessionContext.state.kills++;
+        sessionContext.abilities?.onKill();
         sessionContext.state.earned+=sessionContext.Progression.kill();
         if(sessionContext.Math.random()<.05)sessionContext.state.helmets.push({x:e.x,y:e.y,value:3});
         sessionContext.state.gems.push({x:e.x,y:e.y,v:sessionContext.Legion.units[e.unit].xp});
@@ -75,7 +76,7 @@ function beginAction(actor,duration,target){
     }
 function hurtPlayer(e){
       const p=sessionContext.state.p;
-      if(p.inv>0)return;
+      if(p.hp<=0||p.inv>0||sessionContext.abilities?.protectedMove())return;
       p.hp-=sessionContext.Math.max(1,e.damage-sessionContext.state.stats.armor);
       p.inv=.7;
       p.hurt={elapsed:0,duration:.34,flip:p.flip};
@@ -84,7 +85,7 @@ function hurtPlayer(e){
       sessionContext.state.fx.push({kind:'hurt',x:p.x,y:p.y,r:25,life:.25,max:.25});
     }
 function heroImpact(a){
-      const s=sessionContext.state,p=s.p,dir=a.direction;
+      const s={...sessionContext.state,stats:(sessionContext.abilities?.effectiveStats()||sessionContext.state.stats)},p=s.p,dir=a.direction;
       if(sessionContext.selected==='obelix'){
         throwStones(1+(s.stats.stoneCount||0),52*(1+(s.stats.stoneDamage||0)),dir);
         return;

@@ -10,9 +10,11 @@ function resetInput(){
       sessionContext.$('stick').style.bottom='';
     }
 function bind(){
+[0,1].forEach(i=>{const b=sessionContext.$('ability'+i);b.onclick=()=>sessionContext.abilities.activate(i);b.addEventListener('pointerdown',e=>e.stopPropagation());});
 sessionContext.window.addEventListener('keydown',e=>{
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(e.repeat)return;
+      if(e.code==='KeyQ'||e.code==='KeyE'){e.preventDefault();sessionContext.abilities.activate(e.code==='KeyQ'?0:1);return;}
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('shop').classList.contains('hidden')){
         sessionContext.closeShop();
         return;
@@ -23,7 +25,7 @@ sessionContext.window.addEventListener('keydown',e=>{
         return;
       }
       if(e.code==='Escape'||e.code==='KeyP')sessionContext.pause();
-      if(sessionContext.mode==='level'&&['Digit1','Digit2','Digit3'].includes(e.code))sessionContext.pickUpgrade(+e.code.slice(-1)-1);
+      if(sessionContext.mode==='level'&&['Digit1','Digit2','Digit3','Digit4'].includes(e.code))sessionContext.pickUpgrade(+e.code.slice(-1)-1);
       sessionContext.keys.add(e.code);
     });
 sessionContext.window.addEventListener('keyup',e=>sessionContext.keys.delete(e.code));
@@ -36,7 +38,7 @@ sessionContext.document.addEventListener('visibilitychange',()=>{
     });
 sessionContext.canvas.style.touchAction='none';
 sessionContext.canvas.addEventListener('pointerdown',e=>{
-      if(sessionContext.mode!=='play'||e.pointerType==='mouse')return;
+      if(sessionContext.mode!=='play'||e.pointerType==='mouse'||sessionContext.pointer)return;
       sessionContext.pointer={id:e.pointerId,x:e.clientX,y:e.clientY};
       const control=sessionContext.$('stick'),size=control.offsetWidth||88;
       control.style.left=`${e.clientX-size/2}px`;
@@ -50,7 +52,7 @@ sessionContext.canvas.addEventListener('pointermove',e=>{
       sessionContext.stick={x:dx/sessionContext.Math.max(35,l),y:dy/sessionContext.Math.max(35,l)};
       sessionContext.$('knob').style.transform=`translate(${sessionContext.stick.x*24}px,${sessionContext.stick.y*24}px)`;
     });
-['pointerup','pointercancel','lostpointercapture'].forEach(ev=>sessionContext.canvas.addEventListener(ev,sessionContext.resetInput));
+['pointerup','pointercancel','lostpointercapture'].forEach(ev=>sessionContext.canvas.addEventListener(ev,e=>{if(!e||sessionContext.pointer?.id===e.pointerId)sessionContext.resetInput();}));
 }
 return {resetInput,bind};
 }};

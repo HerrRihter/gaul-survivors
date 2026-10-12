@@ -38,5 +38,6 @@ Progression=(()=>{
  const cost=id=>Object.hasOwn(upgrades,id)?(upgrades[id].hero?50:30)*(data.levels[id]+1):prices[id];
  function buyHero(id){if(!Object.hasOwn(prices,id)||owned(id)||data.helmets<prices[id])return false;data.helmets-=prices[id];data.unlocked.push(id);save();return true;}
  function buyUpgrade(id){if(!Object.hasOwn(upgrades,id)||(upgrades[id].hero&&!owned(upgrades[id].hero))||data.levels[id]>=upgrades[id].max||data.helmets<cost(id))return false;data.helmets-=cost(id);data.levels[id]++;save();return true;}
- return {prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
+ function grantArmorRank(){if(data.levels.armor>=upgrades.armor.max)return false;data.levels.armor++;deferSave();return true;}
+ return {grantArmorRank,prices,upgrades,owned,cost,buyHero,buyUpgrade,earn,kill,flush,get helmets(){return data.helmets;},get armorRank(){return data.levels.armor;},get data(){return JSON.parse(JSON.stringify(data));},get persistent(){return persistent;}};
 })();

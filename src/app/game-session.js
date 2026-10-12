@@ -10,6 +10,7 @@ import {EnemySpawning} from '../systems/enemy-spawning.js';
 import {CombatSystem} from '../systems/combat.js';
 import {Simulation} from '../systems/simulation.js';
 import {SceneRenderer} from '../rendering/scene-renderer.js';
+import {AbilitySystem} from '../systems/abilities.js';
 import {GameLoop} from '../core/game-loop.js';
 export let GameSession;
 'use strict';
@@ -23,6 +24,7 @@ const arenas=createArenas(Village);
 let selectedMap='village';
 let audioController=null;
 const sessionContext={
+get abilities(){return abilities},
 get selectedMap(){return selectedMap},
 get arenaDefinitions(){return arenaDefinitions},
 get document(){return document},
@@ -147,6 +149,7 @@ get stop(){return stop}
 
     audioController=AudioSystem.create(sessionContext);
 
+    const abilities=AbilitySystem.create(sessionContext);
     const {resetInput,bind:bindInput}=InputSystem.create(sessionContext);
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
@@ -193,6 +196,7 @@ get stop(){return stop}
 
     return {
       start,
+      activateAbility: abilities.activate,
       update,
       draw,
       pause,

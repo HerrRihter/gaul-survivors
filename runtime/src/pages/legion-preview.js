@@ -524,15 +524,22 @@ VillageRenderer={create({document,VillageArt,size,objects,roads,plaza=true,rough
   }
   if(roughRoads){
    g.save();g.beginPath();for(const points of lanes)roadOutline(g,points,0);g.clip();
+   // Rasterize the detail layer without the complex lane clip. Clipping every
+   // ellipse separately makes GPU rasterization stall despite a short JS frame.
+   const detail=document?.createElement('canvas');
+   if(detail){detail.width=size;detail.height=size;}
+   const ink=detail?detail.getContext('2d'):g;
+   ink.lineCap='round';ink.lineJoin='round';
    // Cached, deterministic dirt mottling, stones and broken wheel ruts.
    for(let i=0;i<15000;i++){
     const x=i*397.31%size,y=i*673.73%size;
-    g.fillStyle=i%3?'#6f573526':'#fff0c436';g.beginPath();g.ellipse(x,y,2+i%13,1+i%5,i*.7,0,Math.PI*2);g.fill();
+    ink.fillStyle=i%3?'#6f573526':'#fff0c436';ink.beginPath();ink.ellipse(x,y,2+i%13,1+i%5,i*.7,0,Math.PI*2);ink.fill();
    }
    for(const points of lanes)for(const side of [-1,1])for(let i=1;i<points.length;i++){
     if(i%7<2)continue;const p=points[i],q=points[i-1],offset=side*25;
-    g.strokeStyle='#71593730';g.lineWidth=2+i%3;g.beginPath();g.moveTo(q.x+q.nx*offset,q.y+q.ny*offset);g.lineTo(p.x+p.nx*offset,p.y+p.ny*offset);g.stroke();
+    ink.strokeStyle='#71593730';ink.lineWidth=2+i%3;ink.beginPath();ink.moveTo(q.x+q.nx*offset,q.y+q.ny*offset);ink.lineTo(p.x+p.nx*offset,p.y+p.ny*offset);ink.stroke();
    }
+   if(detail)g.drawImage(detail,0,0);
    g.restore();
   }
   if(plaza){g.fillStyle=dirt;g.beginPath();g.ellipse(1120,1170,255,175,-.1,0,Math.PI*2);g.fill();}

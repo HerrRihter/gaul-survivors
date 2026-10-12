@@ -1,3 +1,4 @@
+import {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} from '../../data/characters/abilities.js';
 import {Progression} from './persistence.js';
 export let UpgradeSystem;
 'use strict';
@@ -22,16 +23,22 @@ UpgradeSystem=(()=>{
   automatix:[item('hammerDamage','Закалённый молот','+25% к базовому урону молота.','hammerDamage',.25),item('hammerReach','Длинная рукоять','+12 к дальности удара молотом. Сектор остаётся 180°.','hammerReach',12),item('hammerForce','Кузнечный размах','+65 к силе отбрасывания молотом.','hammerForce',65)],
   panoramix:[item('poisonDuration','Стойкий настой','Ядовитые лужи живут на 1 секунду дольше.','poisonDuration',1),item('poisonRange','Полная фляга','+20% к радиусу ядовитых луж.','poisonRange',.2),item('poisonDamage','Крепкое варево','+25% к базовому урону яда.','poisonDamage',.25)]
  };
- const fallback=[{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
- function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max);}
+ const abilities=Object.fromEntries(Object.entries(abilityDefinitions).map(([hero,defs])=>[hero,defs.map(a=>({
+  id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:abilityUpgradeDescriptions[a.id],icon:'◆',max:abilityUpgradeMax,
+  available:()=>a.id!=='forge'||Progression.armorRank<Progression.upgrades.armor.max,
+  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-6);}}
+ }))]));
+ const fallback=[{id:'herbs',name:'Травяной запас',desc:'+0,1 HP регенерации в секунду.',icon:'♥',apply:add('regen',.1)},{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
+ function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'})),...(abilities[hero]||[]).map(u=>({...u,group:'Активное умение'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&(!u.available||u.available(s)));}
  function offer(hero,s,random=Math.random){const all=pool(hero,s),special=all.filter(u=>u.group==='Оружие героя'),result=[];
   if(special.length)result.push(special[Math.floor(random()*special.length)]);
-  const rest=all.filter(u=>!result.includes(u));for(let i=rest.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}result.push(...rest.slice(0,3-result.length));
-  for(const u of fallback){if(result.length===3)break;result.push({...u,group:'Припасы'});}return result;
+  const active=all.filter(u=>u.group==='Активное умение');if(active.length)result.push(active[Math.floor(random()*active.length)]);
+  const rest=all.filter(u=>!result.includes(u));for(let i=rest.length-1;i>0;i--){const j=Math.floor(random()*(i+1));[rest[i],rest[j]]=[rest[j],rest[i]];}result.push(...rest.slice(0,4-result.length));
+  for(const u of fallback){if(result.length===4)break;result.push({...u,group:'Припасы'});}return result;
  }
- function apply(u,s){s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
+ function apply(u,s){if(u.available&&!u.available(s))return false;s.upgradeRanks??={};if(u.max&&(s.upgradeRanks[u.id]||0)>=u.max)return false;u.apply(s);if(u.max)s.upgradeRanks[u.id]=(s.upgradeRanks[u.id]||0)+1;return true;}
  function permanent(s,hero,levels){for(const [key,factor] of [['haste',.04],['range',.04],['magnet',10],['armor',1],['regen',.15]])s.stats[key]+=(levels[key]||0)*factor;
   const personal={asterix:['punchTempo',.06],obelix:['stoneDamage',.08],cacofonix:['musicRange',.06],antisanitarix:['fishReturn',.1],automatix:['hammerDamage',.1],panoramix:['poisonDuration',.4]}[hero];if(personal)add(...[personal[0],personal[1]*(levels['training_'+hero]||0)])(s);
  }
- return {common,heroes,pool,offer,apply,permanent};
+ return {common,heroes,abilities,pool,offer,apply,permanent};
 })();
