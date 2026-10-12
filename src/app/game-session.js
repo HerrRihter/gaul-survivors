@@ -55,7 +55,7 @@ get WORLD(){return WORLD},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
-get mode(){return mode},set mode(value){mode=value;audioController?.sync()},
+get mode(){return mode},set mode(value){mode=value;if(document?.body)document.body.dataset.mode=value;audioController?.sync()},
 get state(){return state},set state(value){state=value},
 get keys(){return keys},set keys(value){keys=value},
 get toastLeft(){return toastLeft},set toastLeft(value){toastLeft=value},
@@ -91,6 +91,9 @@ get closeShop(){return closeShop},
 get renderAchievements(){return renderAchievements},
 get openAchievements(){return openAchievements},
 get closeAchievements(){return closeAchievements},
+get openSettings(){return openSettings},
+get closeSettings(){return closeSettings},
+get gameSettings(){return gameSettings},
 get pause(){return pause},
 get levelUp(){return levelUp},
 get pickUpgrade(){return pickUpgrade},
@@ -117,6 +120,7 @@ get stop(){return stop}
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
     let selected='asterix',mode='menu',state=null,keys=new Set(),toastLeft=0,choice=[];
+    if(document?.body)document.body.dataset.mode=mode;
     let pointer=null,stick={x:0,y:0},best={kills:0,time:0};
     try{
       best=JSON.parse(localStorage.getItem('gaul-best'))||best;
@@ -135,7 +139,7 @@ get stop(){return stop}
     });
     const fitPortrait = portraits.fit;
     let menuPortraitPhase=-1;
-    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud}=GameUI.create(sessionContext);
+    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,openSettings,closeSettings,gameSettings,hud}=GameUI.create(sessionContext);
     document.addEventListener('villager-art-ready',()=>{
       portraits.clear();
       menuPortraitPhase=-1;
@@ -157,7 +161,7 @@ get stop(){return stop}
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
     updateRecord();
-    ['runHeroSelect','shop','achievements'].forEach(id=>show(id,false));
+    ['runHeroSelect','shop','achievements','settings'].forEach(id=>show(id,false));
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
@@ -190,6 +194,12 @@ get stop(){return stop}
       openAchievements();
     };
     if(achClose)achClose.onclick=closeAchievements;
+
+    const setOpen=$('settingsOpen'),pauseSetOpen=$('pauseSettings'),setClose=$('settingsClose'),setBack=$('settingsBack');
+    if(setOpen)setOpen.onclick=()=>{if(mode==='menu')openSettings('menu');};
+    if(pauseSetOpen)pauseSetOpen.onclick=()=>openSettings('paused');
+    if(setClose)setClose.onclick=closeSettings;
+    if(setBack)setBack.onclick=closeSettings;
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;

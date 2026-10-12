@@ -67,8 +67,9 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
-      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements'].forEach(id=>sessionContext.show(id,false));
-      ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
+      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
+      ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));
+      sessionContext.show('hint',sessionContext.gameSettings?.hints!==false);
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
       sessionContext.soundEffect('ui');
@@ -84,7 +85,7 @@ function menu(){
       sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
-      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements'].forEach(id=>sessionContext.show(id,false));
+      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       sessionContext.show('menu',true);
       sessionContext.renderShop();
       sessionContext.$('toast').style.opacity=0;
@@ -95,11 +96,14 @@ function pause(){
         sessionContext.Progression.flush();
         sessionContext.mode='pause';
         sessionContext.resetInput();
+        sessionContext.show('settings',false);
         sessionContext.show('paused',true);
         sessionContext.abilities.hud();
       }else if(sessionContext.mode==='pause'){
         sessionContext.mode='play';
+        sessionContext.show('settings',false);
         sessionContext.show('paused',false);
+        sessionContext.show('hint',sessionContext.gameSettings?.hints!==false);
         sessionContext.abilities.hud();
       }
     }

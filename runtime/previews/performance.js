@@ -128,7 +128,7 @@ get WORLD(){return WORLD},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
-get mode(){return mode},set mode(value){mode=value;audioController?.sync()},
+get mode(){return mode},set mode(value){mode=value;if(document?.body)document.body.dataset.mode=value;audioController?.sync()},
 get state(){return state},set state(value){state=value},
 get keys(){return keys},set keys(value){keys=value},
 get toastLeft(){return toastLeft},set toastLeft(value){toastLeft=value},
@@ -164,6 +164,9 @@ get closeShop(){return closeShop},
 get renderAchievements(){return renderAchievements},
 get openAchievements(){return openAchievements},
 get closeAchievements(){return closeAchievements},
+get openSettings(){return openSettings},
+get closeSettings(){return closeSettings},
+get gameSettings(){return gameSettings},
 get pause(){return pause},
 get levelUp(){return levelUp},
 get pickUpgrade(){return pickUpgrade},
@@ -190,6 +193,7 @@ get stop(){return stop}
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
     let selected='asterix',mode='menu',state=null,keys=new Set(),toastLeft=0,choice=[];
+    if(document?.body)document.body.dataset.mode=mode;
     let pointer=null,stick={x:0,y:0},best={kills:0,time:0};
     try{
       best=JSON.parse(localStorage.getItem('gaul-best'))||best;
@@ -208,7 +212,7 @@ get stop(){return stop}
     });
     const fitPortrait = portraits.fit;
     let menuPortraitPhase=-1;
-    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud}=GameUI.create(sessionContext);
+    const {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,openSettings,closeSettings,gameSettings,hud}=GameUI.create(sessionContext);
     document.addEventListener('villager-art-ready',()=>{
       portraits.clear();
       menuPortraitPhase=-1;
@@ -230,7 +234,7 @@ get stop(){return stop}
     const {start,menu,pause,levelUp,pickUpgrade,finish}=GameFlow.create(sessionContext);
 
     updateRecord();
-    ['runHeroSelect','shop','achievements'].forEach(id=>show(id,false));
+    ['runHeroSelect','shop','achievements','settings'].forEach(id=>show(id,false));
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
@@ -263,6 +267,12 @@ get stop(){return stop}
       openAchievements();
     };
     if(achClose)achClose.onclick=closeAchievements;
+
+    const setOpen=$('settingsOpen'),pauseSetOpen=$('pauseSettings'),setClose=$('settingsClose'),setBack=$('settingsBack');
+    if(setOpen)setOpen.onclick=()=>{if(mode==='menu')openSettings('menu');};
+    if(pauseSetOpen)pauseSetOpen.onclick=()=>openSettings('paused');
+    if(setClose)setClose.onclick=closeSettings;
+    if(setBack)setBack.onclick=closeSettings;
     
     $('pause').onclick=pause;
     $('resume').onclick=pause;
@@ -1093,6 +1103,76 @@ function closeAchievements(){
       show('menu',true);
       updateRecord();
     }
+const gameSettings={shake:true,hints:true};
+try{
+  const saved=JSON.parse(sessionContext.localStorage.getItem('gaul-settings'));
+  if(saved&&typeof saved==='object'){
+    if(typeof saved.shake==='boolean')gameSettings.shake=saved.shake;
+    if(typeof saved.hints==='boolean')gameSettings.hints=saved.hints;
+  }
+}catch{}
+function saveGameSettings(){
+  try{sessionContext.localStorage.setItem('gaul-settings',JSON.stringify(gameSettings));}catch{}
+}
+function applyHintsDisplay(){
+  const showHints = !!gameSettings.hints;
+  show('hint', showHints && (sessionContext.mode==='play'||sessionContext.mode==='pause'||!!sessionContext.state));
+  const menuHint = sessionContext.$('menuHint');
+  if(menuHint) menuHint.classList.toggle('hidden', !showHints);
+  const lvlHint = sessionContext.$('levelupHint');
+  if(lvlHint) lvlHint.classList.toggle('hidden', !showHints);
+  if(sessionContext.document?.body){
+    sessionContext.document.body.classList.toggle('hide-hints', !showHints);
+  }
+}
+function updateGameSettingButtons(){
+  const sBtn=sessionContext.$('settingShake');
+  if(sBtn){
+    sBtn.textContent=gameSettings.shake?'ВКЛ':'ВЫКЛ';
+    sBtn.style.color=gameSettings.shake?'var(--gold)':'#99a896';
+  }
+  const hBtn=sessionContext.$('settingHints');
+  if(hBtn){
+    hBtn.textContent=gameSettings.hints?'ВКЛ':'ВЫКЛ';
+    hBtn.style.color=gameSettings.hints?'var(--gold)':'#99a896';
+  }
+  applyHintsDisplay();
+}
+let settingsOrigin='menu';
+function openSettings(fromView='menu'){
+  settingsOrigin=fromView;
+  show('menu',false);
+  show('paused',false);
+  show('shop',false);
+  show('achievements',false);
+  show('runHeroSelect',false);
+  show('settings',true);
+  updateGameSettingButtons();
+}
+function closeSettings(){
+  show('settings',false);
+  show(settingsOrigin||'menu',true);
+  applyHintsDisplay();
+}
+const sBtn=sessionContext.$('settingShake');
+if(sBtn)sBtn.onclick=()=>{
+  gameSettings.shake=!gameSettings.shake;
+  saveGameSettings();
+  updateGameSettingButtons();
+  sessionContext.soundEffect?.('ui');
+};
+const hBtn=sessionContext.$('settingHints');
+if(hBtn)hBtn.onclick=()=>{
+  gameSettings.hints=!gameSettings.hints;
+  saveGameSettings();
+  updateGameSettingButtons();
+  sessionContext.soundEffect?.('ui');
+};
+const sCloseBtn=sessionContext.$('settingsClose');
+if(sCloseBtn)sCloseBtn.onclick=closeSettings;
+const sBackBtn=sessionContext.$('settingsBack');
+if(sBackBtn)sBackBtn.onclick=closeSettings;
+updateGameSettingButtons();
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
 let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
 function hud(){
@@ -1151,7 +1231,7 @@ function hud(){
         }
       }
     }
-return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud};
+return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,openSettings,closeSettings,updateGameSettingButtons,gameSettings,hud};
 }};
 
 Object.defineProperty(exports, "GameUI", {get: () => GameUI});
@@ -1262,9 +1342,26 @@ const AudioSystem = {create(c) {
   }
   function save() { try { c.localStorage.setItem('gaul-audio', JSON.stringify(settings)); } catch {} }
   function refreshControls() {
+    const text = `ЗВУК: ${settings.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
     const button = c.$('sound');
-    button.textContent = `ЗВУК: ${settings.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
-    button.setAttribute?.('aria-pressed', String(settings.enabled));
+    if (button) {
+      button.textContent = text;
+      button.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const settingsBtn = c.$('settingsSound');
+    if (settingsBtn) {
+      settingsBtn.textContent = text;
+      settingsBtn.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const pauseBtn = c.$('pauseSound');
+    if (pauseBtn) {
+      pauseBtn.textContent = text;
+      pauseBtn.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const musicVal = c.$('musicVolumeVal');
+    if (musicVal) musicVal.textContent = Math.round(settings.music * 100) + '%';
+    const effectsVal = c.$('effectsVolumeVal');
+    if (effectsVal) effectsVal.textContent = Math.round(settings.effects * 100) + '%';
   }
   function unlock(event) {
     const panel = c.document.querySelector?.('.audio-settings');
@@ -1274,10 +1371,15 @@ const AudioSystem = {create(c) {
   c.document.addEventListener('pointerdown', unlock);
   c.document.addEventListener('keydown', unlock);
   c.document.addEventListener('visibilitychange', sync);
-  c.$('sound').onclick = () => {
+  function toggleEnabled() {
     settings.enabled = !settings.enabled;
     unlock(); save(); refreshControls(); effect('ui');
-  };
+  }
+  c.$('sound').onclick = toggleEnabled;
+  const settingsSoundBtn = c.$('settingsSound');
+  if (settingsSoundBtn) settingsSoundBtn.onclick = toggleEnabled;
+  const pauseSoundBtn = c.$('pauseSound');
+  if (pauseSoundBtn) pauseSoundBtn.onclick = toggleEnabled;
   for (const [id, key] of [['musicVolume', 'music'], ['effectsVolume', 'effects']]) {
     const control = c.$(id);
     if (!control) continue;
@@ -1285,6 +1387,8 @@ const AudioSystem = {create(c) {
     control.oninput = () => {
       settings[key] = Math.max(0, Math.min(1, Number(control.value) / 100));
       if (key === 'effects') silenceEffects();
+      const valLabel = c.$(key === 'music' ? 'musicVolumeVal' : 'effectsVolumeVal');
+      if (valLabel) valLabel.textContent = Math.round(settings[key] * 100) + '%';
       unlock(); save();
     };
     control.onchange = () => effect('ui');
@@ -1292,7 +1396,7 @@ const AudioSystem = {create(c) {
   refreshControls();
   return {effect, sync, finish(win) {result = win ? 'victory' : 'defeat'; silenceEffects(); sync();},
     stop() {stopped = true; current?.audio.pause(); silenceEffects();},
-    resume() {stopped = false; sync();}};
+    resume() {stopped = false; sync();}, toggle: toggleEnabled, settings};
 }};
 
 Object.defineProperty(exports, "AudioSystem", {get: () => AudioSystem});
@@ -1315,6 +1419,10 @@ sessionContext.window.addEventListener('keydown',e=>{
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(e.repeat)return;
       if(e.code==='KeyQ'||e.code==='KeyE'){e.preventDefault();sessionContext.abilities.activate(e.code==='KeyQ'?0:1);return;}
+      if(e.code==='Escape'&&!sessionContext.$('settings').classList.contains('hidden')){
+        sessionContext.closeSettings();
+        return;
+      }
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('shop').classList.contains('hidden')){
         sessionContext.closeShop();
         return;
@@ -1433,8 +1541,9 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       sessionContext.mode='play';
-      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements'].forEach(id=>sessionContext.show(id,false));
-      ['hud','hint','pause','stick'].forEach(id=>sessionContext.show(id,true));
+      ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
+      ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));
+      sessionContext.show('hint',sessionContext.gameSettings?.hints!==false);
       sessionContext.$('heroLabel').textContent=hero.name.toUpperCase();
       sessionContext.toast(sessionContext.arenaDefinitions[sessionContext.selectedMap].name.toUpperCase()+' · '+sessionContext.arenaDefinitions[sessionContext.selectedMap].description);
       sessionContext.soundEffect('ui');
@@ -1450,7 +1559,7 @@ function menu(){
       sessionContext.$('abilities').classList.toggle('hidden',true);
       sessionContext.state=null;
       sessionContext.resetInput();
-      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements'].forEach(id=>sessionContext.show(id,false));
+      ['end','paused','levelup','hud','hint','pause','stick','bossbar','runHeroSelect','shop','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       sessionContext.show('menu',true);
       sessionContext.renderShop();
       sessionContext.$('toast').style.opacity=0;
@@ -1461,11 +1570,14 @@ function pause(){
         sessionContext.Progression.flush();
         sessionContext.mode='pause';
         sessionContext.resetInput();
+        sessionContext.show('settings',false);
         sessionContext.show('paused',true);
         sessionContext.abilities.hud();
       }else if(sessionContext.mode==='pause'){
         sessionContext.mode='play';
+        sessionContext.show('settings',false);
         sessionContext.show('paused',false);
+        sessionContext.show('hint',sessionContext.gameSettings?.hints!==false);
         sessionContext.abilities.hud();
       }
     }
@@ -2206,7 +2318,7 @@ function background(cx,cy){
 function draw(){
       const s=sessionContext.state,p=s?s.p:{x:1100,y:1010},cx=sessionContext.clamp(p.x-sessionContext.W/2,0,sessionContext.WORLD-sessionContext.W),cy=sessionContext.clamp(p.y-sessionContext.H/2,0,sessionContext.WORLD-sessionContext.H);
       sessionContext.ctx.save();
-      if(s&&s.shake&&sessionContext.mode==='play')sessionContext.ctx.translate(sessionContext.rand(-s.shake,s.shake),sessionContext.rand(-s.shake,s.shake));
+      if(s&&s.shake&&sessionContext.mode==='play'&&sessionContext.gameSettings?.shake!==false)sessionContext.ctx.translate(sessionContext.rand(-s.shake,s.shake),sessionContext.rand(-s.shake,s.shake));
       background(cx,cy);
       sessionContext.ctx.save();
       sessionContext.ctx.translate(-cx,-cy);

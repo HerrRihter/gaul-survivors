@@ -266,6 +266,76 @@ function closeAchievements(){
       show('menu',true);
       updateRecord();
     }
+const gameSettings={shake:true,hints:true};
+try{
+  const saved=JSON.parse(sessionContext.localStorage.getItem('gaul-settings'));
+  if(saved&&typeof saved==='object'){
+    if(typeof saved.shake==='boolean')gameSettings.shake=saved.shake;
+    if(typeof saved.hints==='boolean')gameSettings.hints=saved.hints;
+  }
+}catch{}
+function saveGameSettings(){
+  try{sessionContext.localStorage.setItem('gaul-settings',JSON.stringify(gameSettings));}catch{}
+}
+function applyHintsDisplay(){
+  const showHints = !!gameSettings.hints;
+  show('hint', showHints && (sessionContext.mode==='play'||sessionContext.mode==='pause'||!!sessionContext.state));
+  const menuHint = sessionContext.$('menuHint');
+  if(menuHint) menuHint.classList.toggle('hidden', !showHints);
+  const lvlHint = sessionContext.$('levelupHint');
+  if(lvlHint) lvlHint.classList.toggle('hidden', !showHints);
+  if(sessionContext.document?.body){
+    sessionContext.document.body.classList.toggle('hide-hints', !showHints);
+  }
+}
+function updateGameSettingButtons(){
+  const sBtn=sessionContext.$('settingShake');
+  if(sBtn){
+    sBtn.textContent=gameSettings.shake?'ВКЛ':'ВЫКЛ';
+    sBtn.style.color=gameSettings.shake?'var(--gold)':'#99a896';
+  }
+  const hBtn=sessionContext.$('settingHints');
+  if(hBtn){
+    hBtn.textContent=gameSettings.hints?'ВКЛ':'ВЫКЛ';
+    hBtn.style.color=gameSettings.hints?'var(--gold)':'#99a896';
+  }
+  applyHintsDisplay();
+}
+let settingsOrigin='menu';
+function openSettings(fromView='menu'){
+  settingsOrigin=fromView;
+  show('menu',false);
+  show('paused',false);
+  show('shop',false);
+  show('achievements',false);
+  show('runHeroSelect',false);
+  show('settings',true);
+  updateGameSettingButtons();
+}
+function closeSettings(){
+  show('settings',false);
+  show(settingsOrigin||'menu',true);
+  applyHintsDisplay();
+}
+const sBtn=sessionContext.$('settingShake');
+if(sBtn)sBtn.onclick=()=>{
+  gameSettings.shake=!gameSettings.shake;
+  saveGameSettings();
+  updateGameSettingButtons();
+  sessionContext.soundEffect?.('ui');
+};
+const hBtn=sessionContext.$('settingHints');
+if(hBtn)hBtn.onclick=()=>{
+  gameSettings.hints=!gameSettings.hints;
+  saveGameSettings();
+  updateGameSettingButtons();
+  sessionContext.soundEffect?.('ui');
+};
+const sCloseBtn=sessionContext.$('settingsClose');
+if(sCloseBtn)sCloseBtn.onclick=closeSettings;
+const sBackBtn=sessionContext.$('settingsBack');
+if(sBackBtn)sBackBtn.onclick=closeSettings;
+updateGameSettingButtons();
 let elHealth=null,elXp=null,elLevel=null,elTime=null,elKills=null,elWeapon=null,elHelmets=null,elBosshealth=null;
 let lastHealthPct=-1,lastHp=-1,lastMax=-1,lastXp=-1,lastNeed=-1,lastLevel=-1,lastTime=-1,lastKills=-1,lastWeaponKey='',lastHelmets=-1,lastEarned=-1,lastBossActive=null,lastBossHpPct=-1;
 function hud(){
@@ -324,5 +394,5 @@ function hud(){
         }
       }
     }
-return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,hud};
+return {animateMenu,show,toast,updateRecord,updateRunHeroStats,renderRunHeroes,openRunHeroSelect,renderShop,closeShop,renderAchievements,openAchievements,closeAchievements,openSettings,closeSettings,updateGameSettingButtons,gameSettings,hud};
 }};

@@ -68,9 +68,26 @@ export const AudioSystem = {create(c) {
   }
   function save() { try { c.localStorage.setItem('gaul-audio', JSON.stringify(settings)); } catch {} }
   function refreshControls() {
+    const text = `ЗВУК: ${settings.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
     const button = c.$('sound');
-    button.textContent = `ЗВУК: ${settings.enabled ? 'ВКЛ' : 'ВЫКЛ'}`;
-    button.setAttribute?.('aria-pressed', String(settings.enabled));
+    if (button) {
+      button.textContent = text;
+      button.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const settingsBtn = c.$('settingsSound');
+    if (settingsBtn) {
+      settingsBtn.textContent = text;
+      settingsBtn.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const pauseBtn = c.$('pauseSound');
+    if (pauseBtn) {
+      pauseBtn.textContent = text;
+      pauseBtn.setAttribute?.('aria-pressed', String(settings.enabled));
+    }
+    const musicVal = c.$('musicVolumeVal');
+    if (musicVal) musicVal.textContent = Math.round(settings.music * 100) + '%';
+    const effectsVal = c.$('effectsVolumeVal');
+    if (effectsVal) effectsVal.textContent = Math.round(settings.effects * 100) + '%';
   }
   function unlock(event) {
     const panel = c.document.querySelector?.('.audio-settings');
@@ -80,10 +97,15 @@ export const AudioSystem = {create(c) {
   c.document.addEventListener('pointerdown', unlock);
   c.document.addEventListener('keydown', unlock);
   c.document.addEventListener('visibilitychange', sync);
-  c.$('sound').onclick = () => {
+  function toggleEnabled() {
     settings.enabled = !settings.enabled;
     unlock(); save(); refreshControls(); effect('ui');
-  };
+  }
+  c.$('sound').onclick = toggleEnabled;
+  const settingsSoundBtn = c.$('settingsSound');
+  if (settingsSoundBtn) settingsSoundBtn.onclick = toggleEnabled;
+  const pauseSoundBtn = c.$('pauseSound');
+  if (pauseSoundBtn) pauseSoundBtn.onclick = toggleEnabled;
   for (const [id, key] of [['musicVolume', 'music'], ['effectsVolume', 'effects']]) {
     const control = c.$(id);
     if (!control) continue;
@@ -91,6 +113,8 @@ export const AudioSystem = {create(c) {
     control.oninput = () => {
       settings[key] = Math.max(0, Math.min(1, Number(control.value) / 100));
       if (key === 'effects') silenceEffects();
+      const valLabel = c.$(key === 'music' ? 'musicVolumeVal' : 'effectsVolumeVal');
+      if (valLabel) valLabel.textContent = Math.round(settings[key] * 100) + '%';
       unlock(); save();
     };
     control.onchange = () => effect('ui');
@@ -98,5 +122,5 @@ export const AudioSystem = {create(c) {
   refreshControls();
   return {effect, sync, finish(win) {result = win ? 'victory' : 'defeat'; silenceEffects(); sync();},
     stop() {stopped = true; current?.audio.pause(); silenceEffects();},
-    resume() {stopped = false; sync();}};
+    resume() {stopped = false; sync();}, toggle: toggleEnabled, settings};
 }};

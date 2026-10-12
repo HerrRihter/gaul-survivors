@@ -127,6 +127,55 @@ assert(nodes.get('achievements').classList.contains('hidden'), 'Escape closes ac
 assert(!nodes.get('menu').classList.contains('hidden'), 'Escape returns to main menu');
 console.log('PASS: achievements tab opens, renders cards, closes via button and Escape key.');
 
+nodes.get('settingsOpen').onclick();
+assert(nodes.get('menu').classList.contains('hidden'), 'Settings overlay replaces main menu');
+assert(!nodes.get('settings').classList.contains('hidden'), 'Settings panel is visible');
+assert.equal(nodes.get('settingShake').textContent, 'ВКЛ');
+nodes.get('settingShake').onclick();
+assert.equal(nodes.get('settingShake').textContent, 'ВЫКЛ');
+nodes.get('settingShake').onclick();
+assert.equal(nodes.get('settingShake').textContent, 'ВКЛ');
+assert.equal(nodes.get('settingHints').textContent, 'ВКЛ');
+nodes.get('settingHints').onclick();
+assert.equal(nodes.get('settingHints').textContent, 'ВЫКЛ');
+assert(nodes.get('hint').classList.contains('hidden'), 'Hints are hidden when disabled');
+assert(nodes.get('menuHint').classList.contains('hidden'), 'Menu hints are hidden when disabled');
+nodes.get('settingHints').onclick();
+assert.equal(nodes.get('settingHints').textContent, 'ВКЛ');
+assert(!nodes.get('menuHint').classList.contains('hidden'), 'Menu hints are shown when enabled');
+nodes.get('settingsClose').onclick();
+assert(nodes.get('settings').classList.contains('hidden'), 'Settings closed via close button');
+assert(!nodes.get('menu').classList.contains('hidden'), 'Returned to main menu');
+
+nodes.get('settingsOpen').onclick();
+listeners.keydown({code:'Escape',repeat:false,preventDefault:noop});
+assert(nodes.get('settings').classList.contains('hidden'), 'Escape closes settings');
+assert(!nodes.get('menu').classList.contains('hidden'), 'Escape returns to main menu from settings');
+
+t.start();
+assert(!nodes.get('hint').classList.contains('hidden'), 'Hints are visible during game when enabled');
+t.pause();
+assert(!nodes.get('paused').classList.contains('hidden'), 'Game is paused');
+nodes.get('pauseSettings').onclick();
+assert(nodes.get('paused').classList.contains('hidden'), 'Settings opens from pause menu');
+assert(!nodes.get('settings').classList.contains('hidden'), 'Settings panel is visible during pause');
+nodes.get('settingHints').onclick();
+assert(nodes.get('hint').classList.contains('hidden'), 'Hints are hidden immediately when disabled in settings during pause');
+nodes.get('settingsBack').onclick();
+assert(nodes.get('settings').classList.contains('hidden'), 'Settings closed from pause');
+assert(!nodes.get('paused').classList.contains('hidden'), 'Returned to pause menu');
+t.pause();
+assert(nodes.get('hint').classList.contains('hidden'), 'Hints remain hidden after unpausing');
+t.pause();
+nodes.get('pauseSettings').onclick();
+nodes.get('settingHints').onclick();
+assert(!nodes.get('hint').classList.contains('hidden'), 'Hints are shown immediately when re-enabled');
+nodes.get('settingsBack').onclick();
+t.pause();
+assert(!nodes.get('hint').classList.contains('hidden'), 'Hints visible during active play');
+t.menu();
+console.log('PASS: settings panel opens from main menu and pause menu, toggles options, hides hints properly, and restores origin on close and Escape.');
+
 // Weapon-specific bonuses are exercised through the live combat loop.
 function boost(hero,id){env.UpgradeSystem.apply(env.UpgradeSystem.heroes[hero].find(u=>u.id===id),t.state);}
 prepare('obelix');boost('obelix','stoneCount');boost('obelix','stoneDamage');boost('obelix','stoneSize');t.state.attack=0;for(let i=0;i<12;i++)t.update(.04);assert.equal(t.state.shots.length,2);assert(t.state.shots.every(b=>b.damage>52&&b.r>11));

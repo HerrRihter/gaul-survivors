@@ -15,6 +15,10 @@ sessionContext.window.addEventListener('keydown',e=>{
       if(['ArrowUp','ArrowDown','ArrowLeft','ArrowRight','Space'].includes(e.code))e.preventDefault();
       if(e.repeat)return;
       if(e.code==='KeyQ'||e.code==='KeyE'){e.preventDefault();sessionContext.abilities.activate(e.code==='KeyQ'?0:1);return;}
+      if(e.code==='Escape'&&!sessionContext.$('settings').classList.contains('hidden')){
+        sessionContext.closeSettings();
+        return;
+      }
       if(e.code==='Escape'&&sessionContext.mode==='menu'&&!sessionContext.$('shop').classList.contains('hidden')){
         sessionContext.closeShop();
         return;

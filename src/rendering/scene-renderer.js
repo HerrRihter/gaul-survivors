@@ -23,7 +23,7 @@ function background(cx,cy){
 function draw(){
       const s=sessionContext.state,p=s?s.p:{x:1100,y:1010},cx=sessionContext.clamp(p.x-sessionContext.W/2,0,sessionContext.WORLD-sessionContext.W),cy=sessionContext.clamp(p.y-sessionContext.H/2,0,sessionContext.WORLD-sessionContext.H);
       sessionContext.ctx.save();
-      if(s&&s.shake&&sessionContext.mode==='play')sessionContext.ctx.translate(sessionContext.rand(-s.shake,s.shake),sessionContext.rand(-s.shake,s.shake));
+      if(s&&s.shake&&sessionContext.mode==='play'&&sessionContext.gameSettings?.shake!==false)sessionContext.ctx.translate(sessionContext.rand(-s.shake,s.shake),sessionContext.rand(-s.shake,s.shake));
       background(cx,cy);
       sessionContext.ctx.save();
       sessionContext.ctx.translate(-cx,-cy);
