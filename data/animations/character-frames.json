@@ -665,6 +665,69 @@
         "action": "attack",
         "index": 3
       }
+    },
+    "citizen-0": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/citizen-0/walk/0.png",
+          "characters/frames/citizen-0/walk/1.png",
+          "characters/frames/citizen-0/walk/2.png",
+          "characters/frames/citizen-0/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/citizen-0/walk/0.png"
+        ],
+        "hurt": [
+          "characters/frames/citizen-0/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      }
+    },
+    "citizen-1": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/citizen-1/walk/0.png",
+          "characters/frames/citizen-1/walk/1.png",
+          "characters/frames/citizen-1/walk/2.png",
+          "characters/frames/citizen-1/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/citizen-1/walk/0.png"
+        ],
+        "hurt": [
+          "characters/frames/citizen-1/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      }
+    },
+    "citizen-2": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/frames/citizen-2/walk/0.png",
+          "characters/frames/citizen-2/walk/1.png",
+          "characters/frames/citizen-2/walk/2.png",
+          "characters/frames/citizen-2/walk/3.png"
+        ],
+        "attack": [
+          "characters/frames/citizen-2/walk/0.png"
+        ],
+        "hurt": [
+          "characters/frames/citizen-2/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      }
     }
   }
 }

@@ -46,6 +46,7 @@ export function drawExpansion(g,e){
 
 export function expansionTelegraph(g,e){
   if(!expansionUnits[e.unit])return false;
+  if(!e.crush&&(!e.action||e.action.hit))return true;
   g.save();g.strokeStyle='#ffd38a';g.fillStyle='#e79e4938';g.lineWidth=2;
   if(e.crush){g.beginPath();g.arc(e.x,e.y,85,0,Math.PI*2);g.fill();g.stroke();}
   else if(e.action&&!e.action.hit){

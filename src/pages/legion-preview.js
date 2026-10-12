@@ -10,13 +10,10 @@ import {Village} from '../world/village/village.js';
 import {fitCharacterPreview,drawCharacterPreview} from '../ui/character-preview.js';
 
 const descriptions={
+citizen:['Лютеция · с начала боя','Три облика: пекарь, носильщик и писец. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.'],
 auxiliary:['Лютеция · с начала боя','Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.'],
 merchant:['Лютеция · на карте изначально','Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.'],
 courtesan:['Лютеция · с 0:15','Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.'],
-citizenBaker:['Лютеция · с начала боя','Горожанин. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
-citizenPorter:['Лютеция · с начала боя','Горожанин. Бегает с мешком по улицам, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
-citizenMatron:['Лютеция · с начала боя','Горожанка с корзиной. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
-citizenScribe:['Лютеция · с начала боя','Горожанин со свитком. Хаотично бегает, не атакует. Столкновение: 1 урон. Не даёт опыта или добычи.'],
 boar:['Лес · с 0:04','Кабан предупреждает о рывке и несётся по прямой.'],
 stoneSquad:['Лес · с 0:35','Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.'],
 netter:['Лес · с 0:18','Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.'],
@@ -51,16 +48,17 @@ function showLocation(){
  }
  previews.length=0;
  document.getElementById('cards').replaceChildren();
- const units=selectedMap==='lutetia'?['roman','auxiliary','merchant','courtesan','pilum','wine','veteran','turtle','boss','citizenBaker','citizenPorter','citizenMatron','citizenScribe']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
+ const units=selectedMap==='lutetia'?['roman','auxiliary','merchant','courtesan','pilum','wine','veteran','turtle','boss','citizen']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
  document.getElementById('rosterCount').textContent='Отряды в локации: '+units.length;
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
  const description=[...(descriptions[unit]||['Новый отряд',''])];
- if(selectedMap==='lutetia'&&({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit])description[0]=({pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'})[unit];
+ const cityTiming={pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'};
+ if(selectedMap==='lutetia'&&cityTiming[unit])description[0]=cityTiming[unit];
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${description[0]}</p><p>${description[1]}</p>`;
  document.getElementById('cards').append(card);
- const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit;
+ const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit==='citizen'?'citizen-0':unit;
  const bounds=CharacterBounds[id]||{left:0,top:0,right:256,bottom:256};
  previews.push({unit,id,g:canvas.getContext('2d'),placement:fitCharacterPreview(bounds,anchor,canvas.width,canvas.height),wide:u.r>30});
  }
@@ -77,6 +75,18 @@ function frame(t){
  let loaded=0,failed=0;
  for(const {unit,id,g,placement,wide}of previews){
   g.clearRect(0,0,g.canvas.width,g.canvas.height);g.imageSmoothingEnabled=false;
+  if(unit==='citizen'){
+   const frames=[0,1,2].map(v=>UnitArt.get('citizen',motion,progress,v));
+   if(frames.every(Boolean)){
+    loaded++;
+    frames.forEach((art,v)=>{
+     const fit=fitCharacterPreview(CharacterBounds['citizen-'+v],anchor,g.canvas.width/3,g.canvas.height);
+     fit.x+=v*g.canvas.width/3;
+     drawCharacterPreview(g,art,anchor,fit,reverse);
+    });
+   }else if([0,1,2].some(v=>UnitArt.status['citizen-'+v]==='fallback'))failed++;
+   continue;
+  }
   const art=UnitArt.get(unit,motion,progress)||AnimationArt.get(unit,0,motion,progress);
   if(!art){
   if(drawExpansion(g,{unit,x:140,y:196,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){continue;}

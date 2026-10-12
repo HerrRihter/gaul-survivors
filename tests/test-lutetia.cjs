@@ -8,6 +8,11 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  const city=createArenas(env.Village).get('lutetia');
  assert(city.objects.some(o=>o.art==='guardpost'));
  assert(city.objects.length>=16);assert.equal(city.residents.length,6);
+ for(const art of ['fountain-v2','garden-v2']){
+  const landmark=city.objects.find(o=>o.art===art);assert(landmark,'City includes '+art);
+  assert(city.blocked(landmark.x,landmark.y-65,14),'Landmark has a solid ground footprint');
+ }
+ assert(city.objects.filter(o=>o.art==='lamp').length>=12,'Streets have lighting');
  assert(!city.blocked(1100,1100,46),'All units fit in market spawn');
  for(const r of city.residents)assert(!city.blocked(r.x,r.y,35),'Merchant has free starting position');
  city.prepare([14,17,29,35],{x:1100,y:1100});

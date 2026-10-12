@@ -62,6 +62,13 @@ VillageCollision=(()=>{
     // Buckets deliberately over-select; reject non-overlapping bounds before
     // the expensive polygon/segment distance tests.
     if(p.maxX<minX||p.minX>maxX||p.maxY<minY||p.minY>maxY)continue;
+    // Reject polygons outside the swept segment's expanded box. The bucket
+    // rectangle alone over-selects many buildings on long diagonal paths.
+    let enter=0,leave=1;
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(dx!==0){const t0=(p.minX-r-a.x)/dx,t1=(p.maxX+r-a.x)/dx;enter=Math.max(enter,Math.min(t0,t1));leave=Math.min(leave,Math.max(t0,t1));}
+    if(dy!==0){const t0=(p.minY-r-a.y)/dy,t1=(p.maxY+r-a.y)/dy;enter=Math.max(enter,Math.min(t0,t1));leave=Math.min(leave,Math.max(t0,t1));}
+    if(enter>leave)continue;
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;

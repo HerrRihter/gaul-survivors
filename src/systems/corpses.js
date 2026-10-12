@@ -6,8 +6,8 @@ export let Corpses;
 Corpses=(()=>{
  const lifetime=8,fadeTime=2,limit=180,cache=new Map();
  function pose(e,sprite){
-  const variant=Math.floor(e.phase||0)%3;
-  const art=typeof UnitArt!=='undefined'?UnitArt.get(e.unit,'hurt',.3):null;
+  const variant=Math.floor(e.variant??e.phase??0)%3;
+  const art=typeof UnitArt!=='undefined'?UnitArt.get(e.unit,'hurt',.3,variant):null;
   const roman=typeof AnimationArt!=='undefined'?AnimationArt.get(e.type,variant,e.boss?'attack':'hurt',.3):null;
   const key=`${e.unit}:${variant}:${!!art}:${!!roman}`;
   if(cache.has(key))return cache.get(key);

@@ -35,6 +35,7 @@ function spawn(unit,boss=false,position=null){
         vy:0,
         heading:sessionContext.Math.atan2(p.y-y,p.x-x)
       };
+      if(unit==='citizen')e.variant=Number.isInteger(position?.variant)?((position.variant%3)+3)%3:sessionContext.Math.floor(e.phase);
       prepareExpansion(e,sessionContext);
       s.enemies.push(e);
       return e;

@@ -446,6 +446,13 @@ VillageCollision=(()=>{
     // Buckets deliberately over-select; reject non-overlapping bounds before
     // the expensive polygon/segment distance tests.
     if(p.maxX<minX||p.minX>maxX||p.maxY<minY||p.minY>maxY)continue;
+    // Reject polygons outside the swept segment's expanded box. The bucket
+    // rectangle alone over-selects many buildings on long diagonal paths.
+    let enter=0,leave=1;
+    const dx=b.x-a.x,dy=b.y-a.y;
+    if(dx!==0){const t0=(p.minX-r-a.x)/dx,t1=(p.maxX+r-a.x)/dx;enter=Math.max(enter,Math.min(t0,t1));leave=Math.min(leave,Math.max(t0,t1));}
+    if(dy!==0){const t0=(p.minY-r-a.y)/dy,t1=(p.maxY+r-a.y)/dy;enter=Math.max(enter,Math.min(t0,t1));leave=Math.min(leave,Math.max(t0,t1));}
+    if(enter>leave)continue;
     if(inside(a,p.points)||inside(b,p.points))return false;
     for(let i=0;i<p.points.length;i++){const c=p.points[i],d=p.points[(i+1)%p.points.length];
      if(intersects(a,b,c,d)||Math.min(distance2(a,c,d),distance2(b,c,d),distance2(c,a,b),distance2(d,a,b))<r*r)return false;
@@ -690,61 +697,88 @@ const {VillageCollision} = require("src/world/village/collision.js");
 const {VillageNavigation} = require("src/world/village/navigation.js");
 const {sceneryVisible} = require("src/world/village/village-renderer.js");
 const {LutetiaArt} = require("src/rendering/art/lutetia-art.js");
+const {VillageArt} = require("src/rendering/art/village-art.js");
 const {UnitArt} = require("src/rendering/art/unit-art.js");
 function createLutetia(){
  const size=2200,objects=[];
- const roads=[
-  [0,450,620,280,1420,650,2200,420,190],
-  [0,1150,650,940,1400,1270,2200,1050,210],
-  [0,1840,700,1980,1450,1600,2200,1810,185],
-  [440,0,220,730,690,1420,360,2200,185],
-  [1110,0,1390,650,870,1500,1170,2200,200],
-  [1820,0,1580,700,2080,1500,1750,2200,185]
+ // Irregular neighbourhoods leave winding streets between raised courtyard islands.
+ const blocks=[
+  [180,340,410],[640,300,360],[1490,290,360],[2050,350,410],
+  [160,820,390],[690,970,430],[1510,960,440],[2090,910,390],
+  [150,1350,420],[1990,1400,420],
+  [370,1750,450],[800,1850,400],[1510,1810,440],[2050,1900,400],
+  [160,2190,390],[730,2280,400],[1310,2230,400],[1900,2340,420]
  ];
- for(const [row,y] of [310,830,1560,2110].entries())for(const [col,x] of [180,750,1440,2040].entries()){
-  if(row===1&&col===2)continue;
-  const width=310+(row+col)%3*18;
-  objects.push({x:x+Math.sin(row*3+col)*28,y,art:(row+col)%2?'townhouseOchre':'townhouse',width,footprint:[-width*.35,-width*.36,width*.7,width*.34]});
- }
- objects.push({x:1440,y:825,art:'guardpost',width:330,footprint:[-115,-119,230,115]});
- // Stalls occupy the market perimeter, leaving the centre and four exits open.
- const residents=[{unit:'merchant',x:880,y:900},{unit:'merchant',x:1130,y:890},{unit:'merchant',x:1360,y:945},{unit:'merchant',x:830,y:1275},{unit:'merchant',x:1290,y:1330},{unit:'merchant',x:1560,y:1770}];
- const collision=VillageCollision.create(objects,size);
+ blocks.forEach(([x,y,width],i)=>objects.push({x,y,width,art:i%3===1?'villa-v2':'townhouse-v2',flip:i%3===0,footprint:[-width*.32,-width*.30,width*.64,width*.26],island:true}));
+ objects.push({x:1800,y:650,width:410,art:'guardpost',footprint:[-135,-145,270,135],island:true});
+ objects.push({x:1100,y:740,width:610,art:'garden-v2',footprint:[-230,-215,460,195],island:true});
+ objects.push({x:1100,y:1460,width:390,art:'fountain-v2',footprint:[-150,-190,300,170],island:true});
+ for(const [x,y,width] of [[65,540,170],[440,700,165],[2100,600,180],[450,1300,200],[1740,1290,180],[70,1660,180],[1820,1680,170],[450,2060,170],[1700,2120,190]])objects.push({x,y,width,art:'trees',footprint:[-25,-28,50,25]});
+ const residents=[{unit:'merchant',x:790,y:1005},{unit:'merchant',x:1530,y:1030},{unit:'merchant',x:1750,y:730},{unit:'merchant',x:300,y:1410},{unit:'merchant',x:850,y:1920},{unit:'merchant',x:1880,y:1480}];
+ residents.forEach((r,i)=>objects.push({x:r.x,y:r.y+8,width:116,art:'awning',color:['#bf4133','#d6aa48','#60834c','#4e7f98','#a54336','#54835a'][i]}));
+ const lamps=[];
+ for(const [x,y] of [[405,380],[830,340],[1370,350],[1900,390],[400,865],[825,995],[1320,1000],[1890,980],[535,1350],[1650,1390],[610,1760],[1320,1850],[1810,1920],[430,2190],[1020,2160],[1710,2250]])lamps.push({x,y,width:56,art:'lamp'});
+ objects.push(...lamps);
+ const collision=VillageCollision.create(objects.filter(o=>o.footprint),size);
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
  const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
  let ground=null;
  function paint(g){
-  g.fillStyle='#a4977b';g.fillRect(0,0,size,size);
-  for(let i=0;i<3500;i++){g.fillStyle=i%2?'#746d5520':'#e2d2a02a';g.fillRect(i*397%size,i*673%size,3+i%8,2);}
-  let paving='#b7ad96';
+  let paving='#a5aaa0';
   if(typeof document!=='undefined'){
-   const tile=document.createElement('canvas');tile.width=96;tile.height=64;const t=tile.getContext('2d');
-   t.fillStyle='#79786c';t.fillRect(0,0,96,64);
-   for(let y=0;y<4;y++)for(let x=-1;x<6;x++){
-    const px=x*20+(y%2)*10,py=y*16,variation=(x+y+8)%4;
-    t.fillStyle=['#aaa997','#a1a38f','#b5b09d','#989d8c'][variation];
-    t.beginPath();t.roundRect(px+1,py+1,18,14,[3,4,3,2]);t.fill();
-    t.strokeStyle='#d8d0b43a';t.lineWidth=1;t.beginPath();t.moveTo(px+4,py+3);t.lineTo(px+15,py+3);t.stroke();
-    t.fillStyle='#62695722';t.fillRect(px+5+variation,py+7,2,1);
+   const tile=document.createElement('canvas');tile.width=120;tile.height=64;const t=tile.getContext('2d');
+   t.fillStyle='#7e877c';t.fillRect(0,0,120,64);
+   for(let y=0;y<4;y++)for(let x=-1;x<7;x++){
+    const px=x*20+(y%2)*10,py=y*16,v=(x*3+y+20)%5;
+    t.fillStyle=['#a9afa1','#b7baaa','#a0a99e','#b2b6a8','#a8b0a6'][v];
+    t.beginPath();t.roundRect(px+1,py+1,18,14,[4,5,4,3]);t.fill();
+    t.strokeStyle='#e2e0c660';t.lineWidth=1;t.beginPath();t.moveTo(px+4,py+3);t.lineTo(px+14,py+3);t.stroke();
    }
    paving=g.createPattern(tile,'repeat');
   }
-  g.lineCap='round';g.lineJoin='round';
-  for(const [extra,color] of [[14,'#6e7467'],[7,'#d0c5a4'],[0,paving]])for(const [x,y,a,b,c,d,e,f,w] of roads){g.strokeStyle=color;g.lineWidth=w+extra;g.beginPath();g.moveTo(x,y);g.bezierCurveTo(a,b,c,d,e,f);g.stroke();}
-  g.fillStyle=paving;g.beginPath();g.ellipse(1100,1110,365,290,0,0,Math.PI*2);g.fill();
-  g.strokeStyle='#d2c8ae';g.lineWidth=4;g.beginPath();g.ellipse(1100,1110,155,116,0,0,Math.PI*2);g.stroke();
+  g.fillStyle=paving;g.fillRect(0,0,size,size);
+  // Curved limestone kerbs and paved aprons follow each building, rather than a grid.
+  for(const o of objects.filter(o=>o.island)){
+   const garden=o.art==='garden-v2',fountain=o.art==='fountain-v2';
+   const w=o.width*(garden?.98:fountain?1.12:1.02),h=o.width*(garden?.55:fountain?.55:.46),cy=o.y-h*.34;
+   g.beginPath();
+   if(garden||fountain)g.ellipse(o.x,cy,w/2,h/2,-.1,0,Math.PI*2);
+   else {
+    g.moveTo(o.x-w*.5,cy+h*.05);g.quadraticCurveTo(o.x-w*.55,cy-h*.2,o.x-w*.33,cy-h*.5);
+    g.lineTo(o.x+w*.27,cy-h*.5);g.quadraticCurveTo(o.x+w*.43,cy-h*.5,o.x+w*.49,cy-h*.05);
+    g.lineTo(o.x+w*.53,cy+h*.25);g.quadraticCurveTo(o.x+w*.55,cy+h*.48,o.x+w*.3,cy+h*.5);
+    g.lineTo(o.x-w*.29,cy+h*.5);g.quadraticCurveTo(o.x-w*.43,cy+h*.5,o.x-w*.5,cy+h*.05);g.closePath();
+   }
+   g.fillStyle='#c9bd9d';g.fill();g.lineWidth=9;g.strokeStyle='#8b8c77';g.stroke();g.lineWidth=5;g.strokeStyle='#e8dbb8';g.stroke();
+   g.save();g.clip();g.strokeStyle='#ada98e';g.lineWidth=1;
+   for(let y=cy-h;y<cy+h;y+=22){g.beginPath();g.moveTo(o.x-w,y);g.lineTo(o.x+w,y);g.stroke();for(let x=o.x-w;x<o.x+w;x+=34){g.beginPath();g.moveTo(x+(Math.round(y/22)%2)*17,y);g.lineTo(x+(Math.round(y/22)%2)*17,y+22);g.stroke();}}
+   g.restore();
+  }
  }
  function drawGround(g){
   if(!ground&&typeof document!=='undefined'){ground=document.createElement('canvas');ground.width=ground.height=size;paint(ground.getContext('2d'));}
   if(ground)g.drawImage(ground,0,0);else paint(g);
  }
+ function drawLamp(g,o){
+  const {x,y}=o;g.strokeStyle='#313d35';g.lineWidth=5;g.beginPath();g.moveTo(x,y-5);g.lineTo(x,y-88);g.stroke();
+  g.fillStyle='#313d35';g.beginPath();g.ellipse(x,y-3,10,4,0,0,Math.PI*2);g.fill();
+  g.fillStyle='#ffde7d';g.fillRect(x-7,y-102,14,20);g.strokeRect(x-7,y-102,14,20);
+  g.beginPath();g.moveTo(x-12,y-103);g.lineTo(x,y-116);g.lineTo(x+12,y-103);g.closePath();g.fillStyle='#364438';g.fill();
+ }
  function drawObject(g,o,p,view){
-  if(!sceneryVisible(o,o.width,view))return;
+  if(!sceneryVisible(o,Math.max(o.width,120),view))return;
   g.save();if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.45)g.globalAlpha=.45;
-  if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.35,o.y-o.width*.7,o.width*.7,o.width*.7);}
+  if(o.art==='awning'){
+   const {x,y}=o;g.strokeStyle='#664529';g.lineWidth=4;g.beginPath();g.moveTo(x-48,y);g.lineTo(x-48,y-97);g.moveTo(x+48,y);g.lineTo(x+48,y-97);g.stroke();
+   for(let i=0;i<6;i++){g.fillStyle=i%2?'#f3dfb0':o.color;g.beginPath();g.moveTo(x-48+i*16,y-100);g.lineTo(x-32+i*16,y-100);g.lineTo(x-38+i*19,y-70);g.lineTo(x-57+i*19,y-70);g.closePath();g.fill();g.fillRect(x-57+i*19,y-70,19,7);}
+   g.strokeStyle='#755b37';g.lineWidth=2;g.beginPath();g.moveTo(x-48,y-100);g.lineTo(x+48,y-100);g.stroke();
+  }
+  else if(o.art==='lamp')drawLamp(g,o);
+  else if(o.art==='trees')VillageArt.draw(g,'trees',o.x,o.y,o.width);
+  else if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width,o.flip)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.3,o.y-o.width*.3,o.width*.6,o.width*.3);}
   g.restore();
  }
- return {size,objects,roads,residents,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);for(const o of depthObjects)drawObject(g,o);for(const e of residents)UnitArt.draw(g,{...e,heading:0});}};
+ return {size,objects,roads:[],residents,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
 }
 
 Object.defineProperty(exports, "createLutetia", {get: () => createLutetia});
@@ -754,11 +788,21 @@ const {AssetPaths} = require("src/rendering/asset-paths.js");
 // Only the architecture row is used. Characters use the game's shared frame loader.
 const cells={townhouse:[0,1],townhouseOchre:[1,1],guardpost:[2,1]};
 let atlas=null;
+const sprites={},status={};
 if(typeof Image!=='undefined'){
+ for(const name of ['townhouse-v2','villa-v2','fountain-v2','garden-v2']){
+  const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('lutetia/'+name+'.png');sprites[name]=sprite;
+ }
  const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('lutetia/atlas-v1.png');
 }
 const LutetiaArt={
+ status,
  draw(g,kind,x,y,width,flip=false){
+  if(sprites[kind]){
+   if(status[kind]!=='ready')return false;
+   const sprite=sprites[kind],height=width*sprite.naturalHeight/sprite.naturalWidth;
+   g.save();g.translate(x,y);if(flip)g.scale(-1,1);g.drawImage(sprite,-width/2,-height,width,height);g.restore();return true;
+  }
   const cell=cells[kind];if(!cell||!atlas)return false;
   const w=atlas.naturalWidth/3,h=atlas.naturalHeight/2;
   g.save();g.translate(x,y);if(flip)g.scale(-1,1);
@@ -772,15 +816,19 @@ Object.defineProperty(exports, "LutetiaArt", {get: () => LutetiaArt});
 "src/rendering/art/unit-art.js": function(require, exports){
 const {CharacterFrames} = require("src/rendering/character-frames.js");
 const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
-function get(name,action='idle',progress=0){return names.includes(name)?CharacterFrames.get(name,action,progress):null;}
+function get(name,action='idle',progress=0,variant=0){
+ const id=name==='citizen'?'citizen-'+((Math.floor(variant)%3+3)%3):name;
+ return names.includes(id)?CharacterFrames.get(id,action,progress):null;
+}
  function draw(g,e){
   const reaction=e.hurt||e.visualHurt,attack=e.action?.warning?null:e.action;
   const ramImpact=e.unit==='ram'&&e.charge&&e.charge.left>1.14;
   const strike=e.strike;
   const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
   const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:e.walk||0;
-  const frame=get(e.unit,action,progress);if(!frame)return false;
+  const frame=get(e.unit,action,progress,e.variant??e.phase??0);if(!frame)return false;
   const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
+  if(!flip){g.drawImage(frame,Math.round(e.x)-CharacterFrames.manifest.anchor[0],Math.round(e.y)-CharacterFrames.manifest.anchor[1]);return true;}
   g.save();g.translate(Math.round(e.x),Math.round(e.y));if(flip)g.scale(-1,1);
   g.drawImage(frame,-CharacterFrames.manifest.anchor[0],-CharacterFrames.manifest.anchor[1]);g.restore();return true;
  }
@@ -863,7 +911,7 @@ Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
 },
 "data/animations/character-frames.js": function(require, exports){
 // Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
-const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/frames/boar/walk/0.png","characters/frames/boar/walk/1.png","characters/frames/boar/walk/2.png","characters/frames/boar/walk/3.png"],"attack":["characters/frames/boar/attack/0.png","characters/frames/boar/attack/1.png","characters/frames/boar/attack/2.png","characters/frames/boar/attack/3.png"],"hurt":["characters/frames/boar/hurt/0.png","characters/frames/boar/hurt/1.png","characters/frames/boar/hurt/2.png","characters/frames/boar/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/frames/stone-squad/walk/0.png","characters/frames/stone-squad/walk/1.png","characters/frames/stone-squad/walk/2.png","characters/frames/stone-squad/walk/3.png"],"attack":["characters/frames/stone-squad/attack/0.png","characters/frames/stone-squad/attack/1.png","characters/frames/stone-squad/attack/2.png","characters/frames/stone-squad/attack/3.png"],"hurt":["characters/frames/stone-squad/hurt/0.png","characters/frames/stone-squad/hurt/1.png","characters/frames/stone-squad/hurt/2.png","characters/frames/stone-squad/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/frames/netter/walk/0.png","characters/frames/netter/walk/1.png","characters/frames/netter/walk/2.png","characters/frames/netter/walk/3.png"],"attack":["characters/frames/netter/attack/0.png","characters/frames/netter/attack/1.png","characters/frames/netter/attack/2.png","characters/frames/netter/attack/3.png"],"hurt":["characters/frames/netter/hurt/0.png","characters/frames/netter/hurt/1.png","characters/frames/netter/hurt/2.png","characters/frames/netter/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/frames/tower/walk/0.png","characters/frames/tower/walk/1.png","characters/frames/tower/walk/2.png","characters/frames/tower/walk/3.png"],"attack":["characters/frames/tower/attack/0.png","characters/frames/tower/attack/1.png","characters/frames/tower/attack/2.png","characters/frames/tower/attack/3.png"],"hurt":["characters/frames/tower/hurt/0.png","characters/frames/tower/hurt/1.png","characters/frames/tower/hurt/2.png","characters/frames/tower/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/frames/cavalry/walk/0.png","characters/frames/cavalry/walk/1.png","characters/frames/cavalry/walk/2.png","characters/frames/cavalry/walk/3.png"],"attack":["characters/frames/cavalry/attack/0.png","characters/frames/cavalry/attack/1.png","characters/frames/cavalry/attack/2.png","characters/frames/cavalry/attack/3.png"],"hurt":["characters/frames/cavalry/hurt/0.png","characters/frames/cavalry/hurt/1.png","characters/frames/cavalry/hurt/2.png","characters/frames/cavalry/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/frames/caius/walk/0.png","characters/frames/caius/walk/1.png","characters/frames/caius/walk/2.png","characters/frames/caius/walk/3.png"],"attack":["characters/frames/caius/attack/0.png","characters/frames/caius/attack/1.png","characters/frames/caius/attack/2.png","characters/frames/caius/attack/3.png"],"hurt":["characters/frames/caius/hurt/0.png","characters/frames/caius/hurt/1.png","characters/frames/caius/hurt/2.png","characters/frames/caius/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/frames/wine/walk/0.png","characters/frames/wine/walk/1.png","characters/frames/wine/walk/2.png","characters/frames/wine/walk/3.png"],"attack":["characters/frames/wine/attack/0.png","characters/frames/wine/attack/1.png","characters/frames/wine/attack/2.png","characters/frames/wine/attack/3.png"],"hurt":["characters/frames/wine/hurt/0.png","characters/frames/wine/hurt/1.png","characters/frames/wine/hurt/2.png","characters/frames/wine/hurt/3.png"]},"idle":{"action":"attack","index":3}},"auxiliary":{"renderer":"unit","actions":{"walk":["characters/frames/auxiliary/walk/0.png","characters/frames/auxiliary/walk/1.png","characters/frames/auxiliary/walk/2.png","characters/frames/auxiliary/walk/3.png"],"attack":["characters/frames/auxiliary/attack/0.png","characters/frames/auxiliary/attack/1.png","characters/frames/auxiliary/attack/2.png","characters/frames/auxiliary/attack/3.png"],"hurt":["characters/frames/auxiliary/hurt/0.png","characters/frames/auxiliary/hurt/1.png","characters/frames/auxiliary/hurt/2.png","characters/frames/auxiliary/hurt/3.png"]},"idle":{"action":"attack","index":3}},"merchant":{"renderer":"unit","actions":{"walk":["characters/frames/merchant/walk/0.png","characters/frames/merchant/walk/1.png","characters/frames/merchant/walk/2.png","characters/frames/merchant/walk/3.png"],"attack":["characters/frames/merchant/attack/0.png","characters/frames/merchant/attack/1.png","characters/frames/merchant/attack/2.png","characters/frames/merchant/attack/3.png"],"hurt":["characters/frames/merchant/hurt/0.png","characters/frames/merchant/hurt/1.png","characters/frames/merchant/hurt/2.png","characters/frames/merchant/hurt/3.png"]},"idle":{"action":"walk","index":0}},"courtesan":{"renderer":"unit","actions":{"walk":["characters/frames/courtesan/walk/0.png","characters/frames/courtesan/walk/1.png","characters/frames/courtesan/walk/2.png","characters/frames/courtesan/walk/3.png"],"attack":["characters/frames/courtesan/attack/0.png","characters/frames/courtesan/attack/1.png","characters/frames/courtesan/attack/2.png","characters/frames/courtesan/attack/3.png"],"hurt":["characters/frames/courtesan/hurt/0.png","characters/frames/courtesan/hurt/1.png","characters/frames/courtesan/hurt/2.png","characters/frames/courtesan/hurt/3.png"]},"idle":{"action":"attack","index":3}}}};
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/frames/boar/walk/0.png","characters/frames/boar/walk/1.png","characters/frames/boar/walk/2.png","characters/frames/boar/walk/3.png"],"attack":["characters/frames/boar/attack/0.png","characters/frames/boar/attack/1.png","characters/frames/boar/attack/2.png","characters/frames/boar/attack/3.png"],"hurt":["characters/frames/boar/hurt/0.png","characters/frames/boar/hurt/1.png","characters/frames/boar/hurt/2.png","characters/frames/boar/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/frames/stone-squad/walk/0.png","characters/frames/stone-squad/walk/1.png","characters/frames/stone-squad/walk/2.png","characters/frames/stone-squad/walk/3.png"],"attack":["characters/frames/stone-squad/attack/0.png","characters/frames/stone-squad/attack/1.png","characters/frames/stone-squad/attack/2.png","characters/frames/stone-squad/attack/3.png"],"hurt":["characters/frames/stone-squad/hurt/0.png","characters/frames/stone-squad/hurt/1.png","characters/frames/stone-squad/hurt/2.png","characters/frames/stone-squad/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/frames/netter/walk/0.png","characters/frames/netter/walk/1.png","characters/frames/netter/walk/2.png","characters/frames/netter/walk/3.png"],"attack":["characters/frames/netter/attack/0.png","characters/frames/netter/attack/1.png","characters/frames/netter/attack/2.png","characters/frames/netter/attack/3.png"],"hurt":["characters/frames/netter/hurt/0.png","characters/frames/netter/hurt/1.png","characters/frames/netter/hurt/2.png","characters/frames/netter/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/frames/tower/walk/0.png","characters/frames/tower/walk/1.png","characters/frames/tower/walk/2.png","characters/frames/tower/walk/3.png"],"attack":["characters/frames/tower/attack/0.png","characters/frames/tower/attack/1.png","characters/frames/tower/attack/2.png","characters/frames/tower/attack/3.png"],"hurt":["characters/frames/tower/hurt/0.png","characters/frames/tower/hurt/1.png","characters/frames/tower/hurt/2.png","characters/frames/tower/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/frames/cavalry/walk/0.png","characters/frames/cavalry/walk/1.png","characters/frames/cavalry/walk/2.png","characters/frames/cavalry/walk/3.png"],"attack":["characters/frames/cavalry/attack/0.png","characters/frames/cavalry/attack/1.png","characters/frames/cavalry/attack/2.png","characters/frames/cavalry/attack/3.png"],"hurt":["characters/frames/cavalry/hurt/0.png","characters/frames/cavalry/hurt/1.png","characters/frames/cavalry/hurt/2.png","characters/frames/cavalry/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/frames/caius/walk/0.png","characters/frames/caius/walk/1.png","characters/frames/caius/walk/2.png","characters/frames/caius/walk/3.png"],"attack":["characters/frames/caius/attack/0.png","characters/frames/caius/attack/1.png","characters/frames/caius/attack/2.png","characters/frames/caius/attack/3.png"],"hurt":["characters/frames/caius/hurt/0.png","characters/frames/caius/hurt/1.png","characters/frames/caius/hurt/2.png","characters/frames/caius/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/frames/wine/walk/0.png","characters/frames/wine/walk/1.png","characters/frames/wine/walk/2.png","characters/frames/wine/walk/3.png"],"attack":["characters/frames/wine/attack/0.png","characters/frames/wine/attack/1.png","characters/frames/wine/attack/2.png","characters/frames/wine/attack/3.png"],"hurt":["characters/frames/wine/hurt/0.png","characters/frames/wine/hurt/1.png","characters/frames/wine/hurt/2.png","characters/frames/wine/hurt/3.png"]},"idle":{"action":"attack","index":3}},"auxiliary":{"renderer":"unit","actions":{"walk":["characters/frames/auxiliary/walk/0.png","characters/frames/auxiliary/walk/1.png","characters/frames/auxiliary/walk/2.png","characters/frames/auxiliary/walk/3.png"],"attack":["characters/frames/auxiliary/attack/0.png","characters/frames/auxiliary/attack/1.png","characters/frames/auxiliary/attack/2.png","characters/frames/auxiliary/attack/3.png"],"hurt":["characters/frames/auxiliary/hurt/0.png","characters/frames/auxiliary/hurt/1.png","characters/frames/auxiliary/hurt/2.png","characters/frames/auxiliary/hurt/3.png"]},"idle":{"action":"attack","index":3}},"merchant":{"renderer":"unit","actions":{"walk":["characters/frames/merchant/walk/0.png","characters/frames/merchant/walk/1.png","characters/frames/merchant/walk/2.png","characters/frames/merchant/walk/3.png"],"attack":["characters/frames/merchant/attack/0.png","characters/frames/merchant/attack/1.png","characters/frames/merchant/attack/2.png","characters/frames/merchant/attack/3.png"],"hurt":["characters/frames/merchant/hurt/0.png","characters/frames/merchant/hurt/1.png","characters/frames/merchant/hurt/2.png","characters/frames/merchant/hurt/3.png"]},"idle":{"action":"walk","index":0}},"courtesan":{"renderer":"unit","actions":{"walk":["characters/frames/courtesan/walk/0.png","characters/frames/courtesan/walk/1.png","characters/frames/courtesan/walk/2.png","characters/frames/courtesan/walk/3.png"],"attack":["characters/frames/courtesan/attack/0.png","characters/frames/courtesan/attack/1.png","characters/frames/courtesan/attack/2.png","characters/frames/courtesan/attack/3.png"],"hurt":["characters/frames/courtesan/hurt/0.png","characters/frames/courtesan/hurt/1.png","characters/frames/courtesan/hurt/2.png","characters/frames/courtesan/hurt/3.png"]},"idle":{"action":"attack","index":3}},"citizen-0":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-0/walk/0.png","characters/frames/citizen-0/walk/1.png","characters/frames/citizen-0/walk/2.png","characters/frames/citizen-0/walk/3.png"],"attack":["characters/frames/citizen-0/walk/0.png"],"hurt":["characters/frames/citizen-0/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-1":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-1/walk/0.png","characters/frames/citizen-1/walk/1.png","characters/frames/citizen-1/walk/2.png","characters/frames/citizen-1/walk/3.png"],"attack":["characters/frames/citizen-1/walk/0.png"],"hurt":["characters/frames/citizen-1/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-2":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-2/walk/0.png","characters/frames/citizen-2/walk/1.png","characters/frames/citizen-2/walk/2.png","characters/frames/citizen-2/walk/3.png"],"attack":["characters/frames/citizen-2/walk/0.png"],"hurt":["characters/frames/citizen-2/walk/2.png"]},"idle":{"action":"walk","index":0}}}};
 
 Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
 },
@@ -1801,11 +1849,11 @@ const waves={
 
 const lutetiaWaves={
   stages:[
-    {time:0,interval:1.5,batch:1,cap:24,weights:[['roman',75],['auxiliary',25]]},
+    {time:0,interval:1.5,batch:1,cap:36,weights:[['roman',75],['auxiliary',25]]},
     {time:40,interval:1.2,batch:1,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
-    {time:85,interval:1,batch:2,cap:50,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
-    {time:140,interval:.9,batch:2,cap:66,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
-    {time:210,interval:.8,batch:3,cap:84,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
+    {time:85,interval:1,batch:2,cap:60,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
+    {time:140,interval:.9,batch:2,cap:75,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
+    {time:210,interval:.8,batch:3,cap:90,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
   ],
   turtle:{first:125,every:70,cap:1,late:205,lateCap:2},
   civilians:{initial:24,maximum:40,every:2.5}
@@ -1838,15 +1886,14 @@ Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
 "src/systems/city-population.js": function(require, exports){
 const {expansionUnits} = require("data/enemies/units.js");
 const {lutetiaWaves} = require("data/enemies/waves.js");
-const civilianTypes=['citizenBaker','citizenPorter','citizenMatron','citizenScribe'];
+const civilianVariants=3;
 function seedCityCrowd(c){
  if(c.state.map!=='lutetia')return;
  for(let i=0;i<lutetiaWaves.civilians.initial;i++){
-  const unit=civilianTypes[i%4];
   for(let attempt=0;attempt<80;attempt++){
    const p={x:c.rand(100,c.WORLD-100),y:c.rand(120,c.WORLD-100)};
    if(c.dist(p,c.state.p)<140||c.Village.blocked(p.x,p.y,12))continue;
-   c.spawn(unit,false,p);break;
+   c.spawn('citizen',false,{...p,variant:i%civilianVariants});break;
   }
  }
  c.state.crowdNext=lutetiaWaves.civilians.every;
@@ -1854,9 +1901,9 @@ function seedCityCrowd(c){
 function replenishCityCrowd(c){
  const s=c.state;if(s.map!=='lutetia'||s.t<(s.crowdNext||0))return;
  s.crowdNext=s.t+lutetiaWaves.civilians.every;
- const counts=civilianTypes.map(unit=>s.enemies.filter(e=>e.unit===unit&&e.hp>0).length);
+ const count=s.enemies.filter(e=>e.unit==='citizen'&&e.hp>0).length;
  const desired=Math.min(lutetiaWaves.civilians.maximum,24+Math.floor(s.t/15));
- if(counts.reduce((a,b)=>a+b,0)<desired)c.spawn(civilianTypes[counts.indexOf(Math.min(...counts))]);
+ if(count<desired)c.spawn('citizen');
 }
 function updateCityPedestrian(e,c,dt){
  const civilian=expansionUnits[e.unit]?.civilian;
@@ -1904,17 +1951,14 @@ function updateCityPedestrian(e,c,dt){
  return true;
 }
 
-Object.defineProperty(exports, "civilianTypes", {get: () => civilianTypes});
+Object.defineProperty(exports, "civilianVariants", {get: () => civilianVariants});
 Object.defineProperty(exports, "seedCityCrowd", {get: () => seedCityCrowd});
 Object.defineProperty(exports, "replenishCityCrowd", {get: () => replenishCityCrowd});
 Object.defineProperty(exports, "updateCityPedestrian", {get: () => updateCityPedestrian});
 },
 "data/enemies/units.js": function(require, exports){
 const expansionUnits={
-  citizenBaker:{name:'Пекарь',hp:28,speed:104,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
-  citizenPorter:{name:'Носильщик',hp:32,speed:116,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#b2bd8b',civilian:true},
-  citizenMatron:{name:'Матрона',hp:26,speed:94,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#8fc6ba',civilian:true},
-  citizenScribe:{name:'Писец',hp:22,speed:124,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#e4c88b',civilian:true},
+  citizen:{name:'Горожанин',hp:28,speed:110,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
   auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
   merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
   courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
@@ -2025,6 +2069,7 @@ function spawn(unit,boss=false,position=null){
         vy:0,
         heading:sessionContext.Math.atan2(p.y-y,p.x-x)
       };
+      if(unit==='citizen')e.variant=Number.isInteger(position?.variant)?((position.variant%3)+3)%3:sessionContext.Math.floor(e.phase);
       prepareExpansion(e,sessionContext);
       s.enemies.push(e);
       return e;
@@ -2773,6 +2818,7 @@ function drawExpansion(g,e){
 
 function expansionTelegraph(g,e){
   if(!expansionUnits[e.unit])return false;
+  if(!e.crush&&(!e.action||e.action.hit))return true;
   g.save();g.strokeStyle='#ffd38a';g.fillStyle='#e79e4938';g.lineWidth=2;
   if(e.crush){g.beginPath();g.arc(e.x,e.y,85,0,Math.PI*2);g.fill();g.stroke();}
   else if(e.action&&!e.action.hit){
@@ -3613,6 +3659,22 @@ let Legion;
 'use strict';
 Legion=(()=>{
  const units=unitDefinitions;
+ const labels=new Map();
+ function drawLabel(g,u,x,y){
+  let label=labels.get(u);
+  if(!label&&typeof document!=='undefined'){
+   const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+   ctx.font='bold 10px monospace';
+   const width=Math.ceil(ctx.measureText(u.name).width)+4,height=18;
+   // Render once at 2x for both standard and high-DPI game canvases.
+   canvas.width=width*2;canvas.height=height*2;
+   ctx.scale(2,2);ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillStyle=u.color;
+   ctx.fillText(u.name,width/2,13);
+   label={canvas,width,height};labels.set(u,label);
+  }
+  if(label)g.drawImage(label.canvas,x-label.width/2,y-13,label.width,label.height);
+  else {g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,x,y);}
+ }
  function wave(t,r=Math.random()){
   for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
  }
@@ -3640,7 +3702,7 @@ Legion=(()=>{
    sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
    if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
   }
-  if(e.unit!=='roman'&&!e.boss&&!u.civilian){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
+  if(e.unit!=='roman'&&!e.boss&&!u.civilian)drawLabel(g,u,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));
  }
  return {units,wave,mitigation,telegraph,draw,projectile};
 })();
@@ -3656,8 +3718,8 @@ let Corpses;
 Corpses=(()=>{
  const lifetime=8,fadeTime=2,limit=180,cache=new Map();
  function pose(e,sprite){
-  const variant=Math.floor(e.phase||0)%3;
-  const art=typeof UnitArt!=='undefined'?UnitArt.get(e.unit,'hurt',.3):null;
+  const variant=Math.floor(e.variant??e.phase??0)%3;
+  const art=typeof UnitArt!=='undefined'?UnitArt.get(e.unit,'hurt',.3,variant):null;
   const roman=typeof AnimationArt!=='undefined'?AnimationArt.get(e.type,variant,e.boss?'attack':'hurt',.3):null;
   const key=`${e.unit}:${variant}:${!!art}:${!!roman}`;
   if(cache.has(key))return cache.get(key);

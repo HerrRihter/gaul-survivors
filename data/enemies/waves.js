@@ -14,11 +14,11 @@ export const waves={
 
 export const lutetiaWaves={
   stages:[
-    {time:0,interval:1.5,batch:1,cap:24,weights:[['roman',75],['auxiliary',25]]},
+    {time:0,interval:1.5,batch:1,cap:36,weights:[['roman',75],['auxiliary',25]]},
     {time:40,interval:1.2,batch:1,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
-    {time:85,interval:1,batch:2,cap:50,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
-    {time:140,interval:.9,batch:2,cap:66,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
-    {time:210,interval:.8,batch:3,cap:84,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
+    {time:85,interval:1,batch:2,cap:60,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
+    {time:140,interval:.9,batch:2,cap:75,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
+    {time:210,interval:.8,batch:3,cap:90,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
   ],
   turtle:{first:125,every:70,cap:1,late:205,lateCap:2},
   civilians:{initial:24,maximum:40,every:2.5}

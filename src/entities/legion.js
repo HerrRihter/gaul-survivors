@@ -7,6 +7,22 @@ export let Legion;
 'use strict';
 Legion=(()=>{
  const units=unitDefinitions;
+ const labels=new Map();
+ function drawLabel(g,u,x,y){
+  let label=labels.get(u);
+  if(!label&&typeof document!=='undefined'){
+   const canvas=document.createElement('canvas'),ctx=canvas.getContext('2d');
+   ctx.font='bold 10px monospace';
+   const width=Math.ceil(ctx.measureText(u.name).width)+4,height=18;
+   // Render once at 2x for both standard and high-DPI game canvases.
+   canvas.width=width*2;canvas.height=height*2;
+   ctx.scale(2,2);ctx.font='bold 10px monospace';ctx.textAlign='center';ctx.fillStyle=u.color;
+   ctx.fillText(u.name,width/2,13);
+   label={canvas,width,height};labels.set(u,label);
+  }
+  if(label)g.drawImage(label.canvas,x-label.width/2,y-13,label.width,label.height);
+  else {g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,x,y);}
+ }
  function wave(t,r=Math.random()){
   for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
  }
@@ -34,7 +50,7 @@ Legion=(()=>{
    sprite(g,e.type,e.x,e.y,2.5,Math.cos(e.heading)<0,0,e.hit>0,e.phase,e);
    if(e.unit==='spear'||e.unit==='pilum'){g.strokeStyle='#ccbd86';g.lineWidth=3;g.beginPath();g.moveTo(e.x-10,e.y-14);g.lineTo(e.x+Math.cos(e.heading)*55,e.y-72);g.stroke();}
   }
-  if(e.unit!=='roman'&&!e.boss&&!u.civilian){g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));}
+  if(e.unit!=='roman'&&!e.boss&&!u.civilian)drawLabel(g,u,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));
  }
  return {units,wave,mitigation,telegraph,draw,projectile};
 })();
