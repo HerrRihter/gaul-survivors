@@ -19,7 +19,7 @@
 Для первого персонажа достаточно 12 изображений:
 
 ```text
-assets/runtime/characters/frames/bravix/
+assets/runtime/characters/heroes/bravix/animations/
   walk/
     0.png
     1.png
@@ -50,22 +50,22 @@ assets/runtime/characters/frames/bravix/
   "renderer": "villager",
   "actions": {
     "walk": [
-      "characters/frames/bravix/walk/0.png",
-      "characters/frames/bravix/walk/1.png",
-      "characters/frames/bravix/walk/2.png",
-      "characters/frames/bravix/walk/3.png"
+      "characters/heroes/bravix/animations/walk/0.png",
+      "characters/heroes/bravix/animations/walk/1.png",
+      "characters/heroes/bravix/animations/walk/2.png",
+      "characters/heroes/bravix/animations/walk/3.png"
     ],
     "attack": [
-      "characters/frames/bravix/attack/0.png",
-      "characters/frames/bravix/attack/1.png",
-      "characters/frames/bravix/attack/2.png",
-      "characters/frames/bravix/attack/3.png"
+      "characters/heroes/bravix/animations/attack/0.png",
+      "characters/heroes/bravix/animations/attack/1.png",
+      "characters/heroes/bravix/animations/attack/2.png",
+      "characters/heroes/bravix/animations/attack/3.png"
     ],
     "hurt": [
-      "characters/frames/bravix/hurt/0.png",
-      "characters/frames/bravix/hurt/1.png",
-      "characters/frames/bravix/hurt/2.png",
-      "characters/frames/bravix/hurt/3.png"
+      "characters/heroes/bravix/animations/hurt/0.png",
+      "characters/heroes/bravix/animations/hurt/1.png",
+      "characters/heroes/bravix/animations/hurt/2.png",
+      "characters/heroes/bravix/animations/hurt/3.png"
     ]
   },
   "idle": {"action": "attack", "index": 3}
@@ -165,7 +165,7 @@ npm start
 
 ## Если нужен новый враг
 
-Рисунки и структура реестра те же, но `renderer` — `unit`. Добавьте параметры в `data/enemies/units.js` и правило появления в `data/enemies/waves.js`.
+Рисунки и структура реестра те же, но `renderer` — `unit`, а кадры находятся в `assets/runtime/characters/enemies/<id>/animations/<action>/`. Добавьте параметры в `data/enemies/units.js` и правило появления в `data/enemies/waves.js`.
 
 Пример обычного врага ближнего боя:
 

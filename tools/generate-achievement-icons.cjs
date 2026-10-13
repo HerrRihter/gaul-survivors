@@ -558,8 +558,7 @@ const icons = {
 };
 
 const dirs = [
-  path.resolve(__dirname, '../assets/ui/achivements'),
-  path.resolve(__dirname, '../assets/ui/achievements')
+  path.resolve(__dirname, '../assets/runtime/ui/achievements')
 ];
 
 for (const dir of dirs) {
@@ -574,4 +573,4 @@ for (const [name, generator] of Object.entries(icons)) {
   console.log(`Generated: ${name} (${buf.length} bytes)`);
 }
 
-console.log('All 14 achievement icons successfully generated in assets/ui/achivements and assets/ui/achievements!');
+console.log('All 14 achievement icons successfully generated in assets/runtime/ui/achievements!');

@@ -14,7 +14,7 @@ const {createServer}=require('./server.cjs');
    await page.goto(`http://127.0.0.1:${server.address().port}/`);await page.click('#start');await page.selectOption('#runMap','lutetia');await page.click('#runHeroStart');
    await page.waitForFunction(async()=>{const {UnitArt}=await import('/src/rendering/art/unit-art.js');return ['auxiliary','merchant','courtesan','citizen-0','citizen-1','citizen-2'].every(id=>UnitArt.get(id,'walk',0));});
    await page.waitForFunction(async()=>{const {LutetiaArt}=await import('/src/rendering/art/lutetia-art.js');return Object.values(LutetiaArt.status).every(s=>s==='ready');});
-   const count=await page.evaluate(async()=>{const {gameSession:s}=await import('/src/main.js');s.stop();s.state.p.inv=999;s.state.spawn=999;s.state.specialNext={courtesan:999};const n=s.state.enemies.filter(e=>e.unit==='merchant').length;s.spawn('auxiliary',false,{x:1200,y:1130});s.spawn('courtesan',false,{x:990,y:1180});s.state.gems.push({x:1010,y:1170,v:3});s.state.pickups.push({x:1040,y:1210,type:'food'});s.draw();return n;});
+   const count=await page.evaluate(async()=>{const {gameSession:s}=await import('/src/main.js');s.stop();s.state.p.inv=999;s.state.spawn=999;s.state.waveNext={courtesan:999};const n=s.state.enemies.filter(e=>e.unit==='merchant').length;s.spawn('auxiliary',false,{x:1200,y:1130});s.spawn('courtesan',false,{x:990,y:1180});s.state.gems.push({x:1010,y:1170,v:3});s.state.pickups.push({x:1040,y:1210,type:'food'});s.draw();return n;});
    assert.equal(count,6);assert.equal(await page.evaluate(()=>document.documentElement.scrollWidth>innerWidth),false);
    await page.screenshot({path:path.join(os.tmpdir(),`lutetia-${width}.png`)});
    await page.click('#pause');await page.click('#resume');assert.deepEqual(errors,[]);

@@ -19,6 +19,8 @@ function publicationFiles(inventory = manifest) {
 function buildSite({root = path.resolve(__dirname, '..'), inventory = manifest} = {}) {
   root = fs.realpathSync(root);
   if(inventory===manifest){
+    require('./check-structure.cjs').checkStructure({root, inventory});
+    require('./check-game-contracts.cjs').checkGameContracts();
     require('./generate-layouts.cjs').generateLayouts({root,check:true});
     require('./generate-file-bundles.cjs').generateFileBundles({root,check:true});
   }

@@ -1,4 +1,5 @@
 const {loadModule}=require('./load-modules.cjs');
+const {canvasContext}=require('./canvas-context.cjs');
 'use strict';
 
 const fs = require('node:fs');
@@ -10,7 +11,7 @@ const noop = () => {};
 async function createHarness({createSession = true} = {}) {
   const nodes = new Map(), listeners = {}, scheduled = new Map();
   let frameId = 0;
-  const context = new Proxy({measureText: text => ({width: text.length*6}),createRadialGradient: () => ({addColorStop: noop})}, {
+  const context = new Proxy(canvasContext({createRadialGradient: () => ({addColorStop: noop})}), {
     get: (target, key) => target[key] || noop,
     set: (target, key, value) => (target[key] = value, true),
   });

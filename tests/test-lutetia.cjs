@@ -21,7 +21,7 @@ const {loadModule}=require('./helpers/load-modules.cjs');
   for(let i=0;i<1300&&Math.hypot(p.x-target.x,p.y-target.y)>30;i++){const d=city.direction(p,target,17);city.move(p,d.x*6,d.y*6,17);}
   assert(Math.hypot(p.x-target.x,p.y-target.y)<30,'Market connects to city exit '+JSON.stringify(target));
  }
- function reset(){t.selectMap('lutetia');t.start();t.state.attack=1e6;t.state.spawn=1e6;t.state.specialNext={courtesan:1e6,wine:1e6};t.state.crowdNext=1e6;}
+ function reset(){t.selectMap('lutetia');t.start();t.state.attack=1e6;t.state.spawn=1e6;t.state.waveNext={courtesan:1e6,wine:1e6};t.state.populationNext=1e6;}
  function ticks(n){for(let i=0;i<n;i++)t.update(.02);}
  reset();assert.equal(t.state.enemies.filter(e=>e.unit==='merchant').length,6,'Merchants exist before first tick');
  assert.equal(t.state.enemies.filter(e=>e.unit.startsWith('citizen')).length,24);
@@ -38,11 +38,11 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  t.state.pickups=[{x:1105,y:1100,type:'food'}];ticks(1);assert.equal(t.state.p.hp,40,'Stolen food cannot also heal hero');
  reset();t.state.enemies=[];const spear=t.spawn('auxiliary',false,{x:1180,y:1100});
  ticks(1);assert(spear.action,'Spear winds up');t.state.p.y=1200;ticks(30);assert.equal(t.state.p.hp,t.state.p.max,'Spear attack can be dodged sideways');
- reset();t.state.spawn=0;t.state.specialNext={};t.state.t=160;t.state.p.inv=999;ticks(1);
+ reset();t.state.spawn=0;t.state.waveNext={};t.state.t=160;t.state.p.inv=999;ticks(1);
  assert(t.state.enemies.some(e=>['roman','auxiliary','pilum','veteran'].includes(e.unit)));assert(t.state.enemies.some(e=>e.unit==='courtesan'));assert(t.state.enemies.some(e=>e.unit==='wine'));assert(t.state.enemies.some(e=>e.unit==='turtle'));
  assert(!t.state.enemies.some(e=>e.unit==='ram'),'City excludes rams');
  t.draw();t.selectMap('village');t.start();assert.equal(t.state.enemies.length,0,'Residents never leak into other maps');
- reset();t.state.spawn=.5;t.state.specialNext={};t.state.p.inv=999;t.state.stats.damage=0;
+ reset();t.state.spawn=.5;t.state.waveNext={};t.state.p.inv=999;t.state.stats.damage=0;
  for(let i=0;i<6001;i++)t.update(.05);
  assert(t.state.bossSpawned,'City retains final boss and run completion');
  assert(t.state.enemies.length<=135,'Population stays bounded');

@@ -26,7 +26,7 @@ async function main(){
  nodes.get('runMap').value='forest';nodes.get('runMap').onchange();t.start();assert.equal(t.state.map,'forest');
  function reset(map='forest'){
   t.selectMap(map);t.select('asterix');t.start();t.state.spawn=999;t.state.attack=999;
-  for(const id of ['boar','netter','stoneSquad','tower','cavalry','caius','wine'])t.state.specialNext[id]=999;
+  for(const id of ['boar','netter','stoneSquad','tower','cavalry','caius','wine'])t.state.waveNext[id]=999;
  }
  function enemy(unit,x=1250,y=1100){const e=t.spawn(unit);assert(e);e.x=x;e.y=y;e.cd=0;return e;}
  function ticks(n){for(let i=0;i<n;i++)t.update(.02);}
@@ -52,7 +52,7 @@ async function main(){
  t.damage(e,1e6);assert(t.state.helmets.length<=27,'Payout capped by actual remaining HP');const count=t.state.gems.length;t.damage(e,1e6);assert.equal(t.state.gems.length,count,'Dead Caius cannot be farmed');
  reset('camp');e=enemy('wine',1300);ticks(30);assert(t.state.winePools.length>0);const pool=t.state.winePools[0];t.state.enemies=[];t.state.p.x=pool.x;t.state.p.y=pool.y;ticks(1);assert(t.state.p.poisoned>0);assert(t.state.p.hp<t.state.p.max);t.state.p.y+=200;ticks(320);assert.equal(t.state.winePools.length,0);assert.equal(t.state.p.poisoned,0);
  for(const map of ['forest','camp','village']){
-  reset(map);t.state.specialNext={};t.state.t=46;t.state.p.inv=999;t.update(.02);
+  reset(map);t.state.waveNext={};t.state.t=46;t.state.p.inv=999;t.update(.02);
   const types=t.state.enemies.map(e=>e.unit);
   const expected=map==='forest'?['boar','netter','stoneSquad']:map==='camp'?['wine','cavalry','tower','caius']:[];
   for(const unit of expected)assert(types.includes(unit),map+' spawns '+unit);

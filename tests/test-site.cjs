@@ -116,7 +116,7 @@ async function main() {
         if (!/^(?:https?:|data:|mailto:|#)/i.test(value)) requests.add(new URL(value, pageURL).href);
       }
       // Audio loads only after a user gesture and is absent from the image loader graph.
-      if (page === 'index.html') for (const file of publicationFiles().filter(file => file.startsWith('assets/audio/'))) requests.add(new URL(file, base).href);
+      if (page === 'index.html') for (const file of publicationFiles().filter(file => file.startsWith('assets/runtime/audio/'))) requests.add(new URL(file, base).href);
       for (const request of requests) {
         assert(new URL(request).pathname.startsWith(prefix), `${page}: URL escapes project prefix: ${request}`);
         const resource = await fetch(request);

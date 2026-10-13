@@ -3,7 +3,7 @@ const {createHarness}=require('./helpers/game-harness.cjs');
 const {loadModule}=require('./helpers/load-modules.cjs');
 const path=require('node:path');
 async function main(){
- const h=await createHarness();h.env.Progression.earn(100);h.env.Progression.buyHero('automatix');h.session.select('automatix');h.session.start();const s=h.session.state;s.spawn=s.nextTurtle=s.nextRam=1e9;
+ const h=await createHarness();h.env.Progression.earn(100);h.env.Progression.buyHero('automatix');h.session.select('automatix');h.session.start();const s=h.session.state;s.spawn=1e9;for(const id of Object.keys(s.waveNext))s.waveNext[id]=1e9;
  let copies=0;const descriptor=Object.getOwnPropertyDescriptor(h.env.Progression,'data');Object.defineProperty(h.env.Progression,'data',{get(){copies++;return descriptor.get();}});
  let writes=0;for(const id of ['ability0','ability1','levelText'])for(const property of ['textContent','title','disabled']){const node=h.nodes.get(id);let value=node[property];Object.defineProperty(node,property,{get:()=>value,set(v){writes++;value=v;}});}
  for(let i=0;i<120;i++)h.session.update(.01);

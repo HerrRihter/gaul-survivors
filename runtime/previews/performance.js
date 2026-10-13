@@ -90,9 +90,10 @@ let GameSession;
 GameSession = {
   create({
     document, window, localStorage, performance, requestAnimationFrame, cancelAnimationFrame,
-    Math, Villagers, Progression, UpgradeSystem, RomanArt, Village, Legion, Corpses,
+    Math, Villagers, Progression, UpgradeSystem: UpgradeSystemFactory, RomanArt, Village, Legion, Corpses,
     VillagerArt, AnimationArt, HeroArt, MenhirArt, MenuPortraits,
   }) {
+const UpgradeSystem=UpgradeSystemFactory.create(Progression);
 const arenas=createArenas(Village);
 let selectedMap='village';
 let audioController=null;
@@ -124,7 +125,7 @@ get canvas(){return canvas},
 get ctx(){return ctx},
 get W(){return W},set W(value){W=value},
 get H(){return H},set H(value){H=value},
-get WORLD(){return WORLD},
+get WORLD(){return arenas.get(selectedMap).size},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
@@ -188,7 +189,7 @@ get stop(){return stop}
 
     const $=id=>document.getElementById(id), canvas=$('game'), ctx=canvas.getContext('2d');
     let W=960,H=540;
-    const WORLD=Village.size,DURATION=300;
+    const DURATION=300;
     const {resizeCanvas}=CanvasSystem.create(sessionContext);
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
@@ -238,6 +239,7 @@ get stop(){return stop}
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
+    if(mapSelect){mapSelect.innerHTML=Object.entries(arenaDefinitions).map(([id,map])=>`<option value="${id}">${map.name}</option>`).join('');mapSelect.value=selectedMap;}
     if(mapSelect)mapSelect.onchange=()=>{selectedMap=arenaDefinitions[mapSelect.value]?mapSelect.value:'village';$('mapDescription').textContent=arenaDefinitions[selectedMap].description;};
     $('start').onclick=openRunHeroSelect;
     $('runHeroBack').onclick=()=>{
@@ -291,6 +293,7 @@ get stop(){return stop}
     return {
       start,
       activateAbility: abilities.activate,
+      upgrades: UpgradeSystem,
       update,
       draw,
       pause,
@@ -322,25 +325,21 @@ get stop(){return stop}
 Object.defineProperty(exports, "GameSession", {get: () => GameSession});
 },
 "src/world/arenas.js": function(require, exports){
+const {mapDefinitions} = require("data/maps/maps.js");
 const {VillageCollision} = require("src/world/village/collision.js");
 const {VillageNavigation} = require("src/world/village/navigation.js");
 const {VillageRenderer,sceneryVisible} = require("src/world/village/village-renderer.js");
 const {VillageArt} = require("src/rendering/art/village-art.js");
 const {SceneryArt} = require("src/rendering/art/scenery-art.js");
 const {createLutetia} = require("src/world/lutetia.js");
-const arenaDefinitions={
- village:{name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
- forest:{name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
- camp:{name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'},
- lutetia:{name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду.'}
-};
+const arenaDefinitions=mapDefinitions;
 const campLanes=[180,640,1100,1560,2020];
 const scenery=SceneryArt;
 function createArenas(village){
- const cache={village};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=createArena(id));}};
+ const factories={village:()=>village,forest:()=>createArena('forest'),camp:()=>createArena('camp'),lutetia:createLutetia};
+ const cache={};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=factories[id]());}};
 }
 function createArena(id){
- if(id==='lutetia')return createLutetia();
  const size=2200,objects=[],roads=[];let seed=id==='forest'?731:192;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const add=(x,y,art,width,footprint)=>objects.push({x,y,kind:art,art,width,...(footprint?{footprint}:{})});
@@ -410,12 +409,22 @@ function createArena(id){
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}
   g.restore();
  }
- return {size,objects,roads,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
+ return {size,objects,roads,residents:[],depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
 }
 
 Object.defineProperty(exports, "arenaDefinitions", {get: () => arenaDefinitions});
 Object.defineProperty(exports, "campLanes", {get: () => campLanes});
 Object.defineProperty(exports, "createArenas", {get: () => createArenas});
+},
+"data/maps/maps.js": function(require, exports){
+const mapDefinitions={
+ village:{notes:"Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.",victoryTag:'ДЕРЕВНЯ НЕ СДАЁТСЯ',name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
+ forest:{notes:"Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
+ camp:{notes:"Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'},
+ lutetia:{notes:"Кривые улицы и рынок создают укрытия. Торговцы охраняют прилавки; гражданские бегают по улицам, куртизанки подбирают добычу.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду.'}
+};
+
+Object.defineProperty(exports, "mapDefinitions", {get: () => mapDefinitions});
 },
 "src/world/village/collision.js": function(require, exports){
 let VillageCollision;
@@ -827,9 +836,9 @@ let atlas=null;
 const sprites={},status={};
 if(typeof Image!=='undefined'){
  for(const name of ['townhouse-v2','villa-v2','fountain-v2','garden-v2']){
-  const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('lutetia/'+name+'.png');sprites[name]=sprite;
+  const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('world/lutetia/'+name+'.png');sprites[name]=sprite;
  }
- const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('lutetia/atlas-v1.png');
+ const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('world/lutetia/atlas-v1.png');
 }
 const LutetiaArt={
  status,
@@ -947,7 +956,7 @@ Object.defineProperty(exports, "CharacterFrames", {get: () => CharacterFrames});
 },
 "data/animations/character-frames.js": function(require, exports){
 // Generated from data/animations/character-frames.json; edit the JSON and run node tools/generate-layouts.cjs.
-const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/frames/asterix/walk/0.png","characters/frames/asterix/walk/1.png","characters/frames/asterix/walk/2.png","characters/frames/asterix/walk/3.png"],"attack":["characters/frames/asterix/attack/0.png","characters/frames/asterix/attack/1.png","characters/frames/asterix/attack/2.png","characters/frames/asterix/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/frames/obelix/walk/0.png","characters/frames/obelix/walk/1.png","characters/frames/obelix/walk/2.png","characters/frames/obelix/walk/3.png"],"attack":["characters/frames/obelix/attack/0.png","characters/frames/obelix/attack/1.png","characters/frames/obelix/attack/2.png","characters/frames/obelix/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/frames/roman-0/walk/0.png","characters/frames/roman-0/walk/1.png","characters/frames/roman-0/walk/2.png","characters/frames/roman-0/walk/3.png"],"attack":["characters/frames/roman-0/attack/0.png","characters/frames/roman-0/attack/1.png","characters/frames/roman-0/attack/2.png","characters/frames/roman-0/attack/3.png"],"hurt":["characters/frames/roman-0/hurt/0.png","characters/frames/roman-0/hurt/1.png","characters/frames/roman-0/hurt/2.png","characters/frames/roman-0/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/frames/roman-1/walk/0.png","characters/frames/roman-1/walk/1.png","characters/frames/roman-1/walk/2.png","characters/frames/roman-1/walk/3.png"],"attack":["characters/frames/roman-1/attack/0.png","characters/frames/roman-1/attack/1.png","characters/frames/roman-1/attack/2.png","characters/frames/roman-1/attack/3.png"],"hurt":["characters/frames/roman-1/hurt/0.png","characters/frames/roman-1/hurt/1.png","characters/frames/roman-1/hurt/2.png","characters/frames/roman-1/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/frames/roman-2/walk/0.png","characters/frames/roman-2/walk/1.png","characters/frames/roman-2/walk/2.png","characters/frames/roman-2/walk/3.png"],"attack":["characters/frames/roman-2/attack/0.png","characters/frames/roman-2/attack/1.png","characters/frames/roman-2/attack/2.png","characters/frames/roman-2/attack/3.png"],"hurt":["characters/frames/roman-2/hurt/0.png","characters/frames/roman-2/hurt/1.png","characters/frames/roman-2/hurt/2.png","characters/frames/roman-2/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/frames/boss/walk/0.png","characters/frames/boss/walk/1.png","characters/frames/boss/walk/2.png","characters/frames/boss/walk/3.png"],"attack":["characters/frames/boss/attack/0.png","characters/frames/boss/attack/1.png","characters/frames/boss/attack/2.png","characters/frames/boss/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/frames/cacofonix/walk/0.png","characters/frames/cacofonix/walk/1.png","characters/frames/cacofonix/walk/2.png","characters/frames/cacofonix/walk/3.png"],"attack":["characters/frames/cacofonix/attack/0.png","characters/frames/cacofonix/attack/1.png","characters/frames/cacofonix/attack/2.png","characters/frames/cacofonix/attack/3.png"],"hurt":["characters/frames/cacofonix/hurt/0.png","characters/frames/cacofonix/hurt/1.png","characters/frames/cacofonix/hurt/2.png","characters/frames/cacofonix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/frames/antisanitarix/walk/0.png","characters/frames/antisanitarix/walk/1.png","characters/frames/antisanitarix/walk/2.png","characters/frames/antisanitarix/walk/3.png"],"attack":["characters/frames/antisanitarix/attack/0.png","characters/frames/antisanitarix/attack/1.png","characters/frames/antisanitarix/attack/2.png","characters/frames/antisanitarix/attack/3.png"],"hurt":["characters/frames/antisanitarix/hurt/0.png","characters/frames/antisanitarix/hurt/1.png","characters/frames/antisanitarix/hurt/2.png","characters/frames/antisanitarix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/frames/automatix/walk/0.png","characters/frames/automatix/walk/1.png","characters/frames/automatix/walk/2.png","characters/frames/automatix/walk/3.png"],"attack":["characters/frames/automatix/attack/0.png","characters/frames/automatix/attack/1.png","characters/frames/automatix/attack/2.png","characters/frames/automatix/attack/3.png"],"hurt":["characters/frames/automatix/hurt/0.png","characters/frames/automatix/hurt/1.png","characters/frames/automatix/hurt/2.png","characters/frames/automatix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/frames/panoramix/walk/0.png","characters/frames/panoramix/walk/1.png","characters/frames/panoramix/walk/2.png","characters/frames/panoramix/walk/3.png"],"attack":["characters/frames/panoramix/attack/0.png","characters/frames/panoramix/attack/1.png","characters/frames/panoramix/attack/2.png","characters/frames/panoramix/attack/3.png"],"hurt":["characters/frames/panoramix/hurt/0.png","characters/frames/panoramix/hurt/1.png","characters/frames/panoramix/hurt/2.png","characters/frames/panoramix/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/frames/spear/walk/0.png","characters/frames/spear/walk/1.png","characters/frames/spear/walk/2.png","characters/frames/spear/walk/3.png"],"attack":["characters/frames/spear/attack/0.png","characters/frames/spear/attack/1.png","characters/frames/spear/attack/2.png","characters/frames/spear/attack/3.png"],"hurt":["characters/frames/spear/hurt/0.png","characters/frames/spear/hurt/1.png","characters/frames/spear/hurt/2.png","characters/frames/spear/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/frames/pilum/walk/0.png","characters/frames/pilum/walk/1.png","characters/frames/pilum/walk/2.png","characters/frames/pilum/walk/3.png"],"attack":["characters/frames/pilum/attack/0.png","characters/frames/pilum/attack/1.png","characters/frames/pilum/attack/2.png","characters/frames/pilum/attack/3.png"],"hurt":["characters/frames/pilum/hurt/0.png","characters/frames/pilum/hurt/1.png","characters/frames/pilum/hurt/2.png","characters/frames/pilum/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/frames/veteran/walk/0.png","characters/frames/veteran/walk/1.png","characters/frames/veteran/walk/2.png","characters/frames/veteran/walk/3.png"],"attack":["characters/frames/veteran/attack/0.png","characters/frames/veteran/attack/1.png","characters/frames/veteran/attack/2.png","characters/frames/veteran/attack/3.png"],"hurt":["characters/frames/veteran/hurt/0.png","characters/frames/veteran/hurt/1.png","characters/frames/veteran/hurt/2.png","characters/frames/veteran/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/frames/turtle/walk/0.png","characters/frames/turtle/walk/1.png","characters/frames/turtle/walk/2.png","characters/frames/turtle/walk/3.png"],"attack":["characters/frames/turtle/attack/0.png","characters/frames/turtle/attack/1.png","characters/frames/turtle/attack/2.png","characters/frames/turtle/attack/3.png"],"hurt":["characters/frames/turtle/hurt/0.png","characters/frames/turtle/hurt/1.png","characters/frames/turtle/hurt/2.png","characters/frames/turtle/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/frames/ram/walk/0.png","characters/frames/ram/walk/1.png","characters/frames/ram/walk/2.png","characters/frames/ram/walk/3.png"],"attack":["characters/frames/ram/attack/0.png","characters/frames/ram/attack/1.png","characters/frames/ram/attack/2.png","characters/frames/ram/attack/3.png"],"hurt":["characters/frames/ram/hurt/0.png","characters/frames/ram/hurt/1.png","characters/frames/ram/hurt/2.png","characters/frames/ram/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/frames/boar/walk/0.png","characters/frames/boar/walk/1.png","characters/frames/boar/walk/2.png","characters/frames/boar/walk/3.png"],"attack":["characters/frames/boar/attack/0.png","characters/frames/boar/attack/1.png","characters/frames/boar/attack/2.png","characters/frames/boar/attack/3.png"],"hurt":["characters/frames/boar/hurt/0.png","characters/frames/boar/hurt/1.png","characters/frames/boar/hurt/2.png","characters/frames/boar/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/frames/stone-squad/walk/0.png","characters/frames/stone-squad/walk/1.png","characters/frames/stone-squad/walk/2.png","characters/frames/stone-squad/walk/3.png"],"attack":["characters/frames/stone-squad/attack/0.png","characters/frames/stone-squad/attack/1.png","characters/frames/stone-squad/attack/2.png","characters/frames/stone-squad/attack/3.png"],"hurt":["characters/frames/stone-squad/hurt/0.png","characters/frames/stone-squad/hurt/1.png","characters/frames/stone-squad/hurt/2.png","characters/frames/stone-squad/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/frames/netter/walk/0.png","characters/frames/netter/walk/1.png","characters/frames/netter/walk/2.png","characters/frames/netter/walk/3.png"],"attack":["characters/frames/netter/attack/0.png","characters/frames/netter/attack/1.png","characters/frames/netter/attack/2.png","characters/frames/netter/attack/3.png"],"hurt":["characters/frames/netter/hurt/0.png","characters/frames/netter/hurt/1.png","characters/frames/netter/hurt/2.png","characters/frames/netter/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/frames/tower/walk/0.png","characters/frames/tower/walk/1.png","characters/frames/tower/walk/2.png","characters/frames/tower/walk/3.png"],"attack":["characters/frames/tower/attack/0.png","characters/frames/tower/attack/1.png","characters/frames/tower/attack/2.png","characters/frames/tower/attack/3.png"],"hurt":["characters/frames/tower/hurt/0.png","characters/frames/tower/hurt/1.png","characters/frames/tower/hurt/2.png","characters/frames/tower/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/frames/cavalry/walk/0.png","characters/frames/cavalry/walk/1.png","characters/frames/cavalry/walk/2.png","characters/frames/cavalry/walk/3.png"],"attack":["characters/frames/cavalry/attack/0.png","characters/frames/cavalry/attack/1.png","characters/frames/cavalry/attack/2.png","characters/frames/cavalry/attack/3.png"],"hurt":["characters/frames/cavalry/hurt/0.png","characters/frames/cavalry/hurt/1.png","characters/frames/cavalry/hurt/2.png","characters/frames/cavalry/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/frames/caius/walk/0.png","characters/frames/caius/walk/1.png","characters/frames/caius/walk/2.png","characters/frames/caius/walk/3.png"],"attack":["characters/frames/caius/attack/0.png","characters/frames/caius/attack/1.png","characters/frames/caius/attack/2.png","characters/frames/caius/attack/3.png"],"hurt":["characters/frames/caius/hurt/0.png","characters/frames/caius/hurt/1.png","characters/frames/caius/hurt/2.png","characters/frames/caius/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/frames/wine/walk/0.png","characters/frames/wine/walk/1.png","characters/frames/wine/walk/2.png","characters/frames/wine/walk/3.png"],"attack":["characters/frames/wine/attack/0.png","characters/frames/wine/attack/1.png","characters/frames/wine/attack/2.png","characters/frames/wine/attack/3.png"],"hurt":["characters/frames/wine/hurt/0.png","characters/frames/wine/hurt/1.png","characters/frames/wine/hurt/2.png","characters/frames/wine/hurt/3.png"]},"idle":{"action":"attack","index":3}},"auxiliary":{"renderer":"unit","actions":{"walk":["characters/frames/auxiliary/walk/0.png","characters/frames/auxiliary/walk/1.png","characters/frames/auxiliary/walk/2.png","characters/frames/auxiliary/walk/3.png"],"attack":["characters/frames/auxiliary/attack/0.png","characters/frames/auxiliary/attack/1.png","characters/frames/auxiliary/attack/2.png","characters/frames/auxiliary/attack/3.png"],"hurt":["characters/frames/auxiliary/hurt/0.png","characters/frames/auxiliary/hurt/1.png","characters/frames/auxiliary/hurt/2.png","characters/frames/auxiliary/hurt/3.png"]},"idle":{"action":"attack","index":3}},"merchant":{"renderer":"unit","actions":{"walk":["characters/frames/merchant/walk/0.png","characters/frames/merchant/walk/1.png","characters/frames/merchant/walk/2.png","characters/frames/merchant/walk/3.png"],"attack":["characters/frames/merchant/attack/0.png","characters/frames/merchant/attack/1.png","characters/frames/merchant/attack/2.png","characters/frames/merchant/attack/3.png"],"hurt":["characters/frames/merchant/hurt/0.png","characters/frames/merchant/hurt/1.png","characters/frames/merchant/hurt/2.png","characters/frames/merchant/hurt/3.png"]},"idle":{"action":"walk","index":0}},"courtesan":{"renderer":"unit","actions":{"walk":["characters/frames/courtesan/walk/0.png","characters/frames/courtesan/walk/1.png","characters/frames/courtesan/walk/2.png","characters/frames/courtesan/walk/3.png"],"attack":["characters/frames/courtesan/attack/0.png","characters/frames/courtesan/attack/1.png","characters/frames/courtesan/attack/2.png","characters/frames/courtesan/attack/3.png"],"hurt":["characters/frames/courtesan/hurt/0.png","characters/frames/courtesan/hurt/1.png","characters/frames/courtesan/hurt/2.png","characters/frames/courtesan/hurt/3.png"]},"idle":{"action":"attack","index":3}},"citizen-0":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-0/walk/0.png","characters/frames/citizen-0/walk/1.png","characters/frames/citizen-0/walk/2.png","characters/frames/citizen-0/walk/3.png"],"attack":["characters/frames/citizen-0/walk/0.png"],"hurt":["characters/frames/citizen-0/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-1":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-1/walk/0.png","characters/frames/citizen-1/walk/1.png","characters/frames/citizen-1/walk/2.png","characters/frames/citizen-1/walk/3.png"],"attack":["characters/frames/citizen-1/walk/0.png"],"hurt":["characters/frames/citizen-1/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-2":{"renderer":"unit","actions":{"walk":["characters/frames/citizen-2/walk/0.png","characters/frames/citizen-2/walk/1.png","characters/frames/citizen-2/walk/2.png","characters/frames/citizen-2/walk/3.png"],"attack":["characters/frames/citizen-2/walk/0.png"],"hurt":["characters/frames/citizen-2/walk/2.png"]},"idle":{"action":"walk","index":0}}}};
+const CharacterFrameManifest={"width":256,"height":256,"anchor":[128,236],"characters":{"asterix":{"actions":{"walk":["characters/heroes/asterix/animations/walk/0.png","characters/heroes/asterix/animations/walk/1.png","characters/heroes/asterix/animations/walk/2.png","characters/heroes/asterix/animations/walk/3.png"],"attack":["characters/heroes/asterix/animations/attack/0.png","characters/heroes/asterix/animations/attack/1.png","characters/heroes/asterix/animations/attack/2.png","characters/heroes/asterix/animations/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"obelix":{"actions":{"walk":["characters/heroes/obelix/animations/walk/0.png","characters/heroes/obelix/animations/walk/1.png","characters/heroes/obelix/animations/walk/2.png","characters/heroes/obelix/animations/walk/3.png"],"attack":["characters/heroes/obelix/animations/attack/0.png","characters/heroes/obelix/animations/attack/1.png","characters/heroes/obelix/animations/attack/2.png","characters/heroes/obelix/animations/attack/3.png"]},"idle":{"action":"attack","index":3},"renderer":"animation","actionScale":{"attack":1.1688311688311688}},"roman-0":{"actions":{"walk":["characters/enemies/roman-0/animations/walk/0.png","characters/enemies/roman-0/animations/walk/1.png","characters/enemies/roman-0/animations/walk/2.png","characters/enemies/roman-0/animations/walk/3.png"],"attack":["characters/enemies/roman-0/animations/attack/0.png","characters/enemies/roman-0/animations/attack/1.png","characters/enemies/roman-0/animations/attack/2.png","characters/enemies/roman-0/animations/attack/3.png"],"hurt":["characters/enemies/roman-0/animations/hurt/0.png","characters/enemies/roman-0/animations/hurt/1.png","characters/enemies/roman-0/animations/hurt/2.png","characters/enemies/roman-0/animations/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-1":{"actions":{"walk":["characters/enemies/roman-1/animations/walk/0.png","characters/enemies/roman-1/animations/walk/1.png","characters/enemies/roman-1/animations/walk/2.png","characters/enemies/roman-1/animations/walk/3.png"],"attack":["characters/enemies/roman-1/animations/attack/0.png","characters/enemies/roman-1/animations/attack/1.png","characters/enemies/roman-1/animations/attack/2.png","characters/enemies/roman-1/animations/attack/3.png"],"hurt":["characters/enemies/roman-1/animations/hurt/0.png","characters/enemies/roman-1/animations/hurt/1.png","characters/enemies/roman-1/animations/hurt/2.png","characters/enemies/roman-1/animations/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"roman-2":{"actions":{"walk":["characters/enemies/roman-2/animations/walk/0.png","characters/enemies/roman-2/animations/walk/1.png","characters/enemies/roman-2/animations/walk/2.png","characters/enemies/roman-2/animations/walk/3.png"],"attack":["characters/enemies/roman-2/animations/attack/0.png","characters/enemies/roman-2/animations/attack/1.png","characters/enemies/roman-2/animations/attack/2.png","characters/enemies/roman-2/animations/attack/3.png"],"hurt":["characters/enemies/roman-2/animations/hurt/0.png","characters/enemies/roman-2/animations/hurt/1.png","characters/enemies/roman-2/animations/hurt/2.png","characters/enemies/roman-2/animations/hurt/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"boss":{"actions":{"walk":["characters/enemies/boss/animations/walk/0.png","characters/enemies/boss/animations/walk/1.png","characters/enemies/boss/animations/walk/2.png","characters/enemies/boss/animations/walk/3.png"],"attack":["characters/enemies/boss/animations/attack/0.png","characters/enemies/boss/animations/attack/1.png","characters/enemies/boss/animations/attack/2.png","characters/enemies/boss/animations/attack/3.png"]},"idle":{"action":"attack","index":0},"renderer":"animation"},"cacofonix":{"actions":{"walk":["characters/heroes/cacofonix/animations/walk/0.png","characters/heroes/cacofonix/animations/walk/1.png","characters/heroes/cacofonix/animations/walk/2.png","characters/heroes/cacofonix/animations/walk/3.png"],"attack":["characters/heroes/cacofonix/animations/attack/0.png","characters/heroes/cacofonix/animations/attack/1.png","characters/heroes/cacofonix/animations/attack/2.png","characters/heroes/cacofonix/animations/attack/3.png"],"hurt":["characters/heroes/cacofonix/animations/hurt/0.png","characters/heroes/cacofonix/animations/hurt/1.png","characters/heroes/cacofonix/animations/hurt/2.png","characters/heroes/cacofonix/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"antisanitarix":{"actions":{"walk":["characters/heroes/antisanitarix/animations/walk/0.png","characters/heroes/antisanitarix/animations/walk/1.png","characters/heroes/antisanitarix/animations/walk/2.png","characters/heroes/antisanitarix/animations/walk/3.png"],"attack":["characters/heroes/antisanitarix/animations/attack/0.png","characters/heroes/antisanitarix/animations/attack/1.png","characters/heroes/antisanitarix/animations/attack/2.png","characters/heroes/antisanitarix/animations/attack/3.png"],"hurt":["characters/heroes/antisanitarix/animations/hurt/0.png","characters/heroes/antisanitarix/animations/hurt/1.png","characters/heroes/antisanitarix/animations/hurt/2.png","characters/heroes/antisanitarix/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"automatix":{"actions":{"walk":["characters/heroes/automatix/animations/walk/0.png","characters/heroes/automatix/animations/walk/1.png","characters/heroes/automatix/animations/walk/2.png","characters/heroes/automatix/animations/walk/3.png"],"attack":["characters/heroes/automatix/animations/attack/0.png","characters/heroes/automatix/animations/attack/1.png","characters/heroes/automatix/animations/attack/2.png","characters/heroes/automatix/animations/attack/3.png"],"hurt":["characters/heroes/automatix/animations/hurt/0.png","characters/heroes/automatix/animations/hurt/1.png","characters/heroes/automatix/animations/hurt/2.png","characters/heroes/automatix/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"panoramix":{"actions":{"walk":["characters/heroes/panoramix/animations/walk/0.png","characters/heroes/panoramix/animations/walk/1.png","characters/heroes/panoramix/animations/walk/2.png","characters/heroes/panoramix/animations/walk/3.png"],"attack":["characters/heroes/panoramix/animations/attack/0.png","characters/heroes/panoramix/animations/attack/1.png","characters/heroes/panoramix/animations/attack/2.png","characters/heroes/panoramix/animations/attack/3.png"],"hurt":["characters/heroes/panoramix/animations/hurt/0.png","characters/heroes/panoramix/animations/hurt/1.png","characters/heroes/panoramix/animations/hurt/2.png","characters/heroes/panoramix/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"villager"},"spear":{"actions":{"walk":["characters/enemies/spear/animations/walk/0.png","characters/enemies/spear/animations/walk/1.png","characters/enemies/spear/animations/walk/2.png","characters/enemies/spear/animations/walk/3.png"],"attack":["characters/enemies/spear/animations/attack/0.png","characters/enemies/spear/animations/attack/1.png","characters/enemies/spear/animations/attack/2.png","characters/enemies/spear/animations/attack/3.png"],"hurt":["characters/enemies/spear/animations/hurt/0.png","characters/enemies/spear/animations/hurt/1.png","characters/enemies/spear/animations/hurt/2.png","characters/enemies/spear/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"pilum":{"actions":{"walk":["characters/enemies/pilum/animations/walk/0.png","characters/enemies/pilum/animations/walk/1.png","characters/enemies/pilum/animations/walk/2.png","characters/enemies/pilum/animations/walk/3.png"],"attack":["characters/enemies/pilum/animations/attack/0.png","characters/enemies/pilum/animations/attack/1.png","characters/enemies/pilum/animations/attack/2.png","characters/enemies/pilum/animations/attack/3.png"],"hurt":["characters/enemies/pilum/animations/hurt/0.png","characters/enemies/pilum/animations/hurt/1.png","characters/enemies/pilum/animations/hurt/2.png","characters/enemies/pilum/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"veteran":{"actions":{"walk":["characters/enemies/veteran/animations/walk/0.png","characters/enemies/veteran/animations/walk/1.png","characters/enemies/veteran/animations/walk/2.png","characters/enemies/veteran/animations/walk/3.png"],"attack":["characters/enemies/veteran/animations/attack/0.png","characters/enemies/veteran/animations/attack/1.png","characters/enemies/veteran/animations/attack/2.png","characters/enemies/veteran/animations/attack/3.png"],"hurt":["characters/enemies/veteran/animations/hurt/0.png","characters/enemies/veteran/animations/hurt/1.png","characters/enemies/veteran/animations/hurt/2.png","characters/enemies/veteran/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"turtle":{"actions":{"walk":["characters/enemies/turtle/animations/walk/0.png","characters/enemies/turtle/animations/walk/1.png","characters/enemies/turtle/animations/walk/2.png","characters/enemies/turtle/animations/walk/3.png"],"attack":["characters/enemies/turtle/animations/attack/0.png","characters/enemies/turtle/animations/attack/1.png","characters/enemies/turtle/animations/attack/2.png","characters/enemies/turtle/animations/attack/3.png"],"hurt":["characters/enemies/turtle/animations/hurt/0.png","characters/enemies/turtle/animations/hurt/1.png","characters/enemies/turtle/animations/hurt/2.png","characters/enemies/turtle/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"ram":{"actions":{"walk":["characters/enemies/ram/animations/walk/0.png","characters/enemies/ram/animations/walk/1.png","characters/enemies/ram/animations/walk/2.png","characters/enemies/ram/animations/walk/3.png"],"attack":["characters/enemies/ram/animations/attack/0.png","characters/enemies/ram/animations/attack/1.png","characters/enemies/ram/animations/attack/2.png","characters/enemies/ram/animations/attack/3.png"],"hurt":["characters/enemies/ram/animations/hurt/0.png","characters/enemies/ram/animations/hurt/1.png","characters/enemies/ram/animations/hurt/2.png","characters/enemies/ram/animations/hurt/3.png"]},"idle":{"action":"walk","index":1},"renderer":"unit"},"boar":{"renderer":"unit","actions":{"walk":["characters/enemies/boar/animations/walk/0.png","characters/enemies/boar/animations/walk/1.png","characters/enemies/boar/animations/walk/2.png","characters/enemies/boar/animations/walk/3.png"],"attack":["characters/enemies/boar/animations/attack/0.png","characters/enemies/boar/animations/attack/1.png","characters/enemies/boar/animations/attack/2.png","characters/enemies/boar/animations/attack/3.png"],"hurt":["characters/enemies/boar/animations/hurt/0.png","characters/enemies/boar/animations/hurt/1.png","characters/enemies/boar/animations/hurt/2.png","characters/enemies/boar/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"stoneSquad":{"renderer":"unit","actions":{"walk":["characters/enemies/stone-squad/animations/walk/0.png","characters/enemies/stone-squad/animations/walk/1.png","characters/enemies/stone-squad/animations/walk/2.png","characters/enemies/stone-squad/animations/walk/3.png"],"attack":["characters/enemies/stone-squad/animations/attack/0.png","characters/enemies/stone-squad/animations/attack/1.png","characters/enemies/stone-squad/animations/attack/2.png","characters/enemies/stone-squad/animations/attack/3.png"],"hurt":["characters/enemies/stone-squad/animations/hurt/0.png","characters/enemies/stone-squad/animations/hurt/1.png","characters/enemies/stone-squad/animations/hurt/2.png","characters/enemies/stone-squad/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"netter":{"renderer":"unit","actions":{"walk":["characters/enemies/netter/animations/walk/0.png","characters/enemies/netter/animations/walk/1.png","characters/enemies/netter/animations/walk/2.png","characters/enemies/netter/animations/walk/3.png"],"attack":["characters/enemies/netter/animations/attack/0.png","characters/enemies/netter/animations/attack/1.png","characters/enemies/netter/animations/attack/2.png","characters/enemies/netter/animations/attack/3.png"],"hurt":["characters/enemies/netter/animations/hurt/0.png","characters/enemies/netter/animations/hurt/1.png","characters/enemies/netter/animations/hurt/2.png","characters/enemies/netter/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"tower":{"renderer":"unit","actions":{"walk":["characters/enemies/tower/animations/walk/0.png","characters/enemies/tower/animations/walk/1.png","characters/enemies/tower/animations/walk/2.png","characters/enemies/tower/animations/walk/3.png"],"attack":["characters/enemies/tower/animations/attack/0.png","characters/enemies/tower/animations/attack/1.png","characters/enemies/tower/animations/attack/2.png","characters/enemies/tower/animations/attack/3.png"],"hurt":["characters/enemies/tower/animations/hurt/0.png","characters/enemies/tower/animations/hurt/1.png","characters/enemies/tower/animations/hurt/2.png","characters/enemies/tower/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"cavalry":{"renderer":"unit","actions":{"walk":["characters/enemies/cavalry/animations/walk/0.png","characters/enemies/cavalry/animations/walk/1.png","characters/enemies/cavalry/animations/walk/2.png","characters/enemies/cavalry/animations/walk/3.png"],"attack":["characters/enemies/cavalry/animations/attack/0.png","characters/enemies/cavalry/animations/attack/1.png","characters/enemies/cavalry/animations/attack/2.png","characters/enemies/cavalry/animations/attack/3.png"],"hurt":["characters/enemies/cavalry/animations/hurt/0.png","characters/enemies/cavalry/animations/hurt/1.png","characters/enemies/cavalry/animations/hurt/2.png","characters/enemies/cavalry/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"caius":{"renderer":"unit","actions":{"walk":["characters/enemies/caius/animations/walk/0.png","characters/enemies/caius/animations/walk/1.png","characters/enemies/caius/animations/walk/2.png","characters/enemies/caius/animations/walk/3.png"],"attack":["characters/enemies/caius/animations/attack/0.png","characters/enemies/caius/animations/attack/1.png","characters/enemies/caius/animations/attack/2.png","characters/enemies/caius/animations/attack/3.png"],"hurt":["characters/enemies/caius/animations/hurt/0.png","characters/enemies/caius/animations/hurt/1.png","characters/enemies/caius/animations/hurt/2.png","characters/enemies/caius/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"wine":{"renderer":"unit","actions":{"walk":["characters/enemies/wine/animations/walk/0.png","characters/enemies/wine/animations/walk/1.png","characters/enemies/wine/animations/walk/2.png","characters/enemies/wine/animations/walk/3.png"],"attack":["characters/enemies/wine/animations/attack/0.png","characters/enemies/wine/animations/attack/1.png","characters/enemies/wine/animations/attack/2.png","characters/enemies/wine/animations/attack/3.png"],"hurt":["characters/enemies/wine/animations/hurt/0.png","characters/enemies/wine/animations/hurt/1.png","characters/enemies/wine/animations/hurt/2.png","characters/enemies/wine/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"auxiliary":{"renderer":"unit","actions":{"walk":["characters/enemies/auxiliary/animations/walk/0.png","characters/enemies/auxiliary/animations/walk/1.png","characters/enemies/auxiliary/animations/walk/2.png","characters/enemies/auxiliary/animations/walk/3.png"],"attack":["characters/enemies/auxiliary/animations/attack/0.png","characters/enemies/auxiliary/animations/attack/1.png","characters/enemies/auxiliary/animations/attack/2.png","characters/enemies/auxiliary/animations/attack/3.png"],"hurt":["characters/enemies/auxiliary/animations/hurt/0.png","characters/enemies/auxiliary/animations/hurt/1.png","characters/enemies/auxiliary/animations/hurt/2.png","characters/enemies/auxiliary/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"merchant":{"renderer":"unit","actions":{"walk":["characters/enemies/merchant/animations/walk/0.png","characters/enemies/merchant/animations/walk/1.png","characters/enemies/merchant/animations/walk/2.png","characters/enemies/merchant/animations/walk/3.png"],"attack":["characters/enemies/merchant/animations/attack/0.png","characters/enemies/merchant/animations/attack/1.png","characters/enemies/merchant/animations/attack/2.png","characters/enemies/merchant/animations/attack/3.png"],"hurt":["characters/enemies/merchant/animations/hurt/0.png","characters/enemies/merchant/animations/hurt/1.png","characters/enemies/merchant/animations/hurt/2.png","characters/enemies/merchant/animations/hurt/3.png"]},"idle":{"action":"walk","index":0}},"courtesan":{"renderer":"unit","actions":{"walk":["characters/enemies/courtesan/animations/walk/0.png","characters/enemies/courtesan/animations/walk/1.png","characters/enemies/courtesan/animations/walk/2.png","characters/enemies/courtesan/animations/walk/3.png"],"attack":["characters/enemies/courtesan/animations/attack/0.png","characters/enemies/courtesan/animations/attack/1.png","characters/enemies/courtesan/animations/attack/2.png","characters/enemies/courtesan/animations/attack/3.png"],"hurt":["characters/enemies/courtesan/animations/hurt/0.png","characters/enemies/courtesan/animations/hurt/1.png","characters/enemies/courtesan/animations/hurt/2.png","characters/enemies/courtesan/animations/hurt/3.png"]},"idle":{"action":"attack","index":3}},"citizen-0":{"renderer":"unit","actions":{"walk":["characters/civilians/citizen-0/animations/walk/0.png","characters/civilians/citizen-0/animations/walk/1.png","characters/civilians/citizen-0/animations/walk/2.png","characters/civilians/citizen-0/animations/walk/3.png"],"attack":["characters/civilians/citizen-0/animations/walk/0.png"],"hurt":["characters/civilians/citizen-0/animations/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-1":{"renderer":"unit","actions":{"walk":["characters/civilians/citizen-1/animations/walk/0.png","characters/civilians/citizen-1/animations/walk/1.png","characters/civilians/citizen-1/animations/walk/2.png","characters/civilians/citizen-1/animations/walk/3.png"],"attack":["characters/civilians/citizen-1/animations/walk/0.png"],"hurt":["characters/civilians/citizen-1/animations/walk/2.png"]},"idle":{"action":"walk","index":0}},"citizen-2":{"renderer":"unit","actions":{"walk":["characters/civilians/citizen-2/animations/walk/0.png","characters/civilians/citizen-2/animations/walk/1.png","characters/civilians/citizen-2/animations/walk/2.png","characters/civilians/citizen-2/animations/walk/3.png"],"attack":["characters/civilians/citizen-2/animations/walk/0.png"],"hurt":["characters/civilians/citizen-2/animations/walk/2.png"]},"idle":{"action":"walk","index":0}}}};
 
 Object.defineProperty(exports, "CharacterFrameManifest", {get: () => CharacterFrameManifest});
 },
@@ -1467,7 +1476,7 @@ Object.defineProperty(exports, "GameUI", {get: () => GameUI});
 const abilityDefinitions = {
  asterix:[{id:'dash',name:'Галльский прорыв',cooldown:10,duration:.22,description:'Рывок: 35 урона и отталкивание.'},{id:'potion',name:'Волшебное зелье',cooldown:26,duration:6,description:'6 с: быстрее удары и движение.'}],
  obelix:[{id:'jump',name:'Галльский обвал',cooldown:14,duration:.55,description:'Прыжок: 65 урона вокруг приземления.'},{id:'appetite',name:'Боевой аппетит',cooldown:30,duration:7,description:'7 с: каждое убийство восстанавливает 2 HP.'}],
- automatix:[{id:'forge',name:'Кузнечная закалка',cooldown:24,duration:0,description:'Навсегда повысить Крепкую кожу на 1 ранг (макс. 3). Бесплатно.'},{id:'spin',name:'Кузнечный вихрь',cooldown:20,duration:3,description:'3 с: круговые удары молотом, движение медленнее.'}],
+ automatix:[{id:'forge',name:'Кузнечная закалка',cooldown:24,cooldownPerRank:6,duration:0,description:'Навсегда повысить Крепкую кожу на 1 ранг (макс. 3). Бесплатно.'},{id:'spin',name:'Кузнечный вихрь',cooldown:20,duration:3,description:'3 с: круговые удары молотом, движение медленнее.'}],
  cacofonix:[{id:'note',name:'Высокая нота',cooldown:18,duration:0,description:'Звуковая волна: урон, толчок и оглушение.'},{id:'concert',name:'Сольный концерт',cooldown:28,duration:3,radiusMultiplier:3,radiusPerRank:.5,description:'3 с: радиус музыкальной ауры ×3.'}],
  antisanitarix:[{id:'volley',name:'Рыбный развал',cooldown:16,duration:0,description:'Веер из пяти рыб-бумерангов.'},{id:'cloud',name:'Несвежий товар',cooldown:24,duration:5,description:'Облако: урон и замедление на 5 с.'}],
  panoramix:[{id:'brew',name:'Бурлящий настой',cooldown:18,duration:4,description:'Большая ядовитая область впереди.'},{id:'elixir',name:'Дубовый эликсир',cooldown:30,duration:5,description:'Восстановить 20 HP за 5 с и защититься от отравления.'}]
@@ -1479,7 +1488,7 @@ const abilityUpgradeDescriptions = {
  potion:'Зелье действует на 1 секунду дольше за ранг.',
  jump:'+25% к базовому урону приземления за ранг.',
  appetite:'+1 HP за убийство во время аппетита за ранг.',
- forge:'−6 секунд перезарядки закалки за ранг. Применение по-прежнему даёт 1 ранг Крепкой кожи.',
+ forge:`−${abilityDefinitions.automatix.find(a=>a.id==='forge').cooldownPerRank} секунд перезарядки закалки за ранг. Применение по-прежнему даёт 1 ранг Крепкой кожи.`,
  spin:'+25% к базовому урону каждого удара вихря за ранг.',
  note:'+25% к базовому урону и +0,3 с оглушения высокой ноты за ранг.',
  concert:'Ещё +0,5 к множителю радиуса концерта за ранг: ×3,5 / ×4 / ×4,5. Длительность — 3 с.',
@@ -1500,7 +1509,7 @@ Object.defineProperty(exports, "abilityRank", {get: () => abilityRank});
 },
 "src/core/audio.js": function(require, exports){
 const AudioSystem = {create(c) {
-  const root = new URL('../../assets/audio/', new URL("src/core/audio.js", rootURL).href);
+  const root = new URL('../../assets/runtime/audio/', new URL("src/core/audio.js", rootURL).href);
   const settings = {enabled: true, music: .3, effects: .65};
   try {
     const saved = JSON.parse(c.localStorage.getItem('gaul-audio'));
@@ -1703,13 +1712,21 @@ return {resetInput,bind};
 Object.defineProperty(exports, "InputSystem", {get: () => InputSystem});
 },
 "src/app/game-flow.js": function(require, exports){
-const {waves,lutetiaWaves} = require("data/enemies/waves.js");
-const {seedCityCrowd} = require("src/systems/city-population.js");
+const {getWaveSchedule,createWaveState} = require("src/systems/wave-schedule.js");
+const {seedPopulation} = require("src/systems/population.js");
 const {permanentUpgradeDefinitions} = require("data/upgrades.js");
 let GameFlow;
 'use strict';
 GameFlow={create(sessionContext){
+function recordRun(){
+      const s=sessionContext.state;
+      if(!s||s.resultRecorded)return;
+      sessionContext.Progression.recordTime(s.t);
+      sessionContext.Progression.recordLevel(s.level);
+      s.resultRecorded=true;
+    }
 function start(){
+      recordRun();
       if(!sessionContext.Progression.owned(sessionContext.selected))sessionContext.selected='asterix';
       const hero=sessionContext.Villagers.defs[sessionContext.selected],levels=sessionContext.Progression.data.levels;
       sessionContext.resetInput();
@@ -1717,20 +1734,17 @@ function start(){
         t:0,
         map:sessionContext.selectedMap,
         winePools:[],
-        specialNext:{},
+        ...createWaveState(getWaveSchedule(sessionContext.selectedMap)),
         kills:0,
         level:1,
         xp:0,
         need:8,
-        spawn:waves.normal.firstDelay,
         attack:.2,
         menhir:2,
         ring:1,
         enemies:[],
         corpses:[],
         enemyShots:[],
-        nextTurtle:sessionContext.selectedMap==='lutetia'?lutetiaWaves.turtle.first:waves.siege.turtle.first,
-        nextRam:waves.siege.ram.first,
         shots:[],
         fish:[],
         poison:[],
@@ -1743,7 +1757,6 @@ function start(){
         fx:[],
         texts:[],
         pickups:[],
-        bossSpawned:false,
         bossDead:false,
         shake:0,
         step:0,
@@ -1773,7 +1786,7 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       for(const resident of sessionContext.Village.residents||[])sessionContext.spawn(resident.unit,false,resident);
-      seedCityCrowd(sessionContext);
+      seedPopulation(sessionContext);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));
@@ -1784,10 +1797,7 @@ function start(){
       sessionContext.hud();
     }
 function menu(){
-      if(sessionContext.state?.t){
-        sessionContext.Progression?.recordTime?.(sessionContext.state.t);
-        sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
-      }
+      recordRun();
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.$('abilities').classList.toggle('hidden',true);
@@ -1843,8 +1853,8 @@ function pickUpgrade(i){
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
-      sessionContext.Progression?.recordTime?.(sessionContext.state.t);
-      sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
+      if(!sessionContext.state||sessionContext.state.resultRecorded)return;
+      recordRun();
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';
@@ -1853,7 +1863,7 @@ function finish(win){
       sessionContext.show('end',true);
       sessionContext.show('pause',false);
       sessionContext.show('stick',false);
-      sessionContext.$('endTag').textContent=win?(sessionContext.selectedMap==='village'?'ДЕРЕВНЯ НЕ СДАЁТСЯ':'ГАЛЛЫ ПОБЕЖДАЮТ'):'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
+      sessionContext.$('endTag').textContent=win?sessionContext.arenaDefinitions[sessionContext.selectedMap].victoryTag:'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
       sessionContext.$('endTitle').textContent=win?'Пир начинается!':'Нужен ещё глоток зелья';
       sessionContext.$('endText').textContent=win?'Римляне отступают. Кабан уже на вертеле. Ты заслужил этот вечер.':'Даже героям нужен привал. Попробуй другую сборку и вернись в драку.';
       sessionContext.$('endStats').innerHTML=`<div><strong>${sessionContext.clock(sessionContext.state.t)}</strong><span>ПРОДЕРЖАЛСЯ</span></div><div><strong>${sessionContext.state.kills}</strong><span>ВРАГОВ ПОБЕЖДЕНО</span></div><div><strong>${sessionContext.state.level}</strong><span>УРОВЕНЬ</span></div><div><strong>+${sessionContext.state.earned}</strong><span>ШЛЕМОВ</span></div>`;
@@ -1868,161 +1878,168 @@ return {start,menu,pause,levelUp,pickUpgrade,finish};
 
 Object.defineProperty(exports, "GameFlow", {get: () => GameFlow});
 },
-"data/enemies/waves.js": function(require, exports){
-const waves={
-  normal:{firstDelay:.5,minInterval:.35,interval:.95,timeFactor:.0018,batchEvery:110,cap:120},
-  units:[
-    {type:'veteran',time:85,cutoff:.13,message:'ВЕТЕРАНЫ · Медленные, но опасные удары.'},
-    {type:'pilum',time:50,cutoff:.32,message:'ПИЛУМЫ · Дома блокируют вражеские снаряды.'},
-    {type:'spear',time:25,cutoff:.56,message:'КОПЕЙЩИКИ · Уклоняйся от длинного выпада.'},
-  ],
-  siege:{
-    turtle:{first:100,every:65,cap:2,message:'ЧЕРЕПАХА · Обойди строй: сзади щиты не защищают.'},
-    ram:{first:155,every:80,cap:2,message:'ТАРАН · Уйди с линии разгона или укройся за домом.'},
-  },
-  boss:{time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ'},
-};
-
-const lutetiaWaves={
-  stages:[
-    {time:0,interval:1.5,batch:1,cap:36,weights:[['roman',75],['auxiliary',25]]},
-    {time:40,interval:1.2,batch:1,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
-    {time:85,interval:1,batch:2,cap:60,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
-    {time:140,interval:.9,batch:2,cap:75,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
-    {time:210,interval:.8,batch:3,cap:90,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
-  ],
-  turtle:{first:125,every:70,cap:1,late:205,lateCap:2},
-  civilians:{initial:24,maximum:40,every:2.5}
-};
-function lutetiaStage(time){return [...lutetiaWaves.stages].reverse().find(s=>time>=s.time)||lutetiaWaves.stages[0];}
-function lutetiaWave(time,roll=Math.random()){
- const weights=lutetiaStage(time).weights;let value=roll*weights.reduce((sum,[,weight])=>sum+weight,0);
- for(const [unit,weight]of weights){value-=weight;if(value<0)return unit;}return weights.at(-1)[0];
+"src/systems/wave-schedule.js": function(require, exports){
+const {waveSchedules} = require("data/enemies/waves.js");
+function getWaveSchedule(map) {
+  if (!Object.hasOwn(waveSchedules, map)) throw new Error('Unknown wave schedule: ' + map);
+  return waveSchedules[map];
 }
-const expansionSchedules={
-  lutetia:[{unit:'courtesan',first:15,every:27,cap:4},{unit:'wine',first:70,every:42,cap:2}],
-  forest:[{unit:'boar',first:4,every:9,cap:8},{unit:'netter',first:18,every:24,cap:3},{unit:'stoneSquad',first:35,every:38,cap:2}],
-  camp:[{unit:'wine',first:5,every:18,cap:5},{unit:'cavalry',first:15,every:22,cap:3},{unit:'tower',first:32,every:55,cap:2},{unit:'caius',first:45,every:100,cap:1}]
+
+function scheduleStage(stages, time) {
+  for (let index = stages.length - 1; index >= 0; index--) {
+    if (time >= stages[index].time) return stages[index];
+  }
+  return stages[0];
+}
+
+function normalWave(schedule, time) {
+  const stage = scheduleStage(schedule.normal.stages, time);
+  return {
+    interval: Math.max(stage.minInterval, stage.interval - time * stage.timeFactor),
+    batch: stage.batch + (stage.batchEvery === null ? 0 : Math.floor(time / stage.batchEvery)),
+    cap: stage.cap,
+    weights: stage.weights
+  };
+}
+
+function selectWaveUnit(schedule, time, roll = Math.random()) {
+  const {weights} = scheduleStage(schedule.normal.stages, time);
+  const total = weights.reduce((sum, [, weight]) => sum + weight, 0);
+  let cumulative = 0;
+  for (const [unit, weight] of weights) {
+    cumulative += weight;
+    if (roll < cumulative / total) return unit;
+  }
+  return weights.at(-1)[0];
+}
+
+function createWaveState(schedule) {
+  return {
+    spawn: schedule.normal.firstDelay,
+    waveNext: Object.fromEntries(schedule.recurring.map(spec => [spec.unit, spec.first])),
+    populationNext: schedule.population?.every ?? null,
+    bossSpawned: false
+  };
+}
+
+// The preview uses the same schedules as gameplay, including residents and population.
+function waveRoster(schedule) {
+  const arrivals = new Map();
+  const add = (unit, time) => arrivals.set(unit, Math.min(arrivals.get(unit) ?? Infinity, time));
+  for (const stage of schedule.normal.stages) for (const [unit] of stage.weights) add(unit, stage.time);
+  for (const spec of schedule.recurring) add(spec.unit, spec.first);
+  if (schedule.boss) add(schedule.boss.unit, schedule.boss.time);
+  for (const unit of schedule.residents) add(unit, 0);
+  if (schedule.population) add(schedule.population.unit, 0);
+  return [...arrivals].sort((a, b) => a[1] - b[1]).map(([unit, time]) => ({unit, time}));
+}
+
+Object.defineProperty(exports, "getWaveSchedule", {get: () => getWaveSchedule});
+Object.defineProperty(exports, "scheduleStage", {get: () => scheduleStage});
+Object.defineProperty(exports, "normalWave", {get: () => normalWave});
+Object.defineProperty(exports, "selectWaveUnit", {get: () => selectWaveUnit});
+Object.defineProperty(exports, "createWaveState", {get: () => createWaveState});
+Object.defineProperty(exports, "waveRoster", {get: () => waveRoster});
+},
+"data/enemies/waves.js": function(require, exports){
+// Declarative schedules. Every map has the same shape; runtime rules live in wave-schedule.js.
+const regularStages = [
+  {time:0, weights:[['roman',100]]},
+  {time:25, weights:[['spear',56],['roman',44]]},
+  {time:50, weights:[['pilum',32],['spear',24],['roman',44]]},
+  {time:85, weights:[['veteran',13],['pilum',19],['spear',24],['roman',44]]}
+].map(stage => ({...stage, interval:.95, minInterval:.35, timeFactor:.0018, batch:1, batchEvery:110, cap:120}));
+const normal = {firstDelay:.5, stages:regularStages};
+const notifications = [
+  {time:25, message:'КОПЕЙЩИКИ · Уклоняйся от длинного выпада.'},
+  {time:50, message:'ПИЛУМЫ · Дома блокируют вражеские снаряды.'},
+  {time:85, message:'ВЕТЕРАНЫ · Медленные, но опасные удары.'}
+];
+const turtleMessage = 'ЧЕРЕПАХА · Обойди строй: сзади щиты не защищают.';
+const siege = [
+  {unit:'turtle', first:100, populationCap:null, stages:[{time:0,every:65,cap:2}], message:turtleMessage},
+  {unit:'ram', first:155, populationCap:null, stages:[{time:0,every:80,cap:2}], message:'ТАРАН · Уйди с линии разгона или укройся за домом.'}
+];
+const boss = {unit:'boss',time:230,message:'ЦЕНТУРИОН МАКСИМУС ВЫШЕЛ НА ПОЛЕ БОЯ',sound:'boss'};
+
+const waveSchedules = {
+  village: {
+    normal, recurring:[...siege], boss, population:null, residents:[], notifications
+  },
+  forest: {
+    normal,
+    recurring:[
+      {unit:'boar',first:4,populationCap:120,stages:[{time:0,every:9,cap:8}],message:'КАБАН · Уйди с линии рывка.'},
+      {unit:'netter',first:18,populationCap:120,stages:[{time:0,every:24,cap:3}],message:'ЗАСАДНИК С СЕТЬЮ · Сеть оглушает. Уклоняйся от броска.'},
+      {unit:'stoneSquad',first:35,populationCap:120,stages:[{time:0,every:38,cap:2}],message:'ОТРЯД С КАМНЕМ · Разбег и падение камня. Держись подальше!'},
+      ...siege
+    ],
+    boss, population:null, residents:[], notifications
+  },
+  camp: {
+    normal,
+    recurring:[
+      {unit:'wine',first:5,populationCap:120,stages:[{time:0,every:18,cap:5}],message:'ЛЕГИОНЕР-ВИНОЧЕРПИЙ · Не наступай на винный след.'},
+      {unit:'cavalry',first:15,populationCap:120,stages:[{time:0,every:22,cap:3},{time:120,every:12,cap:6}],message:'КОННИЦА · Проход через всю карту. Уйди с дороги!'},
+      {unit:'tower',first:32,populationCap:120,stages:[{time:0,every:55,cap:2}],message:'ОСАДНАЯ БАШНЯ · Залп из трёх стрел. Используй укрытия.'},
+      {unit:'caius',first:45,populationCap:120,stages:[{time:0,every:100,cap:1}],message:'КАЮС БОНУС · Не атакует. При ударах теряет опыт и шлемы.'},
+      ...siege
+    ],
+    boss, population:null, residents:[], notifications
+  },
+  lutetia: {
+    normal: {firstDelay:.5, stages:[
+      {time:0,interval:1.5,minInterval:1.5,timeFactor:0,batch:1,batchEvery:null,cap:36,weights:[['roman',75],['auxiliary',25]]},
+      {time:40,interval:1.2,minInterval:1.2,timeFactor:0,batch:1,batchEvery:null,cap:36,weights:[['roman',55],['auxiliary',30],['pilum',15]]},
+      {time:85,interval:1,minInterval:1,timeFactor:0,batch:2,batchEvery:null,cap:60,weights:[['roman',40],['auxiliary',30],['pilum',18],['veteran',12]]},
+      {time:140,interval:.9,minInterval:.9,timeFactor:0,batch:2,batchEvery:null,cap:75,weights:[['roman',35],['auxiliary',30],['pilum',20],['veteran',15]]},
+      {time:210,interval:.8,minInterval:.8,timeFactor:0,batch:3,batchEvery:null,cap:90,weights:[['roman',30],['auxiliary',30],['pilum',22],['veteran',18]]}
+    ]},
+    recurring:[
+      {unit:'courtesan',first:15,populationCap:120,stages:[{time:0,every:27,cap:4}],message:'КУРТИЗАНКА · Подбирает опыт и еду. Не оставляй добычу на мостовой.'},
+      {unit:'wine',first:70,populationCap:120,stages:[{time:0,every:42,cap:2}],message:'ЛЕГИОНЕР-ВИНОЧЕРПИЙ · Не наступай на винный след.'},
+      {unit:'turtle',first:125,populationCap:null,stages:[{time:0,every:70,cap:1},{time:205,every:70,cap:2}],message:turtleMessage}
+    ],
+    boss,
+    population:{unit:'citizen',initial:24,maximum:40,every:2.5,growthEvery:15,variants:3},
+    residents:['merchant'],
+    notifications:[
+      {time:40,message:'ПИЛУМЫ · Метатели занимают улицы. Используй дома как укрытия.'},
+      {time:85,message:'ВЕТЕРАНЫ · Тяжёлая пехота входит в город.'},
+      {time:210,message:'ПОСЛЕДНИЙ НАТИСК · Легион усиливает наступление.'}
+    ]
+  }
 };
 
-const waveSchedules={
-  village:waves,
-  forest:expansionSchedules.forest,
-  camp:expansionSchedules.camp,
-  lutetia:expansionSchedules.lutetia
-};
-
-Object.defineProperty(exports, "waves", {get: () => waves});
-Object.defineProperty(exports, "lutetiaWaves", {get: () => lutetiaWaves});
-Object.defineProperty(exports, "lutetiaStage", {get: () => lutetiaStage});
-Object.defineProperty(exports, "lutetiaWave", {get: () => lutetiaWave});
-Object.defineProperty(exports, "expansionSchedules", {get: () => expansionSchedules});
 Object.defineProperty(exports, "waveSchedules", {get: () => waveSchedules});
 },
-"src/systems/city-population.js": function(require, exports){
-const {expansionUnits} = require("data/enemies/units.js");
-const {lutetiaWaves} = require("data/enemies/waves.js");
-const civilianVariants=3;
-function seedCityCrowd(c){
- if(c.state.map!=='lutetia')return;
- for(let i=0;i<lutetiaWaves.civilians.initial;i++){
-  for(let attempt=0;attempt<80;attempt++){
-   const p={x:c.rand(100,c.WORLD-100),y:c.rand(120,c.WORLD-100)};
-   if(c.dist(p,c.state.p)<140||c.Village.blocked(p.x,p.y,12))continue;
-   c.spawn('citizen',false,{...p,variant:i%civilianVariants});break;
+"src/systems/population.js": function(require, exports){
+const {getWaveSchedule} = require("src/systems/wave-schedule.js");
+function seedPopulation(c) {
+  const spec = getWaveSchedule(c.state.map).population;
+  if (!spec) return;
+  const radius = c.Legion.units[spec.unit].r;
+  for (let i = 0; i < spec.initial; i++) {
+    for (let attempt = 0; attempt < 80; attempt++) {
+      const position = {x:c.rand(100, c.WORLD-100), y:c.rand(120, c.WORLD-100)};
+      if (c.dist(position, c.state.p) < 140 || c.Village.blocked(position.x, position.y, radius)) continue;
+      c.spawn(spec.unit, false, {...position, variant:i % spec.variants});
+      break;
+    }
   }
- }
- c.state.crowdNext=lutetiaWaves.civilians.every;
-}
-function replenishCityCrowd(c){
- const s=c.state;if(s.map!=='lutetia'||s.t<(s.crowdNext||0))return;
- s.crowdNext=s.t+lutetiaWaves.civilians.every;
- const count=s.enemies.filter(e=>e.unit==='citizen'&&e.hp>0).length;
- const desired=Math.min(lutetiaWaves.civilians.maximum,24+Math.floor(s.t/15));
- if(count<desired)c.spawn('citizen');
-}
-function updateCityPedestrian(e,c,dt){
- const civilian=expansionUnits[e.unit]?.civilian;
- if(!civilian&&e.unit!=='courtesan')return false;
- const s=c.state,p=s.p;
- e.action=null;e.moving=false;
- const move=(angle,speed)=>{
-  // Choose a clear local step instead of constructing a flow field for every pedestrian.
-  let chosen=null;
-  for(const offset of [0,.6,-.6,1.2,-1.2,Math.PI]){
-   const a=angle+offset,q={x:e.x+Math.cos(a)*28,y:e.y+Math.sin(a)*28};
-   if(c.Village.clear(e,q,e.r)){chosen=a;break;}
-  }
-  if(chosen===null){e.roamUntil=0;return;}
-  e.heading=chosen;const ox=e.x,oy=e.y;
-  const step=speed*(1-(e.abilitySlow||0))*dt;
-  c.Village.move(e,Math.cos(chosen)*step+e.vx*dt,Math.sin(chosen)*step+e.vy*dt,e.r);
-  const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;e.walk=(e.walk||0)+travel/50;
- };
- const wander=()=>{
-  if(!e.roamUntil||s.t>=e.roamUntil){e.roamAngle=c.rand(-Math.PI,Math.PI);e.roamUntil=s.t+c.rand(.6,2.1);}
-  move(e.roamAngle,e.speed);
- };
- if(civilian){
-  if(c.dist(e,p)<e.r+14&&c.Village.clear(e,p,2))c.hurtPlayer(e);
-  wander();return true;
- }
- // Thieves never pursue or attack the hero. Grab nearby loot, then retreat.
- let target=null,best=340;
- if(!(e.fleeUntil>s.t))for(const list of [s.gems,s.pickups])for(const item of list){
-  if(item.dead)continue;const distance=c.dist(e,item);
-  if(distance<best&&c.Village.clear(e,item,e.r)){target=item;best=distance;}
- }
- if(target&&best<22){
-  target.dead=true;if(target.type==='food')e.hp=Math.min(e.max,e.hp+25);
-  e.fleeUntil=s.t+2.2;e.roamUntil=0;
-  if(s.texts.length<45)s.texts.push({x:e.x,y:e.y-50,v:target.type==='food'?'Перекус!':'Моё!',life:.8});
- }
- const distance=c.dist(e,p);
- if(e.fleeUntil>s.t||distance<145){
-  const angle=distance<1?(e.roamAngle??c.rand(-Math.PI,Math.PI)):Math.atan2(e.y-p.y,e.x-p.x);
-  move(angle,e.speed*1.25);
- }else if(target){move(Math.atan2(target.y-e.y,target.x-e.x),e.speed);}
- else wander();
- return true;
 }
 
-Object.defineProperty(exports, "civilianVariants", {get: () => civilianVariants});
-Object.defineProperty(exports, "seedCityCrowd", {get: () => seedCityCrowd});
-Object.defineProperty(exports, "replenishCityCrowd", {get: () => replenishCityCrowd});
-Object.defineProperty(exports, "updateCityPedestrian", {get: () => updateCityPedestrian});
-},
-"data/enemies/units.js": function(require, exports){
-const expansionUnits={
-  citizen:{name:'Горожанин',hp:28,speed:110,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
-  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
-  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
-  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
-  boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
-  stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
-  netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
-  tower:{labelHeight:180,name:'Осадная башня',hp:850,speed:19,damage:12,r:44,range:510,wind:1.7,cooldown:3.5,xp:20,color:'#d2ad75'},
-  cavalry:{labelHeight:140,name:'Конница',hp:180,speed:310,damage:30,r:26,range:2200,wind:1.5,cooldown:0,xp:5,color:'#e2c195'},
-  caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
-  wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
-};
+function replenishPopulation(c) {
+  const s = c.state, spec = getWaveSchedule(s.map).population;
+  if (!spec || s.t < s.populationNext) return;
+  s.populationNext = s.t + spec.every;
+  const count = s.enemies.filter(e => e.unit === spec.unit && e.hp > 0).length;
+  const desired = Math.min(spec.maximum, spec.initial + Math.floor(s.t / spec.growthEvery));
+  if (count < desired) c.spawn(spec.unit);
+}
 
-const unitDefinitions={
-  ...expansionUnits,
-  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
-  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
-  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
-  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
-  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
-  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
-  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
-};
-
-const units=unitDefinitions;
-
-Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
-Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
-Object.defineProperty(exports, "units", {get: () => units});
+Object.defineProperty(exports, "seedPopulation", {get: () => seedPopulation});
+Object.defineProperty(exports, "replenishPopulation", {get: () => replenishPopulation});
 },
 "data/upgrades.js": function(require, exports){
 const heroUnlockPrices = {
@@ -2068,16 +2085,16 @@ Object.defineProperty(exports, "heroTrainingDefinitions", {get: () => heroTraini
 Object.defineProperty(exports, "permanentUpgrades", {get: () => permanentUpgrades});
 },
 "src/systems/enemy-spawning.js": function(require, exports){
-const {prepareExpansion,scheduleExpansion} = require("src/systems/expansion.js");
+const {prepareExpansion} = require("src/systems/expansion.js");
 const {expansionUnits} = require("data/enemies/units.js");
-const {waves,lutetiaWaves,lutetiaStage,lutetiaWave} = require("data/enemies/waves.js");
-const {replenishCityCrowd} = require("src/systems/city-population.js");
+const {getWaveSchedule,normalWave,selectWaveUnit,scheduleStage} = require("src/systems/wave-schedule.js");
+const {replenishPopulation} = require("src/systems/population.js");
 let EnemySpawning;
 'use strict';
 EnemySpawning={create(sessionContext){
 function spawn(unit,boss=false,position=null){
-      const s=sessionContext.state,p=s.p,u=sessionContext.Legion.units[boss?'boss':unit]||sessionContext.Legion.units.roman;
-      unit=boss?'boss':sessionContext.Legion.units[unit]?unit:'roman';
+      const s=sessionContext.state,p=s.p,u=sessionContext.Legion.units[unit];
+      if(!u)throw new Error('Unknown unit: '+unit);
       let x,y;
       if(position){x=position.x;y=position.y;}
       for(let i=0;!position&&i<100;i++){
@@ -2111,35 +2128,35 @@ function spawn(unit,boss=false,position=null){
       return e;
     }
 function updateSpawning(dt){
-  const s=sessionContext.state,n=waves.normal;
-  replenishCityCrowd(sessionContext);
-  scheduleExpansion(sessionContext);
+  const s=sessionContext.state,schedule=getWaveSchedule(s.map);
+  replenishPopulation(sessionContext);
+  const combatCount=()=>s.enemies.filter(e=>!sessionContext.Legion.units[e.unit].civilian&&e.hp>0).length;
+  for(const spec of schedule.recurring){
+    const next=s.waveNext[spec.unit]??spec.first;
+    if(s.t<next)continue;
+    const stage=scheduleStage(spec.stages,s.t);
+    s.waveNext[spec.unit]=next+stage.every;
+    if(spec.populationCap!==null&&combatCount()>=spec.populationCap)continue;
+    if(s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length>=stage.cap)continue;
+    if(spawn(spec.unit)&&spec.message)sessionContext.toast(spec.message);
+  }
   s.spawn-=dt;
   if(s.spawn<=0){
-    const city=s.map==='lutetia',stage=city?lutetiaStage(s.t):null;
-    s.spawn=city?stage.interval:sessionContext.Math.max(n.minInterval,n.interval-s.t*n.timeFactor);
-    const count=city?stage.batch:1+sessionContext.Math.floor(s.t/n.batchEvery);
-    let population=s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length;
-    for(let i=0;i<count&&population<(city?stage.cap:n.cap);i++){
-      if(spawn(city?lutetiaWave(s.t,sessionContext.Math.random()):sessionContext.Legion.wave(s.t)))population++;
+    const wave=normalWave(schedule,s.t);
+    s.spawn=wave.interval;
+    let population=combatCount();
+    for(let i=0;i<wave.batch&&population<wave.cap;i++){
+      if(spawn(selectWaveUnit(schedule,s.t,sessionContext.Math.random())))population++;
     }
   }
-  for(const [type,key]of [['turtle','nextTurtle'],['ram','nextRam']]){
-    if(s.map==='lutetia'&&type==='ram')continue;
-    const spec=s.map==='lutetia'?lutetiaWaves.turtle:waves.siege[type];
-    if(s.t>=s[key]){
-      s[key]+=spec.every;
-      const cap=spec.late&&s.t>=spec.late?spec.lateCap:spec.cap;
-      if(s.enemies.filter(e=>e.unit===type&&e.hp>0).length<cap){spawn(type);sessionContext.toast(spec.message||waves.siege[type].message);}
-    }
+  const boss=schedule.boss;
+  if(boss&&s.t>=boss.time&&!s.bossSpawned&&spawn(boss.unit,true)){
+    s.bossSpawned=true;
+    if(boss.message)sessionContext.toast(boss.message);
+    if(boss.sound)sessionContext.soundEffect(boss.sound);
   }
-  if(s.t>=waves.boss.time&&!s.bossSpawned){
-    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.soundEffect('boss');
-  }
-  if(s.map!=='lutetia'){
-    for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
-  }else{
-    for(const [time,message]of [[40,'ПИЛУМЫ · Метатели занимают улицы. Используй дома как укрытия.'],[85,'ВЕТЕРАНЫ · Тяжёлая пехота входит в город.'],[210,'ПОСЛЕДНИЙ НАТИСК · Легион усиливает наступление.']])if(s.t>=time&&s.t-dt<time)sessionContext.toast(message);
+  for(const spec of schedule.notifications){
+    if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
   }
 }
 return {spawn,updateSpawning};
@@ -2149,23 +2166,8 @@ Object.defineProperty(exports, "EnemySpawning", {get: () => EnemySpawning});
 },
 "src/systems/expansion.js": function(require, exports){
 const {expansionUnits} = require("data/enemies/units.js");
-const {expansionSchedules} = require("data/enemies/waves.js");
 const {campLanes} = require("src/world/arenas.js");
 const {updateCityPedestrian} = require("src/systems/city-population.js");
-function scheduleExpansion(c){
-  const s=c.state;
-  for(const spec of expansionSchedules[s.map]||[]){
-    const next=s.specialNext[spec.unit]??spec.first;
-    if(s.t<next)continue;
-    const lateCavalry=spec.unit==='cavalry'&&s.t>=120;
-    s.specialNext[spec.unit]=next+(lateCavalry?12:spec.every);
-    if(s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
-      c.spawn(spec.unit);c.toast(expansionUnits[spec.unit].name.toUpperCase()+' · '+tips[spec.unit]);
-    }
-  }
-}
-const tips={courtesan:'Подбирает опыт и еду. Не оставляй добычу на мостовой.',boar:'Уйди с линии рывка.',stoneSquad:'Разбег и падение камня. Держись подальше!',netter:'Сеть оглушает. Уклоняйся от броска.',tower:'Залп из трёх стрел. Используй укрытия.',cavalry:'Проход через всю карту. Уйди с дороги!',caius:'Не атакует. При ударах теряет опыт и шлемы.',wine:'Не наступай на винный след.'};
-
 function prepareExpansion(e,c){
   if(e.unit==='cavalry'){
     const horizontal=c.Math.random()<.5,sign=c.Math.random()<.5?1:-1;
@@ -2262,16 +2264,97 @@ function updateExpansion(e,c,dt){
   return true;
 }
 
-Object.defineProperty(exports, "scheduleExpansion", {get: () => scheduleExpansion});
 Object.defineProperty(exports, "prepareExpansion", {get: () => prepareExpansion});
 Object.defineProperty(exports, "expansionDrop", {get: () => expansionDrop});
 Object.defineProperty(exports, "updateHazards", {get: () => updateHazards});
 Object.defineProperty(exports, "updateExpansion", {get: () => updateExpansion});
 },
+"data/enemies/units.js": function(require, exports){
+const expansionUnits={
+  citizen:{name:'Горожанин',hp:28,speed:110,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',civilian:true},
+  auxiliary:{labelHeight:108,name:'Ауксиларий',hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776'},
+  merchant:{labelHeight:118,name:'Торговец',hp:650,speed:0,damage:11,r:35,range:370,wind:1.15,cooldown:2.8,xp:12,color:'#e6c98b'},
+  courtesan:{labelHeight:94,name:'Куртизанка',hp:65,speed:94,damage:3,r:13,range:0,wind:0,cooldown:0,xp:2,color:'#dca7d9'},
+  boar:{labelHeight:70,name:'Кабан',hp:85,speed:85,damage:17,r:20,range:230,wind:1,cooldown:3,xp:2,color:'#d6a36d'},
+  stoneSquad:{labelHeight:136,name:'Отряд с камнем',hp:240,speed:42,damage:48,r:35,range:340,wind:1.5,cooldown:5,xp:7,color:'#c2c5b0'},
+  netter:{labelHeight:96,name:'Засадник с сетью',hp:95,speed:45,damage:4,r:14,range:260,wind:1.3,cooldown:5,xp:3,color:'#abcb88'},
+  tower:{labelHeight:180,name:'Осадная башня',hp:850,speed:19,damage:12,r:44,range:510,wind:1.7,cooldown:3.5,xp:20,color:'#d2ad75'},
+  cavalry:{labelHeight:140,name:'Конница',hp:180,speed:310,damage:30,r:26,range:2200,wind:1.5,cooldown:0,xp:5,color:'#e2c195'},
+  caius:{labelHeight:114,name:'Каюс Бонус',hp:2600,speed:25,damage:0,r:27,range:0,wind:1,cooldown:1,xp:12,color:'#efcf73'},
+  wine:{labelHeight:110,name:'Легионер-виночерпий',hp:140,speed:63,damage:8,r:16,range:40,wind:1,cooldown:2,xp:4,color:'#d493b5'}
+};
+
+const unitDefinitions={
+  ...expansionUnits,
+  roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
+  spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
+  pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
+  veteran:{name:'Ветеран',hp:150,speed:39,damage:23,r:16,range:65,wind:1.4,cooldown:2.2,xp:4,color:'#dc9a81',mark:'V'},
+  turtle:{name:'Черепаха',hp:480,speed:27,damage:20,r:46,range:90,wind:1.6,cooldown:2.7,xp:12,color:'#8aafd2',mark:'VI'},
+  ram:{name:'Таран',hp:650,speed:31,damage:32,r:46,range:360,wind:2.2,cooldown:5,xp:18,color:'#e3ab65',mark:'R'},
+  boss:{name:'Центурион',hp:1600,speed:64,damage:24,r:29,range:61,wind:.76,cooldown:1.15,xp:70,color:'#edc757',mark:'★'}
+};
+
+const units=unitDefinitions;
+
+Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
+Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
+Object.defineProperty(exports, "units", {get: () => units});
+},
+"src/systems/city-population.js": function(require, exports){
+const {expansionUnits} = require("data/enemies/units.js");
+function updateCityPedestrian(e,c,dt){
+ const civilian=expansionUnits[e.unit]?.civilian;
+ if(!civilian&&e.unit!=='courtesan')return false;
+ const s=c.state,p=s.p;
+ e.action=null;e.moving=false;
+ const move=(angle,speed)=>{
+  // Choose a clear local step instead of constructing a flow field for every pedestrian.
+  let chosen=null;
+  for(const offset of [0,.6,-.6,1.2,-1.2,Math.PI]){
+   const a=angle+offset,q={x:e.x+Math.cos(a)*28,y:e.y+Math.sin(a)*28};
+   if(c.Village.clear(e,q,e.r)){chosen=a;break;}
+  }
+  if(chosen===null){e.roamUntil=0;return;}
+  e.heading=chosen;const ox=e.x,oy=e.y;
+  const step=speed*(1-(e.abilitySlow||0))*dt;
+  c.Village.move(e,Math.cos(chosen)*step+e.vx*dt,Math.sin(chosen)*step+e.vy*dt,e.r);
+  const travel=Math.hypot(e.x-ox,e.y-oy);e.moving=travel>.01;e.walk=(e.walk||0)+travel/50;
+ };
+ const wander=()=>{
+  if(!e.roamUntil||s.t>=e.roamUntil){e.roamAngle=c.rand(-Math.PI,Math.PI);e.roamUntil=s.t+c.rand(.6,2.1);}
+  move(e.roamAngle,e.speed);
+ };
+ if(civilian){
+  if(c.dist(e,p)<e.r+14&&c.Village.clear(e,p,2))c.hurtPlayer(e);
+  wander();return true;
+ }
+ // Thieves never pursue or attack the hero. Grab nearby loot, then retreat.
+ let target=null,best=340;
+ if(!(e.fleeUntil>s.t))for(const list of [s.gems,s.pickups])for(const item of list){
+  if(item.dead)continue;const distance=c.dist(e,item);
+  if(distance<best&&c.Village.clear(e,item,e.r)){target=item;best=distance;}
+ }
+ if(target&&best<22){
+  target.dead=true;if(target.type==='food')e.hp=Math.min(e.max,e.hp+25);
+  e.fleeUntil=s.t+2.2;e.roamUntil=0;
+  if(s.texts.length<45)s.texts.push({x:e.x,y:e.y-50,v:target.type==='food'?'Перекус!':'Моё!',life:.8});
+ }
+ const distance=c.dist(e,p);
+ if(e.fleeUntil>s.t||distance<145){
+  const angle=distance<1?(e.roamAngle??c.rand(-Math.PI,Math.PI)):Math.atan2(e.y-p.y,e.x-p.x);
+  move(angle,e.speed*1.25);
+ }else if(target){move(Math.atan2(target.y-e.y,target.x-e.x),e.speed);}
+ else wander();
+ return true;
+}
+
+Object.defineProperty(exports, "updateCityPedestrian", {get: () => updateCityPedestrian});
+},
 "src/systems/combat.js": function(require, exports){
 const {expansionUnits} = require("data/enemies/units.js");
 const {expansionDrop} = require("src/systems/expansion.js");
-const {advanceAction} = require("src/rendering/animation-player.js");
+const {advanceAction} = require("src/core/action-timeline.js");
 let CombatSystem;
 'use strict';
 CombatSystem={create(sessionContext){
@@ -2383,14 +2466,8 @@ return {damage,throwStones,beginAction,advanceAction,hurtPlayer,heroImpact};
 
 Object.defineProperty(exports, "CombatSystem", {get: () => CombatSystem});
 },
-"src/rendering/animation-player.js": function(require, exports){
+"src/core/action-timeline.js": function(require, exports){
 const {actionTiming} = require("data/animations/action-timing.js");
-function clampedFrame(progress){
-  return Math.min(actionTiming.frameCount-1,Math.floor(Math.max(0,progress)*actionTiming.frameCount));
-}
-function loopFrame(progress){
-  return Math.floor(((progress%1)+1)%1*actionTiming.frameCount);
-}
 function advanceAction(actor,dt,impact){
   const action=actor.action;
   if(!action)return;
@@ -2402,8 +2479,6 @@ function advanceAction(actor,dt,impact){
   if(action.elapsed>=action.duration)actor.action=null;
 }
 
-Object.defineProperty(exports, "clampedFrame", {get: () => clampedFrame});
-Object.defineProperty(exports, "loopFrame", {get: () => loopFrame});
 Object.defineProperty(exports, "advanceAction", {get: () => advanceAction});
 },
 "data/animations/action-timing.js": function(require, exports){
@@ -2909,12 +2984,12 @@ const AbilitySystem={create(c){
  function activate(slot){if(c.mode!=='play'||!c.state||c.state.p.hp<=0||c.state.p.stun>0)return false;const s=c.state,a=s.abilities[slot],p=s.p,st=effectiveStats();if(!a||a.cd>0||a.left>0)return false;
   if(a.id==='forge'){if(!c.Progression.grantArmorRank())return false;s.stats.armor++;}
   if(a.id==='dash'){const probe={x:p.x,y:p.y};c.Village.move(probe,p.facing.x*6,p.facing.y*6,14);if(Math.hypot(probe.x-p.x,probe.y-p.y)<.01)return false;}
-  a.castRank=abilityRank(s,a.id);a.cd=a.cooldown-(a.id==='forge'?6*a.castRank:0);a.left=a.duration+(a.id==='potion'?a.castRank:0);a.endsAt=s.t+a.left;a.elapsed=0;a.tick=0;a.direction={...p.facing};a.hit=new Set();
+  a.castRank=abilityRank(s,a.id);a.cd=Math.max(0,a.cooldown-(a.cooldownPerRank||0)*a.castRank);a.left=a.duration+(a.id==='potion'?a.castRank:0);a.endsAt=s.t+a.left;a.elapsed=0;a.tick=0;a.direction={...p.facing};a.hit=new Set();
   if(a.id==='dash'||a.id==='jump'){p.action=null;a.start={x:p.x,y:p.y};}
   if(a.id==='spin')p.action=null;
   if(a.id==='note'){area(p,150*st.range,20*st.damage*(1+.25*a.castRank),220,0,1.2+.3*a.castRank);ring(p,150*st.range);}
   if(a.id==='volley')c.Villagers.fish(s,p.facing,{count:5+a.castRank+(st.fishCount||0),spread:Math.PI*70/180,damage:16});
-  if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=brew?4+(st.poisonDuration||0):5;a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
+  if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=a.duration+(brew?(st.poisonDuration||0):0);a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
   if(a.id==='elixir')p.poisoned=0;
   c.Progression?.recordAbility?.();
   c.soundEffect('magic');hud();return true;
@@ -3077,7 +3152,7 @@ const data=VillageData.create();
 const collision=VillageCollision.create(data.objects,data.size);
 const navigation=VillageNavigation.create({...data,...collision});
 const renderer=VillageRenderer.create({...data,document:typeof document==='undefined'?null:document,VillageArt:typeof VillageArt==='undefined'?null:VillageArt});
-return {...data,...navigation,...renderer,collision,blocked:collision.blocked,clear:collision.clear};
+return {...data,residents:[],...navigation,...renderer,collision,blocked:collision.blocked,clear:collision.clear};
 })();
 
 Object.defineProperty(exports, "Village", {get: () => Village});
@@ -3327,7 +3402,7 @@ const achievementDefinitions = [
     id: 'kills_10',
     title: 'Первая стычка',
     desc: 'Победить 10 римлян в боях',
-    icon: 'assets/ui/achivements/kills-10.png',
+    icon: 'assets/runtime/ui/achievements/kills-10.png',
     category: 'combat',
     target: 10,
     unit: 'врагов',
@@ -3339,7 +3414,7 @@ const achievementDefinitions = [
     id: 'kills_100',
     title: 'Гроза патрулей',
     desc: 'Победить 100 римлян',
-    icon: 'assets/ui/achivements/kills-100.png',
+    icon: 'assets/runtime/ui/achievements/kills-100.png',
     category: 'combat',
     target: 100,
     unit: 'врагов',
@@ -3351,7 +3426,7 @@ const achievementDefinitions = [
     id: 'kills_500',
     title: 'Бич легиона',
     desc: 'Победить 500 римлян',
-    icon: 'assets/ui/achivements/kills-500.png',
+    icon: 'assets/runtime/ui/achievements/kills-500.png',
     category: 'combat',
     target: 500,
     unit: 'врагов',
@@ -3363,7 +3438,7 @@ const achievementDefinitions = [
     id: 'kills_1000',
     title: 'Легенда Галлии',
     desc: 'Убить 1000 римлян во славу деревни',
-    icon: 'assets/ui/achivements/kills-1000.png',
+    icon: 'assets/runtime/ui/achievements/kills-1000.png',
     category: 'combat',
     target: 1000,
     unit: 'врагов',
@@ -3375,7 +3450,7 @@ const achievementDefinitions = [
     id: 'kills_2500',
     title: 'Кошмар Цезаря',
     desc: 'Уничтожить 2500 захватчиков',
-    icon: 'assets/ui/achivements/kills-2500.png',
+    icon: 'assets/runtime/ui/achievements/kills-2500.png',
     category: 'combat',
     target: 2500,
     unit: 'врагов',
@@ -3387,7 +3462,7 @@ const achievementDefinitions = [
     id: 'survive_run_60',
     title: 'Первый натиск',
     desc: 'Продержаться в одном забеге 1 минуту',
-    icon: 'assets/ui/achivements/survive-run-60.png',
+    icon: 'assets/runtime/ui/achievements/survive-run-60.png',
     category: 'survival',
     target: 60,
     format: 'time',
@@ -3399,7 +3474,7 @@ const achievementDefinitions = [
     id: 'survive_run_180',
     title: 'Крепкий орешек',
     desc: 'Продержаться в одном забеге 3 минуты',
-    icon: 'assets/ui/achivements/survive-run-180.png',
+    icon: 'assets/runtime/ui/achievements/survive-run-180.png',
     category: 'survival',
     target: 180,
     format: 'time',
@@ -3411,7 +3486,7 @@ const achievementDefinitions = [
     id: 'survive_run_300',
     title: 'Дожить до пира',
     desc: 'Выстоять полные 5 минут до наступления победного пира',
-    icon: 'assets/ui/achivements/survive-run-300.png',
+    icon: 'assets/runtime/ui/achievements/survive-run-300.png',
     category: 'survival',
     target: 300,
     format: 'time',
@@ -3423,7 +3498,7 @@ const achievementDefinitions = [
     id: 'survive_total_600',
     title: 'Выжить 10 минут',
     desc: 'Провести в боях против легиона 10 минут суммарно',
-    icon: 'assets/ui/achivements/survive-total-600.png',
+    icon: 'assets/runtime/ui/achievements/survive-total-600.png',
     category: 'survival',
     target: 600,
     format: 'time',
@@ -3435,7 +3510,7 @@ const achievementDefinitions = [
     id: 'boss_centurion',
     title: 'Падение Максимуса',
     desc: 'Одолеть босса Центуриона Максимуса',
-    icon: 'assets/ui/achivements/boss-centurion.png',
+    icon: 'assets/runtime/ui/achievements/boss-centurion.png',
     category: 'combat',
     target: 1,
     unit: 'раз',
@@ -3447,7 +3522,7 @@ const achievementDefinitions = [
     id: 'unlock_all_heroes',
     title: 'Деревня в сборе',
     desc: 'Разблокировать всех 6 героев в лавке',
-    icon: 'assets/ui/achivements/unlock-all-heroes.png',
+    icon: 'assets/runtime/ui/achievements/unlock-all-heroes.png',
     category: 'progression',
     target: 6,
     unit: 'героев',
@@ -3459,7 +3534,7 @@ const achievementDefinitions = [
     id: 'helmets_100',
     title: 'Трофейная казна',
     desc: 'Накопить 100 римских шлемов в кошельке',
-    icon: 'assets/ui/achivements/helmets-100.png',
+    icon: 'assets/runtime/ui/achievements/helmets-100.png',
     category: 'progression',
     target: 100,
     unit: 'шлемов',
@@ -3471,7 +3546,7 @@ const achievementDefinitions = [
     id: 'upgrades_10',
     title: 'Кузница победы',
     desc: 'Приобрести 10 улучшений в лавке',
-    icon: 'assets/ui/achivements/upgrades-10.png',
+    icon: 'assets/runtime/ui/achievements/upgrades-10.png',
     category: 'progression',
     target: 10,
     unit: 'улучшений',
@@ -3483,7 +3558,7 @@ const achievementDefinitions = [
     id: 'abilities_25',
     title: 'Сила друидов',
     desc: 'Использовать активные умения (Q/E) 25 раз',
-    icon: 'assets/ui/achivements/abilities-25.png',
+    icon: 'assets/runtime/ui/achievements/abilities-25.png',
     category: 'mastery',
     target: 25,
     unit: 'раз',
@@ -3498,10 +3573,9 @@ Object.defineProperty(exports, "achievementDefinitions", {get: () => achievement
 "src/systems/upgrades.js": function(require, exports){
 const {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} = require("data/characters/abilities.js");
 const {permanentUpgradeDefinitions,heroTrainingDefinitions} = require("data/upgrades.js");
-const {Progression} = require("src/systems/persistence.js");
 let UpgradeSystem;
 'use strict';
-UpgradeSystem=(()=>{
+UpgradeSystem={create(Progression){
  const add=(key,value)=>s=>s.stats[key]=(s.stats[key]||0)+value;
  const item=(id,name,desc,key,value,max=3)=>({id,name,desc,icon:'✦',max,apply:add(key,value)});
  const common=[
@@ -3525,7 +3599,7 @@ UpgradeSystem=(()=>{
  const abilities=Object.fromEntries(Object.entries(abilityDefinitions).map(([hero,defs])=>[hero,defs.map(a=>({
   id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:abilityUpgradeDescriptions[a.id],icon:'◆',max:abilityUpgradeMax,
   available:()=>a.id!=='forge'||Progression.armorRank<Progression.upgrades.armor.max,
-  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-6);}}
+  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-(slot.cooldownPerRank||0));}}
  }))]));
  const fallback=[{id:'herbs',name:'Травяной запас',desc:'+0,1 HP регенерации в секунду.',icon:'♥',apply:add('regen',.1)},{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
  function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'})),...(abilities[hero]||[]).map(u=>({...u,group:'Активное умение'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&(!u.available||u.available(s)));}
@@ -3545,7 +3619,7 @@ UpgradeSystem=(()=>{
   if(training)add(training.stat,training.factor*(levels['training_'+hero]||0))(s);
  }
  return {common,heroes,abilities,pool,offer,apply,permanent};
-})();
+}};
 
 Object.defineProperty(exports, "UpgradeSystem", {get: () => UpgradeSystem});
 },
@@ -3687,7 +3761,6 @@ Object.defineProperty(exports, "RomanArt", {get: () => RomanArt});
 },
 "src/entities/legion.js": function(require, exports){
 const {drawExpansion,expansionTelegraph} = require("src/rendering/art/expansion-art.js");
-const {waves} = require("data/enemies/waves.js");
 const {unitDefinitions} = require("data/enemies/units.js");
 const {ProjectileArt} = require("src/rendering/art/projectile-art.js");
 const {UnitArt} = require("src/rendering/art/unit-art.js");
@@ -3711,9 +3784,7 @@ Legion=(()=>{
   if(label)g.drawImage(label.canvas,x-label.width/2,y-13,label.width,label.height);
   else {g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,x,y);}
  }
- function wave(t,r=Math.random()){
-  for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
- }
+
  function mitigation(e,p){if(e.unit!=='turtle')return 1;const a=Math.atan2(p.y-e.y,p.x-e.x);return Math.cos(a-(e.heading||0))>.15?.35:1;}
  function telegraph(g,e){if(expansionTelegraph(g,e))return;if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
@@ -3740,7 +3811,7 @@ Legion=(()=>{
   }
   if(e.unit!=='roman'&&!e.boss&&!u.civilian)drawLabel(g,u,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));
  }
- return {units,wave,mitigation,telegraph,draw,projectile};
+ return {units,mitigation,telegraph,draw,projectile};
 })();
 
 Object.defineProperty(exports, "Legion", {get: () => Legion});

@@ -18,7 +18,7 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  }
  assert.equal(h.draws.length,4,'Only four Obelix attack poses are normalized at load time');
  for(const [image,x,y,w,height]of h.draws){
-  assert(image.url.includes('/obelix/attack/'));
+  assert(image.url.includes('/obelix/animations/attack/'));
   assert(Math.abs(x+w/2-128)<1e-9,'Scaling preserves horizontal anchor');
   assert(Math.abs(y+height*236/256-236)<1e-9,'Scaling preserves the foot anchor');
  }
@@ -30,6 +30,6 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  assert.equal(h.images.length,requests,'Portrait adapter shares decoded frames');
  for(let n=0;n<10000;n++)A.get('roman',n%3,'walk',n/4);
  assert.equal(h.images.length,requests,'No allocations during playback');
- assert(h.images.every(i=>i.url.includes('/characters/frames/')));
+ assert(h.images.every(i=>/\/characters\/(heroes|enemies|civilians)\/[^/]+\/animations\//.test(i.url)));
  console.log('PASS: atomic frame loading, variants, idle, loops and shared image cache.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

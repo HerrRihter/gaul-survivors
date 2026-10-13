@@ -1,6 +1,6 @@
 # Первый кадр черепахи
 
-Исправлен только `assets/runtime/characters/frames/turtle/walk/0.png`. Остальные кадры ожидают согласования первого.
+Исправлен только `assets/runtime/characters/enemies/turtle/animations/walk/0.png`. Остальные кадры ожидают согласования первого.
 
 Инструмент: встроенный image_gen. Исходный результат и прежний кадр сохранены в `assets/source/turtle-first-frame/`. Импорт равномерно уменьшает рисунок до исходной высоты 106 px и размещает на прозрачном холсте 256×256 со стопами на строке 235. Скрипт: `tools/import-turtle-first-frame.cjs`.
 

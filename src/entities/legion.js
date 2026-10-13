@@ -1,5 +1,4 @@
 import {drawExpansion,expansionTelegraph} from '../rendering/art/expansion-art.js';
-import {waves} from '../../data/enemies/waves.js';
 import {unitDefinitions} from '../../data/enemies/units.js';
 import {ProjectileArt} from '../rendering/art/projectile-art.js';
 import {UnitArt} from '../rendering/art/unit-art.js';
@@ -23,9 +22,7 @@ Legion=(()=>{
   if(label)g.drawImage(label.canvas,x-label.width/2,y-13,label.width,label.height);
   else {g.fillStyle=u.color;g.font='bold 10px monospace';g.textAlign='center';g.fillText(u.name,x,y);}
  }
- function wave(t,r=Math.random()){
-  for(const spec of waves.units)if(t>=spec.time&&r<spec.cutoff)return spec.type;return 'roman';
- }
+
  function mitigation(e,p){if(e.unit!=='turtle')return 1;const a=Math.atan2(p.y-e.y,p.x-e.x);return Math.cos(a-(e.heading||0))>.15?.35:1;}
  function telegraph(g,e){if(expansionTelegraph(g,e))return;if(!e.action||e.action.hit)return;const u=units[e.unit],a=e.action,angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);g.save();g.translate(e.x,e.y);g.rotate(angle);g.fillStyle='#e8774245';g.strokeStyle='#ffca80';g.lineWidth=2;
   if(e.unit==='ram'||e.unit==='spear'||e.unit==='pilum'){const reach=e.unit==='ram'?420:u.range;g.fillRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);g.strokeRect(0,-(e.unit==='ram'?43:10),reach,e.unit==='ram'?86:20);}else{g.beginPath();g.arc(0,0,u.range,-1.1,1.1);g.lineTo(0,0);g.closePath();g.fill();g.stroke();}g.restore();
@@ -52,5 +49,5 @@ Legion=(()=>{
   }
   if(e.unit!=='roman'&&!e.boss&&!u.civilian)drawLabel(g,u,e.x,e.y-(u.labelHeight||(e.unit==='ram'?142:e.unit==='turtle'?124:96)));
  }
- return {units,wave,mitigation,telegraph,draw,projectile};
+ return {units,mitigation,telegraph,draw,projectile};
 })();

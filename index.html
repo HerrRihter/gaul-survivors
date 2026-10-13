@@ -7,20 +7,20 @@
 <meta property="og:title" content="Галлы: последний пир">
 <meta property="og:description" content="Римляне снова испортили вечер. Продержись до пира, собирай волшебные кристаллы и объясни легиону, почему эту деревню обходят стороной.">
 <link rel="stylesheet" href="styles/game.css">
-<link rel="preload" as="image" href="assets/ui/achivements/kills-10.png">
-<link rel="preload" as="image" href="assets/ui/achivements/kills-100.png">
-<link rel="preload" as="image" href="assets/ui/achivements/kills-500.png">
-<link rel="preload" as="image" href="assets/ui/achivements/kills-1000.png">
-<link rel="preload" as="image" href="assets/ui/achivements/kills-2500.png">
-<link rel="preload" as="image" href="assets/ui/achivements/survive-run-60.png">
-<link rel="preload" as="image" href="assets/ui/achivements/survive-run-180.png">
-<link rel="preload" as="image" href="assets/ui/achivements/survive-run-300.png">
-<link rel="preload" as="image" href="assets/ui/achivements/survive-total-600.png">
-<link rel="preload" as="image" href="assets/ui/achivements/boss-centurion.png">
-<link rel="preload" as="image" href="assets/ui/achivements/unlock-all-heroes.png">
-<link rel="preload" as="image" href="assets/ui/achivements/helmets-100.png">
-<link rel="preload" as="image" href="assets/ui/achivements/upgrades-10.png">
-<link rel="preload" as="image" href="assets/ui/achivements/abilities-25.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/kills-10.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/kills-100.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/kills-500.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/kills-1000.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/kills-2500.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/survive-run-60.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/survive-run-180.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/survive-run-300.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/survive-total-600.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/boss-centurion.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/unlock-all-heroes.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/helmets-100.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/upgrades-10.png">
+<link rel="preload" as="image" href="assets/runtime/ui/achievements/abilities-25.png">
 </head>
 <body>
 <canvas id="game" aria-label="Игровая арена"></canvas>
@@ -31,7 +31,7 @@
 <div id="abilities" class="ability-controls hidden" aria-label="Умения героя"><button id="ability0" type="button"></button><button id="ability1" type="button"></button></div>
 <div id="stick" class="touch hidden"><i id="knob"></i></div>
 <div id="menu" class="overlay"><main class="menu"><div class="eyebrow">МАЛЕНЬКАЯ ДЕРЕВНЯ. БОЛЬШАЯ ДРАКА.</div><h1 class="title">ГАЛЛЫ:<br><span>ПОСЛЕДНИЙ ПИР</span></h1><p class="intro">Римляне снова испортили вечер. Продержись до пира, собирай волшебные кристаллы и объясни легиону, почему эту деревню обходят стороной.</p><div class="rule"><span>4 ЛОКАЦИИ · ДЕРЕВНЯ / ЛЕС / ЛАГЕРЬ / ЛЮТЕЦИЯ</span></div><div class="startline"><button id="shopOpen" class="small">ЛАВКА</button><button id="achievementsOpen" class="small">ДОСТИЖЕНИЯ</button><button id="settingsOpen" class="small">НАСТРОЙКИ</button><span id="wallet"></span><button id="start" class="primary">НАЧАТЬ ЗАБЕГ →</button><a class="small" href="legion-preview.html" style="color:#f6cb72;text-decoration:none">РАЗВЕДДАННЫЕ</a><a class="small" href="village-preview.html" style="color:#f6cb72;text-decoration:none">КАРТА</a><div class="record" id="record"></div></div><div id="menuHint" class="footer">WASD или стрелки — двигаться · атаки автоматически по направлению последнего шага · на телефоне — веди пальцем</div></main></div>
-<div id="runHeroSelect" class="overlay hidden" style="z-index:40"><section class="run-hero-select" role="dialog" aria-modal="true" aria-labelledby="runHeroTitle"><header class="run-hero-head"><div><h2 id="runHeroTitle">Выбери героя</h2><p>Выбери героя и место следующего сражения.</p></div><button id="runHeroBack" class="small">← НАЗАД</button></header><div class="map-select"><label for="runMap">МЕСТО СРАЖЕНИЯ</label><select id="runMap"><option value="village">Деревня · начало пути</option><option value="forest">Лес · идем искать римлян</option><option value="camp">Римский лагерь · где прячется Каюс Бонус?</option><option value="lutetia">Лютеция · город и торговая площадь</option></select><p id="mapDescription">Знакомые дома и легион. Исходная карта.</p></div><div id="runHeroes" class="run-heroes"></div><footer class="run-hero-foot"><div id="runHeroStats" class="run-hero-stats"></div><div class="run-hero-actions"><button id="runHeroStart" class="primary">В БОЙ →</button></div></footer></section></div>
+<div id="runHeroSelect" class="overlay hidden" style="z-index:40"><section class="run-hero-select" role="dialog" aria-modal="true" aria-labelledby="runHeroTitle"><header class="run-hero-head"><div><h2 id="runHeroTitle">Выбери героя</h2><p>Выбери героя и место следующего сражения.</p></div><button id="runHeroBack" class="small">← НАЗАД</button></header><div class="map-select"><label for="runMap">МЕСТО СРАЖЕНИЯ</label><select id="runMap"></select><p id="mapDescription">Знакомые дома и легион. Исходная карта.</p></div><div id="runHeroes" class="run-heroes"></div><footer class="run-hero-foot"><div id="runHeroStats" class="run-hero-stats"></div><div class="run-hero-actions"><button id="runHeroStart" class="primary">В БОЙ →</button></div></footer></section></div>
 <div id="levelup" class="overlay hidden" style="z-index:40"><div class="modal"><div class="eyebrow">СИЛА ДЕРЕВНИ</div><h2>Ещё глоток волшебства</h2><p>Выбери улучшение. Римляне подождут.</p><div id="cards" class="cards"></div><div id="levelupHint" class="footer">Нажми 1, 2, 3 или 4 для выбора</div></div></div>
 <div id="paused" class="overlay hidden" style="z-index:40"><div class="modal"><div class="eyebrow">ЛЕГИОН НА ПЕРЕКУРЕ</div><h2>Небольшой привал</h2><p>Драка продолжится, когда ты будешь готов.</p><button id="resume" class="primary">ПРОДОЛЖИТЬ →</button><button id="pauseSound" class="small" aria-label="Переключить звук">ЗВУК: ВКЛ</button><button id="pauseSettings" class="small">НАСТРОЙКИ</button><button id="quit" class="small">В МЕНЮ</button></div></div>
 <div id="end" class="overlay hidden" style="z-index:40"><div class="modal"><div id="endTag" class="eyebrow"></div><h2 id="endTitle"></h2><p id="endText"></p><div id="endStats" class="stats"></div><button id="again" class="primary">ЕЩЁ ОДИН ЗАБЕГ →</button><button id="back" class="small">ВЫБРАТЬ ГЕРОЯ</button></div></div>

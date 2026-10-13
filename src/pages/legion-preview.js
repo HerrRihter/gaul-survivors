@@ -1,6 +1,7 @@
 import {drawExpansion} from '../rendering/art/expansion-art.js';
 import {unitDefinitions} from '../../data/enemies/units.js';
-import {waves,expansionSchedules} from '../../data/enemies/waves.js';
+import {getWaveSchedule,waveRoster} from '../systems/wave-schedule.js';
+import {waveTiming} from '../ui/wave-preview.js';
 import {arenaDefinitions,createArenas} from '../world/arenas.js';
 import {CharacterFrameManifest} from '../../data/animations/character-frames.js';
 import {CharacterBounds} from '../../data/animations/character-bounds.js';
@@ -10,27 +11,21 @@ import {Village} from '../world/village/village.js';
 import {fitCharacterPreview,drawCharacterPreview} from '../ui/character-preview.js';
 
 const descriptions={
-citizen:['Лютеция · с начала боя','Три облика: пекарь, носильщик и писец. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.'],
-auxiliary:['Лютеция · с начала боя','Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.'],
-merchant:['Лютеция · на карте изначально','Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.'],
-courtesan:['Лютеция · с 0:15','Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.'],
-boar:['Лес · с 0:04','Кабан предупреждает о рывке и несётся по прямой.'],
-stoneSquad:['Лес · с 0:35','Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.'],
-netter:['Лес · с 0:18','Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.'],
-tower:['Лагерь · с 0:32','Медленная осадная башня со стрелками. Залп из трёх стрел.'],
-cavalry:['Лагерь · с 0:15','Пересекает карту и уходит. С 2:00 атаки учащаются и охватывают проезды по всему лагерю.'],
-caius:['Лагерь · с 0:45','Не атакует. Каждые 100 потерянных HP дают 1 опыт и 1 шлем.'],
-wine:['Лагерь · с 0:05','Оставляет винный след на 6 с. Отравление держится 2,5 с после выхода.'],roman:['С начала боя','Короткий удар мечом. Прерывается попаданием.'],spear:['С 0:25','Дальний выпад по зафиксированной линии. Уйди вбок во время замаха.'],pilum:['С 0:50','Держится на дистанции и метает пилум. Снаряд останавливается о дом.'],veteran:['С 1:25','Тяжёлый удар с долгой подготовкой; меньше отбрасывается.'],turtle:['С 1:40 · затем каждые 65 с','Шесть солдат как один строй. Щиты поглощают 65% урона спереди; обходи сбоку или сзади.'],ram:['С 2:35 · затем каждые 80 с','Отряд с тараном разгоняется по отмеченной полосе. Столкновение с домом останавливает разгон.'],boss:['С 3:50','Центурион завершает наступление. Победи его и продержись до пира.']};
+citizen:'Три облика: пекарь, носильщик и писец. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
+auxiliary:'Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.',
+merchant:'Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.',
+courtesan:'Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.',
+boar:'Кабан предупреждает о рывке и несётся по прямой.',
+stoneSquad:'Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.',
+netter:'Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.',
+tower:'Медленная осадная башня со стрелками. Залп из трёх стрел.',
+cavalry:'Пересекает карту и уходит. С 2:00 атаки учащаются и охватывают проезды по всему лагерю.',
+caius:'Не атакует. Каждые 100 потерянных HP дают 1 опыт и 1 шлем.',
+wine:'Оставляет винный след на 6 с. Отравление держится 2,5 с после выхода.',roman:'Короткий удар мечом. Прерывается попаданием.',spear:'Дальний выпад по зафиксированной линии. Уйди вбок во время замаха.',pilum:'Держится на дистанции и метает пилум. Снаряд останавливается о дом.',veteran:'Тяжёлый удар с долгой подготовкой; меньше отбрасывается.',turtle:'Шесть солдат как один строй. Щиты поглощают 65% урона спереди; обходи сбоку или сзади.',ram:'Отряд с тараном разгоняется по отмеченной полосе. Столкновение с домом останавливает разгон.',boss:'Центурион завершает наступление. Победи его и продержись до пира.'};
 
 const anchor=CharacterFrameManifest.anchor,previews=[];
 const arenas=createArenas(Village);
-const commonUnits=['roman',...waves.units.slice().sort((a,b)=>a.time-b.time).map(w=>w.type),...Object.keys(waves.siege),'boss'];
-const mapNotes={
- lutetia:'Легионеры и ауксиларии — с начала. Пилумы — 0:40, виночерпии — 1:10, ветераны — 1:25, черепаха — 2:05 (до 3:25 максимум одна, затем две). Центурион — 3:50. На улицах 24–40 гражданских без наград. Куртизанки воруют добычу и убегают.',
- village:'Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.',
- forest:'Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.',
- camp:'Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.'
-};
+document.getElementById('locations').innerHTML=Object.entries(arenaDefinitions).map(([id,map])=>'<a href="#'+id+'">'+map.name+'</a>').join('');
 let selectedMap='village';
 function showLocation(){
  const requested=location.hash.slice(1);
@@ -40,7 +35,7 @@ function showLocation(){
  document.getElementById('locationTitle').textContent=arena.name+' · Разведданные';
  document.getElementById('locationIntro').textContent=arena.description;
  document.getElementById('mapTitle').textContent='Карта: '+arena.name;
- document.getElementById('mapNotes').textContent=mapNotes[selectedMap];
+ document.getElementById('mapNotes').textContent=arena.notes;
  document.getElementById('map').setAttribute('aria-label','План локации: '+arena.name);
  for(const link of document.querySelectorAll('.locations a')){
   if(link.hash==='#'+selectedMap)link.setAttribute('aria-current','page');
@@ -48,15 +43,13 @@ function showLocation(){
  }
  previews.length=0;
  document.getElementById('cards').replaceChildren();
- const units=selectedMap==='lutetia'?['roman','auxiliary','merchant','courtesan','pilum','wine','veteran','turtle','boss','citizen']:[...commonUnits,...(expansionSchedules[selectedMap]||[]).map(w=>w.unit)];
+ const schedule=getWaveSchedule(selectedMap),roster=waveRoster(schedule),units=roster.map(entry=>entry.unit);
  document.getElementById('rosterCount').textContent='Отряды в локации: '+units.length;
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const description=[...(descriptions[unit]||['Новый отряд',''])];
- const cityTiming={pilum:'С 0:40',wine:'С 1:10 · максимум 2',veteran:'С 1:25',turtle:'С 2:05 · одна, с 3:25 — до двух'};
- if(selectedMap==='lutetia'&&cityTiming[unit])description[0]=cityTiming[unit];
- card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${description[0]}</p><p>${description[1]}</p>`;
+ const timing=waveTiming(schedule,unit),description=descriptions[unit]||'';
+ card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${timing}</p><p>${description}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit==='citizen'?'citizen-0':unit;
  const bounds=CharacterBounds[id]||{left:0,top:0,right:256,bottom:256};

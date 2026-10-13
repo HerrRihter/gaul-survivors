@@ -10,5 +10,5 @@ const data=VillageData.create();
 const collision=VillageCollision.create(data.objects,data.size);
 const navigation=VillageNavigation.create({...data,...collision});
 const renderer=VillageRenderer.create({...data,document:typeof document==='undefined'?null:document,VillageArt:typeof VillageArt==='undefined'?null:VillageArt});
-return {...data,...navigation,...renderer,collision,blocked:collision.blocked,clear:collision.clear};
+return {...data,residents:[],...navigation,...renderer,collision,blocked:collision.blocked,clear:collision.clear};
 })();

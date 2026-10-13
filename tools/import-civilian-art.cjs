@@ -19,7 +19,7 @@ const ids=['citizen-0','citizen-1','citizen-2'],rows=[0,1,3];
    frames.push({cell,box:{left,top,width:right-left,height:bottom-top}});
   }
   const scale=[70,76,74][variant]/Math.max(...frames.map(f=>f.box.height));
-  const files=[],dir='assets/runtime/characters/frames/'+id+'/walk';fs.mkdirSync(dir,{recursive:true});
+  const files=[],dir='assets/runtime/characters/civilians/'+id+'/animations/walk';fs.mkdirSync(dir,{recursive:true});
   for(let col=0;col<4;col++){
    const {cell,box}=frames[col],width=Math.round(box.width*scale),height=Math.round(box.height*scale);
    const input=await sharp(cell).extract(box).resize(width,height).png().toBuffer();

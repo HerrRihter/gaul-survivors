@@ -2,7 +2,8 @@
 const assert=require('node:assert/strict');
 async function main(){
  const {orderActors}=await import('../src/rendering/depth-order.js');
- const {advanceAction,clampedFrame,loopFrame}=await import('../src/rendering/animation-player.js');
+ const {advanceAction}=await import('../src/core/action-timeline.js');
+ const {clampedFrame,loopFrame}=await import('../src/rendering/animation-player.js');
  const {CanvasSystem}=await import('../src/rendering/canvas.js');
  const canvas={};
  const context={window:{innerWidth:390,innerHeight:844,devicePixelRatio:2},Math,canvas,ctx:{setTransform(){}}};

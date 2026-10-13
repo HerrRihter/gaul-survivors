@@ -1,5 +1,5 @@
 export const AudioSystem = {create(c) {
-  const root = new URL('../../assets/audio/', import.meta.url);
+  const root = new URL('../../assets/runtime/audio/', import.meta.url);
   const settings = {enabled: true, music: .3, effects: .65};
   try {
     const saved = JSON.parse(c.localStorage.getItem('gaul-audio'));

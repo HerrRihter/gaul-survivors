@@ -17,9 +17,10 @@ export let GameSession;
 GameSession = {
   create({
     document, window, localStorage, performance, requestAnimationFrame, cancelAnimationFrame,
-    Math, Villagers, Progression, UpgradeSystem, RomanArt, Village, Legion, Corpses,
+    Math, Villagers, Progression, UpgradeSystem: UpgradeSystemFactory, RomanArt, Village, Legion, Corpses,
     VillagerArt, AnimationArt, HeroArt, MenhirArt, MenuPortraits,
   }) {
+const UpgradeSystem=UpgradeSystemFactory.create(Progression);
 const arenas=createArenas(Village);
 let selectedMap='village';
 let audioController=null;
@@ -51,7 +52,7 @@ get canvas(){return canvas},
 get ctx(){return ctx},
 get W(){return W},set W(value){W=value},
 get H(){return H},set H(value){H=value},
-get WORLD(){return WORLD},
+get WORLD(){return arenas.get(selectedMap).size},
 get DURATION(){return DURATION},
 get resizeCanvas(){return resizeCanvas},
 get selected(){return selected},set selected(value){selected=value},
@@ -115,7 +116,7 @@ get stop(){return stop}
 
     const $=id=>document.getElementById(id), canvas=$('game'), ctx=canvas.getContext('2d');
     let W=960,H=540;
-    const WORLD=Village.size,DURATION=300;
+    const DURATION=300;
     const {resizeCanvas}=CanvasSystem.create(sessionContext);
     resizeCanvas();
     window.addEventListener('resize',resizeCanvas);
@@ -165,6 +166,7 @@ get stop(){return stop}
     let pendingRunHero=selected;
 
     const mapSelect=$('runMap');
+    if(mapSelect){mapSelect.innerHTML=Object.entries(arenaDefinitions).map(([id,map])=>`<option value="${id}">${map.name}</option>`).join('');mapSelect.value=selectedMap;}
     if(mapSelect)mapSelect.onchange=()=>{selectedMap=arenaDefinitions[mapSelect.value]?mapSelect.value:'village';$('mapDescription').textContent=arenaDefinitions[selectedMap].description;};
     $('start').onclick=openRunHeroSelect;
     $('runHeroBack').onclick=()=>{
@@ -218,6 +220,7 @@ get stop(){return stop}
     return {
       start,
       activateAbility: abilities.activate,
+      upgrades: UpgradeSystem,
       update,
       draw,
       pause,

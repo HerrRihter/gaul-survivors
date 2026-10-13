@@ -1,9 +1,8 @@
 import {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} from '../../data/characters/abilities.js';
 import {permanentUpgradeDefinitions,heroTrainingDefinitions} from '../../data/upgrades.js';
-import {Progression} from './persistence.js';
 export let UpgradeSystem;
 'use strict';
-UpgradeSystem=(()=>{
+UpgradeSystem={create(Progression){
  const add=(key,value)=>s=>s.stats[key]=(s.stats[key]||0)+value;
  const item=(id,name,desc,key,value,max=3)=>({id,name,desc,icon:'✦',max,apply:add(key,value)});
  const common=[
@@ -27,7 +26,7 @@ UpgradeSystem=(()=>{
  const abilities=Object.fromEntries(Object.entries(abilityDefinitions).map(([hero,defs])=>[hero,defs.map(a=>({
   id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:abilityUpgradeDescriptions[a.id],icon:'◆',max:abilityUpgradeMax,
   available:()=>a.id!=='forge'||Progression.armorRank<Progression.upgrades.armor.max,
-  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-6);}}
+  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-(slot.cooldownPerRank||0));}}
  }))]));
  const fallback=[{id:'herbs',name:'Травяной запас',desc:'+0,1 HP регенерации в секунду.',icon:'♥',apply:add('regen',.1)},{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
  function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'})),...(abilities[hero]||[]).map(u=>({...u,group:'Активное умение'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&(!u.available||u.available(s)));}
@@ -47,4 +46,4 @@ UpgradeSystem=(()=>{
   if(training)add(training.stat,training.factor*(levels['training_'+hero]||0))(s);
  }
  return {common,heroes,abilities,pool,offer,apply,permanent};
-})();
+}};

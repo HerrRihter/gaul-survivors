@@ -1,24 +1,4 @@
 import {expansionUnits} from '../../data/enemies/units.js';
-import {lutetiaWaves} from '../../data/enemies/waves.js';
-export const civilianVariants=3;
-export function seedCityCrowd(c){
- if(c.state.map!=='lutetia')return;
- for(let i=0;i<lutetiaWaves.civilians.initial;i++){
-  for(let attempt=0;attempt<80;attempt++){
-   const p={x:c.rand(100,c.WORLD-100),y:c.rand(120,c.WORLD-100)};
-   if(c.dist(p,c.state.p)<140||c.Village.blocked(p.x,p.y,12))continue;
-   c.spawn('citizen',false,{...p,variant:i%civilianVariants});break;
-  }
- }
- c.state.crowdNext=lutetiaWaves.civilians.every;
-}
-export function replenishCityCrowd(c){
- const s=c.state;if(s.map!=='lutetia'||s.t<(s.crowdNext||0))return;
- s.crowdNext=s.t+lutetiaWaves.civilians.every;
- const count=s.enemies.filter(e=>e.unit==='citizen'&&e.hp>0).length;
- const desired=Math.min(lutetiaWaves.civilians.maximum,24+Math.floor(s.t/15));
- if(count<desired)c.spawn('citizen');
-}
 export function updateCityPedestrian(e,c,dt){
  const civilian=expansionUnits[e.unit]?.civilian;
  if(!civilian&&e.unit!=='courtesan')return false;

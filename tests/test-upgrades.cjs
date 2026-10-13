@@ -4,7 +4,7 @@ const projectRoot = require('node:path').resolve(__dirname, '..');
 const fs=require('node:fs'),vm=require('node:vm'),assert=require('node:assert/strict');
 const saved=new Map(),e={localStorage:{getItem:k=>saved.get(k),setItem:(k,v)=>saved.set(k,v)}};
 e.AssetPaths={url:relative=>'assets/runtime/'+relative};vm.createContext(e);for(const f of ['src/systems/upgrades.js','src/systems/persistence.js'])await loadModule(e,projectRoot+'/'+f,{fresh:false});
-const U=e.UpgradeSystem,P=e.Progression;
+const P=e.Progression,U=e.UpgradeSystem.create(P);
 const state=()=>({stats:{damage:1,haste:1,range:1,speed:1,magnet:75,regen:0,armor:0},p:{max:100,hp:50},earned:0});
 for(const hero of Object.keys(U.heroes)){
  const s=state();assert.equal(U.pool(hero,s).length,13);

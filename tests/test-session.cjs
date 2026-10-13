@@ -10,6 +10,31 @@ assert.equal(idle.scheduled.size, 0, 'Importing does not schedule a frame');
 assert.equal(Object.keys(idle.listeners).length, 0, 'Importing does not bind input');
 
 const first = await createHarness(), second = await createHarness();
+for(const win of [true,false]){
+ const h=await createHarness();h.session.start();h.session.state.t=300;
+ h.session.finish(win);h.session.finish(win);h.session.menu();h.session.menu();
+ assert.equal(h.env.Progression.stats.totalTime,300,'Finish and menu record a run exactly once');
+ h.session.start();h.session.state.t=25;h.session.menu();
+ assert.equal(h.env.Progression.stats.totalTime,325,'Abandoning a live run records its time');
+ h.session.start();h.session.state.t=10;h.session.finish(win);h.session.start();
+ assert.equal(h.env.Progression.stats.totalTime,335,'Retry does not record the finished run again');
+ h.session.state.t=5;h.session.start();
+ assert.equal(h.env.Progression.stats.totalTime,340,'Restart records the interrupted run');
+}
+const injectedHarness=await createHarness({createSession:false});
+let injectedEarned=0;
+const injectedProgression={...injectedHarness.env.Progression,armorRank:3,earn:n=>{injectedEarned+=n;}};
+const injectedSession=injectedHarness.env.GameSession.create({...injectedHarness.env,Progression:injectedProgression});
+injectedSession.start();
+assert(!injectedSession.upgrades.pool('automatix',injectedSession.state).some(u=>u.ability==='forge'),'Forge availability reads injected progression');
+for(const u of injectedSession.upgrades.pool('asterix',injectedSession.state)){
+ injectedSession.state.upgradeRanks??={};injectedSession.state.upgradeRanks[u.id]=u.max;
+}
+const loot=injectedSession.upgrades.offer('asterix',injectedSession.state).find(u=>u.id==='loot');
+assert(injectedSession.upgrades.apply(loot,injectedSession.state));
+assert.equal(injectedEarned,3,'Loot credits the injected progression');
+assert.equal(injectedHarness.env.Progression.helmets,0,'Global progression is untouched');
+assert.equal(injectedSession.state.earned,3);
 assert.equal(first.session.state, null);
 assert.equal(first.scheduled.size, 0, 'Creating a session does not start its loop');
 first.session.select('obelix');first.session.start();

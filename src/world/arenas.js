@@ -1,3 +1,4 @@
+import {mapDefinitions} from '../../data/maps/maps.js';
 import {VillageCollision} from './village/collision.js';
 import {VillageNavigation} from './village/navigation.js';
 import {VillageRenderer,sceneryVisible} from './village/village-renderer.js';
@@ -5,19 +6,14 @@ import {VillageArt} from '../rendering/art/village-art.js';
 import {SceneryArt} from '../rendering/art/scenery-art.js';
 import {createLutetia} from './lutetia.js';
 
-export const arenaDefinitions={
- village:{name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
- forest:{name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
- camp:{name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'},
- lutetia:{name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду.'}
-};
+export const arenaDefinitions=mapDefinitions;
 export const campLanes=[180,640,1100,1560,2020];
 const scenery=SceneryArt;
 export function createArenas(village){
- const cache={village};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=createArena(id));}};
+ const factories={village:()=>village,forest:()=>createArena('forest'),camp:()=>createArena('camp'),lutetia:createLutetia};
+ const cache={};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=factories[id]());}};
 }
 function createArena(id){
- if(id==='lutetia')return createLutetia();
  const size=2200,objects=[],roads=[];let seed=id==='forest'?731:192;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const add=(x,y,art,width,footprint)=>objects.push({x,y,kind:art,art,width,...(footprint?{footprint}:{})});
@@ -87,5 +83,5 @@ function createArena(id){
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}
   g.restore();
  }
- return {size,objects,roads,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
+ return {size,objects,roads,residents:[],depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
 }

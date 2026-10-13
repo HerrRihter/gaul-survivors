@@ -11,7 +11,7 @@ async function main(){
   page.on('pageerror',e=>errors.push(e.message));
   await page.goto(`http://127.0.0.1:${server.address().port}/previews/animation-preview.html`);
   await page.waitForFunction(()=>document.querySelector('#status').textContent==='Герои готовы к бою');
- await page.waitForFunction(()=>performance.getEntriesByType('resource').filter(e=>/\/frames\/(asterix|obelix|cacofonix|antisanitarix|automatix|panoramix)\/walk\//.test(e.name)).length===24);
+ await page.waitForFunction(()=>performance.getEntriesByType('resource').filter(e=>/\/heroes\/(asterix|obelix|cacofonix|antisanitarix|automatix|panoramix)\/animations\/walk\//.test(e.name)).length===24);
   const audit=await page.evaluate(async()=>{
    const {VillagerArt}=await import('/src/rendering/art/villager-art.js');
    const {AnimationArt}=await import('/src/rendering/art/animation-art.js');
@@ -44,7 +44,7 @@ async function main(){
    for(const b of bounds)assert(b.left>0&&b.right<b.width-1&&b.top>0&&b.bottom<b.height-1,`${name}: clipped frame`);
   }
   assert.deepEqual(errors,[]);
-  await page.screenshot({path:path.resolve('previews/hero-walk-audit.png'),fullPage:true});
+  await page.screenshot({path:path.resolve('assets/source/references/audits/hero-walk-audit.png'),fullPage:true});
   console.log('PASS: six heroes, 24 decoded walk frames, consistent heights/floors, no clipping or browser errors.');
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 }

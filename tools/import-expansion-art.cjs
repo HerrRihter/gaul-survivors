@@ -56,14 +56,14 @@ async function main(){
  const folder=spec.folder||id,actions={},metrics=[];
  for(let row=0;row<3;row++){
   const action=['walk','attack','hurt'][row];actions[action]=[];
-  const dir=path.join(root,'assets/runtime/characters/frames',folder,action);fs.mkdirSync(dir,{recursive:true});
+  const dir=path.join(root,'assets/runtime/characters/enemies',folder,'animations',action);fs.mkdirSync(dir,{recursive:true});
   for(let col=0;col<4;col++){
    const {cell,box,footX}=cells[row*4+col];
    const width=Math.max(1,Math.round(box.width*scale)),height=Math.max(1,Math.round(box.height*scale));
    const sprite=await sharp(cell).extract(box).resize(width,height).ensureAlpha().png().toBuffer();
    const left=Math.round(128-footX*scale),top=236-height;
    await sharp({create:{width:256,height:256,channels:4,background:{r:0,g:0,b:0,alpha:0}}}).composite([{input:sprite,left,top}]).png({palette:false}).toFile(path.join(dir,col+'.png'));
-   actions[action].push('characters/frames/'+folder+'/'+action+'/'+col+'.png');metrics.push({action,frame:col,source:box,width,height,left,top});
+   actions[action].push('characters/enemies/'+folder+'/animations/'+action+'/'+col+'.png');metrics.push({action,frame:col,source:box,width,height,left,top});
   }
  }
  const file=path.join(root,'data/animations/character-frames.json'),manifest=JSON.parse(fs.readFileSync(file,'utf8'));

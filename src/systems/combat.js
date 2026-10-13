@@ -1,6 +1,6 @@
 import {expansionUnits} from '../../data/enemies/units.js';
 import {expansionDrop} from './expansion.js';
-import {advanceAction} from '../rendering/animation-player.js';
+import {advanceAction} from '../core/action-timeline.js';
 export let CombatSystem;
 'use strict';
 CombatSystem={create(sessionContext){

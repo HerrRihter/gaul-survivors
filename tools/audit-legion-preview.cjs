@@ -46,7 +46,7 @@ async function main(){
      for(const {canvas,card}of boxes){assert(canvas.left>=card.left&&canvas.right<=card.right);assert(Math.abs(canvas.width/canvas.height-4/3)<.02,'Canvas keeps its aspect ratio');}
     }
    }
-   if(width===1280||width===375){await page.selectOption('#motion','attack');await page.locator('#reverse').setChecked(false);await page.screenshot({path:path.resolve(__dirname,`../previews/legion-ui-${width}-after.png`),fullPage:true});}
+   if(width===1280||width===375){await page.selectOption('#motion','attack');await page.locator('#reverse').setChecked(false);await page.screenshot({path:path.resolve(__dirname,`../assets/source/references/audits/legion-ui-${width}-after.png`),fullPage:true});}
   }
   await page.goto(pathToFileURL(path.resolve(__dirname,'../legion-preview.html')).href);
   await page.waitForFunction(()=>document.querySelector('#artStatus').textContent==='Легион готов к бою');

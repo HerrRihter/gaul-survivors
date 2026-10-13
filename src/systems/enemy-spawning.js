@@ -1,13 +1,13 @@
-import {prepareExpansion,scheduleExpansion} from './expansion.js';
+import {prepareExpansion} from './expansion.js';
 import {expansionUnits} from '../../data/enemies/units.js';
-import {waves,lutetiaWaves,lutetiaStage,lutetiaWave} from '../../data/enemies/waves.js';
-import {replenishCityCrowd} from './city-population.js';
+import {getWaveSchedule,normalWave,selectWaveUnit,scheduleStage} from './wave-schedule.js';
+import {replenishPopulation} from './population.js';
 export let EnemySpawning;
 'use strict';
 EnemySpawning={create(sessionContext){
 function spawn(unit,boss=false,position=null){
-      const s=sessionContext.state,p=s.p,u=sessionContext.Legion.units[boss?'boss':unit]||sessionContext.Legion.units.roman;
-      unit=boss?'boss':sessionContext.Legion.units[unit]?unit:'roman';
+      const s=sessionContext.state,p=s.p,u=sessionContext.Legion.units[unit];
+      if(!u)throw new Error('Unknown unit: '+unit);
       let x,y;
       if(position){x=position.x;y=position.y;}
       for(let i=0;!position&&i<100;i++){
@@ -41,35 +41,35 @@ function spawn(unit,boss=false,position=null){
       return e;
     }
 function updateSpawning(dt){
-  const s=sessionContext.state,n=waves.normal;
-  replenishCityCrowd(sessionContext);
-  scheduleExpansion(sessionContext);
+  const s=sessionContext.state,schedule=getWaveSchedule(s.map);
+  replenishPopulation(sessionContext);
+  const combatCount=()=>s.enemies.filter(e=>!sessionContext.Legion.units[e.unit].civilian&&e.hp>0).length;
+  for(const spec of schedule.recurring){
+    const next=s.waveNext[spec.unit]??spec.first;
+    if(s.t<next)continue;
+    const stage=scheduleStage(spec.stages,s.t);
+    s.waveNext[spec.unit]=next+stage.every;
+    if(spec.populationCap!==null&&combatCount()>=spec.populationCap)continue;
+    if(s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length>=stage.cap)continue;
+    if(spawn(spec.unit)&&spec.message)sessionContext.toast(spec.message);
+  }
   s.spawn-=dt;
   if(s.spawn<=0){
-    const city=s.map==='lutetia',stage=city?lutetiaStage(s.t):null;
-    s.spawn=city?stage.interval:sessionContext.Math.max(n.minInterval,n.interval-s.t*n.timeFactor);
-    const count=city?stage.batch:1+sessionContext.Math.floor(s.t/n.batchEvery);
-    let population=s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length;
-    for(let i=0;i<count&&population<(city?stage.cap:n.cap);i++){
-      if(spawn(city?lutetiaWave(s.t,sessionContext.Math.random()):sessionContext.Legion.wave(s.t)))population++;
+    const wave=normalWave(schedule,s.t);
+    s.spawn=wave.interval;
+    let population=combatCount();
+    for(let i=0;i<wave.batch&&population<wave.cap;i++){
+      if(spawn(selectWaveUnit(schedule,s.t,sessionContext.Math.random())))population++;
     }
   }
-  for(const [type,key]of [['turtle','nextTurtle'],['ram','nextRam']]){
-    if(s.map==='lutetia'&&type==='ram')continue;
-    const spec=s.map==='lutetia'?lutetiaWaves.turtle:waves.siege[type];
-    if(s.t>=s[key]){
-      s[key]+=spec.every;
-      const cap=spec.late&&s.t>=spec.late?spec.lateCap:spec.cap;
-      if(s.enemies.filter(e=>e.unit===type&&e.hp>0).length<cap){spawn(type);sessionContext.toast(spec.message||waves.siege[type].message);}
-    }
+  const boss=schedule.boss;
+  if(boss&&s.t>=boss.time&&!s.bossSpawned&&spawn(boss.unit,true)){
+    s.bossSpawned=true;
+    if(boss.message)sessionContext.toast(boss.message);
+    if(boss.sound)sessionContext.soundEffect(boss.sound);
   }
-  if(s.t>=waves.boss.time&&!s.bossSpawned){
-    s.bossSpawned=true;spawn('boss',true);sessionContext.toast(waves.boss.message);sessionContext.soundEffect('boss');
-  }
-  if(s.map!=='lutetia'){
-    for(const spec of [...waves.units].reverse())if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
-  }else{
-    for(const [time,message]of [[40,'ПИЛУМЫ · Метатели занимают улицы. Используй дома как укрытия.'],[85,'ВЕТЕРАНЫ · Тяжёлая пехота входит в город.'],[210,'ПОСЛЕДНИЙ НАТИСК · Легион усиливает наступление.']])if(s.t>=time&&s.t-dt<time)sessionContext.toast(message);
+  for(const spec of schedule.notifications){
+    if(s.t>=spec.time&&s.t-dt<spec.time)sessionContext.toast(spec.message);
   }
 }
 return {spawn,updateSpawning};

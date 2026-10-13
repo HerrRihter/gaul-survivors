@@ -27,10 +27,13 @@ const ids=['boar','stoneSquad','netter','tower','cavalry','caius','wine','auxili
   e.charge={left:1};U.draw(g,e);assert.equal(drawn,U.get(id,'walk',.55));
  }
  await loadModule(h.env,path.resolve(__dirname,'../src/entities/legion.js'));
- let raster=0,pixels=0;
- const g=new Proxy({save(){},restore(){},translate(){},scale(){},drawImage(){raster++;},fillRect(){pixels++;},fillText(){}},{get:(o,k)=>o[k]||(()=>{})});
+ let raster=0,pixels=0;const labels=new Set();
+ const g=new Proxy({save(){},restore(){},translate(){},scale(){},drawImage(image){if(image instanceof h.env.Image)raster++;else labels.add(image);},fillRect(){pixels++;},fillText(){}},{get:(o,k)=>o[k]||(()=>{})});
  for(const id of ids)h.env.Legion.draw(g,{unit:id,x:0,y:0,heading:0,moving:false},()=>{throw Error('Unexpected legacy sprite')});
  assert.equal(raster,ids.length,'Game uses raster frames before pixel fallback');assert.equal(pixels,0);
+ const labelCount=labels.size;assert(labelCount>0,'Unit labels use raster canvases');
+ for(const id of ids)h.env.Legion.draw(g,{unit:id,x:0,y:0,heading:0,moving:false},()=>{throw Error('Unexpected legacy sprite')});
+ assert.equal(labels.size,labelCount,'Repeated draws reuse label canvases');
  // Flying weapons are literal crops of their release frames, at the same scale.
  for(const [kind,id,crop,height]of [['net','netter',[183,172,64,44],44],['arrow','tower',[185,109,33,10],122]]){
   for(const [vx,vy]of [[250,0],[-250,0],[0,250]]){

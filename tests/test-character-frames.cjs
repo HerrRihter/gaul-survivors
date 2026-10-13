@@ -12,7 +12,7 @@ const {frameHarness}=require('./helpers/frame-harness.cjs');
   for(const [action,sequence]of Object.entries(spec.actions)){
    assert(sequence.length>0,id+'/'+action);
    for(const file of sequence){
-    assert(/^characters\/frames\/[a-z0-9-]+\/[a-z]+\/\d+\.png$/.test(file),'Safe independent frame path: '+file);
+    assert(/^characters\/(heroes|enemies|civilians)\/[a-z0-9-]+\/animations\/[a-z]+\/\d+\.png$/.test(file),'Safe independent frame path: '+file);
     const bytes=fs.readFileSync(path.resolve(__dirname,'../assets/runtime',file));
     assert.equal(bytes.subarray(1,4).toString(),'PNG');
     assert.equal(bytes.readUInt32BE(16),256,file);assert.equal(bytes.readUInt32BE(20),256,file);

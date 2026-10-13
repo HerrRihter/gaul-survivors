@@ -10,7 +10,7 @@
 полный набор запросов `prompts.json`, уточнения `corrections.json` и измерения
 кадров сохранены в `assets/source/expansion-v1/`.
 
-Игровые кадры: `assets/runtime/characters/frames/` — папки `boar`, `stone-squad`,
+Игровые кадры: `assets/runtime/characters/enemies/<id>/animations/` — папки `boar`, `stone-squad`,
 `netter`, `tower`, `cavalry`, `caius`, `wine`. Реестр:
 `data/animations/character-frames.json`. Масштаб один на весь набор персонажа,
 точка опоры (128,236), силуэты с оружием помещаются в общий холст. Нарезка

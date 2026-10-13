@@ -5,7 +5,7 @@ const sharp=require(process.env.SHARP_MODULE||'sharp');
 async function main(){
  const root=path.resolve(__dirname,'..'),source=process.argv[2];
  if(!source)throw Error('Pass the corrected transparent source PNG.');
- const target=path.join(root,'assets/runtime/characters/frames/turtle/walk/0.png');
+ const target=path.join(root,'assets/runtime/characters/enemies/turtle/animations/walk/0.png');
  const archive=path.join(root,'assets/source/turtle-first-frame');fs.mkdirSync(archive,{recursive:true});
  const before=path.join(archive,'walk-0-before.png');if(!fs.existsSync(before))fs.copyFileSync(target,before);
  fs.copyFileSync(source,path.join(archive,'walk-0-generated.png'));

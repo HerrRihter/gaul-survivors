@@ -20,7 +20,7 @@ async function main(){
    await page.click('#sound');await page.waitForFunction(()=>window.audioClips.some(a=>a.src.endsWith('battle.mp3')&&!a.paused));
    const decoded=await page.evaluate(async()=>{
     const ctx=new AudioContext(),out=[];
-    const root=new URL('assets/audio/',location.href);
+    const root=new URL('assets/runtime/audio/',location.href);
     const files=['music/tavern.mp3','music/battle.mp3','music/victory.mp3','music/defeat.mp3',...['throw','stone','pickup','heal','level','ui','boss','magic','death-1','death-2','death-3'].map(x=>'sfx/'+x+'.ogg'),...['punch','hit-1','hit-2','hurt'].map(x=>'sfx/'+x+'.mp3')];
     if(location.protocol==='file:')return [];
     for(const file of files){const bytes=await(await fetch(new URL(file,root))).arrayBuffer();const a=await ctx.decodeAudioData(bytes);let peak=0;for(const value of a.getChannelData(0))peak=Math.max(peak,Math.abs(value));out.push({file,duration:a.duration,peak});}

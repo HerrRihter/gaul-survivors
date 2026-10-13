@@ -5,9 +5,9 @@ let atlas=null;
 const sprites={},status={};
 if(typeof Image!=='undefined'){
  for(const name of ['townhouse-v2','villa-v2','fountain-v2','garden-v2']){
-  const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('lutetia/'+name+'.png');sprites[name]=sprite;
+  const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('world/lutetia/'+name+'.png');sprites[name]=sprite;
  }
- const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('lutetia/atlas-v1.png');
+ const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('world/lutetia/atlas-v1.png');
 }
 export const LutetiaArt={
  status,

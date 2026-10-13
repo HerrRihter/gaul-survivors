@@ -28,7 +28,7 @@
 
 ## Редактирование и добавление
 
-Кадры лежат в `assets/runtime/characters/frames/<id>/<action>/<index>.png`, например `asterix/walk/0.png`. Для изменения позы замените соответствующий PNG. Нарезать общий атлас или задавать прямоугольники обрезки больше не требуется.
+Кадры лежат в `assets/runtime/characters/<group>/<id>/animations/<action>/<index>.png`, где `<group>` — `heroes`, `enemies` или `civilians`, например `heroes/asterix/animations/walk/0.png`. Для изменения позы замените соответствующий PNG. Нарезать общий атлас или задавать прямоугольники обрезки больше не требуется.
 
 В JSON каждый персонаж имеет `renderer` (`animation`, `villager` или `unit`), `actions` и `idle`. Пример:
 
@@ -36,9 +36,9 @@
 "new-hero": {
   "renderer": "villager",
   "actions": {
-    "walk": ["characters/frames/new-hero/walk/0.png", "characters/frames/new-hero/walk/1.png"],
-    "attack": ["characters/frames/new-hero/attack/0.png", "characters/frames/new-hero/attack/1.png"],
-    "hurt": ["characters/frames/new-hero/hurt/0.png"]
+    "walk": ["characters/heroes/new-hero/animations/walk/0.png", "characters/heroes/new-hero/animations/walk/1.png"],
+    "attack": ["characters/heroes/new-hero/animations/attack/0.png", "characters/heroes/new-hero/animations/attack/1.png"],
+    "hurt": ["characters/heroes/new-hero/animations/hurt/0.png"]
   },
   "idle": {"action": "walk", "index": 0}
 }

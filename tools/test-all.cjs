@@ -8,6 +8,10 @@ const tests = ['test-audio.cjs', 'test.cjs', 'test-expansion.cjs', 'test-lutetia
   'test-villager-art.cjs', 'test-hero-art.cjs', 'test-menu-portraits.cjs', 'test-village-collision.cjs',
   'test-session.cjs', 'test-rendering.cjs', 'test-character-frames.cjs', 'test-character-preview.cjs', 'test-file-launch.cjs', 'test-site.cjs'];
 let failed = 0;
+tests.unshift('test-structure.cjs');
+require('./check-structure.cjs').checkStructure({root});
+require('./check-game-contracts.cjs').checkGameContracts();
+tests.unshift('test-wave-contract.cjs');
 const generated=spawnSync(process.execPath,[path.join(root,'tools/generate-layouts.cjs'),'--check'],{cwd:root,stdio:'inherit'});
 if(generated.error||generated.status!==0)process.exit(1);
 const bundles=spawnSync(process.execPath,[path.join(root,'tools/generate-file-bundles.cjs'),'--check'],{cwd:root,stdio:'inherit'});

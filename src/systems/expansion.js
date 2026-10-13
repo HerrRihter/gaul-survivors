@@ -1,21 +1,6 @@
 import {expansionUnits} from '../../data/enemies/units.js';
-import {expansionSchedules} from '../../data/enemies/waves.js';
 import {campLanes} from '../world/arenas.js';
 import {updateCityPedestrian} from './city-population.js';
-
-export function scheduleExpansion(c){
-  const s=c.state;
-  for(const spec of expansionSchedules[s.map]||[]){
-    const next=s.specialNext[spec.unit]??spec.first;
-    if(s.t<next)continue;
-    const lateCavalry=spec.unit==='cavalry'&&s.t>=120;
-    s.specialNext[spec.unit]=next+(lateCavalry?12:spec.every);
-    if(s.enemies.filter(e=>!expansionUnits[e.unit]?.civilian&&e.hp>0).length<120&&s.enemies.filter(e=>e.unit===spec.unit&&e.hp>0).length<(lateCavalry?6:spec.cap)){
-      c.spawn(spec.unit);c.toast(expansionUnits[spec.unit].name.toUpperCase()+' · '+tips[spec.unit]);
-    }
-  }
-}
-const tips={courtesan:'Подбирает опыт и еду. Не оставляй добычу на мостовой.',boar:'Уйди с линии рывка.',stoneSquad:'Разбег и падение камня. Держись подальше!',netter:'Сеть оглушает. Уклоняйся от броска.',tower:'Залп из трёх стрел. Используй укрытия.',cavalry:'Проход через всю карту. Уйди с дороги!',caius:'Не атакует. При ударах теряет опыт и шлемы.',wine:'Не наступай на винный след.'};
 
 export function prepareExpansion(e,c){
   if(e.unit==='cavalry'){

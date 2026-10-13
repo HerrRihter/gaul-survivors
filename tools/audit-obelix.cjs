@@ -40,8 +40,9 @@ async function main(){
    assert.deepEqual(errors,[]);
   }
   const name=process.argv.slice(2).find(arg=>!arg.startsWith('--'))||'obelix-audit';
-  await page.screenshot({path:path.resolve('previews',name+'.png'),fullPage:true});
-  fs.writeFileSync(path.resolve('previews',name+'.json'),JSON.stringify({bounds,errors},null,2)+'\n');
+  const output=path.resolve('assets/source/references/audits');fs.mkdirSync(output,{recursive:true});
+  await page.screenshot({path:path.join(output,name+'.png'),fullPage:true});
+  fs.writeFileSync(path.join(output,name+'.json'),JSON.stringify({bounds,errors},null,2)+'\n');
   console.log(JSON.stringify({bounds,errors},null,2));
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 }

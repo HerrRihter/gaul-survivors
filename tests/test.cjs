@@ -28,7 +28,8 @@ console.log('PASS: movement, pause, both attacks, XP, upgrade choice, healing, c
 
 // Village/legion integration regressions.
 const V=env.Village,L=env.Legion;
-for(let time=0;time<=300;time+=5)for(let r=0;r<1;r+=.01)assert(['roman','spear','pilum','veteran'].includes(L.wave(time,r)),'Only legion in regular waves');
+const {getWaveSchedule,selectWaveUnit}=await loadModule(env,require('node:path').join(projectRoot,'src/systems/wave-schedule.js'));
+for(let time=0;time<=300;time+=5)for(let r=0;r<1;r+=.01)assert(['roman','spear','pilum','veteran'].includes(selectWaveUnit(getWaveSchedule('village'),time,r)),'Only legion in regular waves');
 let body={x:680,y:900};V.move(body,200,0,14);assert(body.x<800,'House blocks swept movement');assert(!V.blocked(body.x,body.y,14));
 body={x:700,y:840};const goal={x:970,y:840};for(let i=0;i<900;i++){const d=V.direction(body,goal,14);V.move(body,d.x*3,d.y*3,14);}assert(Math.hypot(body.x-goal.x,body.y-goal.y)<20,'Navigation goes around a house');
 function isolated(unit,x=1250,y=1100){t.select('asterix');t.start();t.state.spawn=999;t.state.attack=999;t.state.enemies=[];const e=t.spawn(unit);e.x=x;e.y=y;e.heading=Math.PI;t.state.p.x=1100;t.state.p.y=1100;return e;}
@@ -177,7 +178,7 @@ t.menu();
 console.log('PASS: settings panel opens from main menu and pause menu, toggles options, hides hints properly, and restores origin on close and Escape.');
 
 // Weapon-specific bonuses are exercised through the live combat loop.
-function boost(hero,id){env.UpgradeSystem.apply(env.UpgradeSystem.heroes[hero].find(u=>u.id===id),t.state);}
+function boost(hero,id){t.upgrades.apply(t.upgrades.heroes[hero].find(u=>u.id===id),t.state);}
 prepare('obelix');boost('obelix','stoneCount');boost('obelix','stoneDamage');boost('obelix','stoneSize');t.state.attack=0;for(let i=0;i<12;i++)t.update(.04);assert.equal(t.state.shots.length,2);assert(t.state.shots.every(b=>b.damage>52&&b.r>11));
 prepare('asterix');boost('asterix','punchReach');near=dummy(1188,1100);t.state.attack=0;for(let i=0;i<8;i++)t.update(.04);assert(near.hp<60,'Extended punch reaches farther');
 prepare('automatix');boost('automatix','hammerDamage');near=dummy(1140,1100);t.state.attack=0;for(let i=0;i<10;i++)t.update(.04);assert(near.hp<=0,'Upgraded hammer kills 60 HP target');

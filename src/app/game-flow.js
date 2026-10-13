@@ -1,10 +1,18 @@
-import {waves,lutetiaWaves} from '../../data/enemies/waves.js';
-import {seedCityCrowd} from '../systems/city-population.js';
+import {getWaveSchedule,createWaveState} from '../systems/wave-schedule.js';
+import {seedPopulation} from '../systems/population.js';
 import {permanentUpgradeDefinitions} from '../../data/upgrades.js';
 export let GameFlow;
 'use strict';
 GameFlow={create(sessionContext){
+function recordRun(){
+      const s=sessionContext.state;
+      if(!s||s.resultRecorded)return;
+      sessionContext.Progression.recordTime(s.t);
+      sessionContext.Progression.recordLevel(s.level);
+      s.resultRecorded=true;
+    }
 function start(){
+      recordRun();
       if(!sessionContext.Progression.owned(sessionContext.selected))sessionContext.selected='asterix';
       const hero=sessionContext.Villagers.defs[sessionContext.selected],levels=sessionContext.Progression.data.levels;
       sessionContext.resetInput();
@@ -12,20 +20,17 @@ function start(){
         t:0,
         map:sessionContext.selectedMap,
         winePools:[],
-        specialNext:{},
+        ...createWaveState(getWaveSchedule(sessionContext.selectedMap)),
         kills:0,
         level:1,
         xp:0,
         need:8,
-        spawn:waves.normal.firstDelay,
         attack:.2,
         menhir:2,
         ring:1,
         enemies:[],
         corpses:[],
         enemyShots:[],
-        nextTurtle:sessionContext.selectedMap==='lutetia'?lutetiaWaves.turtle.first:waves.siege.turtle.first,
-        nextRam:waves.siege.ram.first,
         shots:[],
         fish:[],
         poison:[],
@@ -38,7 +43,6 @@ function start(){
         fx:[],
         texts:[],
         pickups:[],
-        bossSpawned:false,
         bossDead:false,
         shake:0,
         step:0,
@@ -68,7 +72,7 @@ function start(){
       sessionContext.UpgradeSystem.permanent(sessionContext.state,sessionContext.selected,levels);
       sessionContext.Village.prepare(Object.values(sessionContext.Legion.units).map(unit=>unit.r),sessionContext.state.p);
       for(const resident of sessionContext.Village.residents||[])sessionContext.spawn(resident.unit,false,resident);
-      seedCityCrowd(sessionContext);
+      seedPopulation(sessionContext);
       sessionContext.mode='play';
       ['menu','runHeroSelect','end','paused','levelup','bossbar','achievements','settings'].forEach(id=>sessionContext.show(id,false));
       ['hud','pause','stick'].forEach(id=>sessionContext.show(id,true));
@@ -79,10 +83,7 @@ function start(){
       sessionContext.hud();
     }
 function menu(){
-      if(sessionContext.state?.t){
-        sessionContext.Progression?.recordTime?.(sessionContext.state.t);
-        sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
-      }
+      recordRun();
       sessionContext.Progression.flush();
       sessionContext.mode='menu';
       sessionContext.$('abilities').classList.toggle('hidden',true);
@@ -138,8 +139,8 @@ function pickUpgrade(i){
       if(sessionContext.state.xp>=sessionContext.state.need)levelUp();
     }
 function finish(win){
-      sessionContext.Progression?.recordTime?.(sessionContext.state.t);
-      sessionContext.Progression?.recordLevel?.(sessionContext.state.level);
+      if(!sessionContext.state||sessionContext.state.resultRecorded)return;
+      recordRun();
       sessionContext.Progression.flush();
       sessionContext.finishAudio(win);
       sessionContext.mode='end';
@@ -148,7 +149,7 @@ function finish(win){
       sessionContext.show('end',true);
       sessionContext.show('pause',false);
       sessionContext.show('stick',false);
-      sessionContext.$('endTag').textContent=win?(sessionContext.selectedMap==='village'?'ДЕРЕВНЯ НЕ СДАЁТСЯ':'ГАЛЛЫ ПОБЕЖДАЮТ'):'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
+      sessionContext.$('endTag').textContent=win?sessionContext.arenaDefinitions[sessionContext.selectedMap].victoryTag:'ЛЕГИОНУ ПОВЕЗЛО. НА ЭТОТ РАЗ.';
       sessionContext.$('endTitle').textContent=win?'Пир начинается!':'Нужен ещё глоток зелья';
       sessionContext.$('endText').textContent=win?'Римляне отступают. Кабан уже на вертеле. Ты заслужил этот вечер.':'Даже героям нужен привал. Попробуй другую сборку и вернись в драку.';
       sessionContext.$('endStats').innerHTML=`<div><strong>${sessionContext.clock(sessionContext.state.t)}</strong><span>ПРОДЕРЖАЛСЯ</span></div><div><strong>${sessionContext.state.kills}</strong><span>ВРАГОВ ПОБЕЖДЕНО</span></div><div><strong>${sessionContext.state.level}</strong><span>УРОВЕНЬ</span></div><div><strong>+${sessionContext.state.earned}</strong><span>ШЛЕМОВ</span></div>`;

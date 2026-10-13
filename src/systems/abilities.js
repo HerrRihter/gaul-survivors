@@ -11,12 +11,12 @@ export const AbilitySystem={create(c){
  function activate(slot){if(c.mode!=='play'||!c.state||c.state.p.hp<=0||c.state.p.stun>0)return false;const s=c.state,a=s.abilities[slot],p=s.p,st=effectiveStats();if(!a||a.cd>0||a.left>0)return false;
   if(a.id==='forge'){if(!c.Progression.grantArmorRank())return false;s.stats.armor++;}
   if(a.id==='dash'){const probe={x:p.x,y:p.y};c.Village.move(probe,p.facing.x*6,p.facing.y*6,14);if(Math.hypot(probe.x-p.x,probe.y-p.y)<.01)return false;}
-  a.castRank=abilityRank(s,a.id);a.cd=a.cooldown-(a.id==='forge'?6*a.castRank:0);a.left=a.duration+(a.id==='potion'?a.castRank:0);a.endsAt=s.t+a.left;a.elapsed=0;a.tick=0;a.direction={...p.facing};a.hit=new Set();
+  a.castRank=abilityRank(s,a.id);a.cd=Math.max(0,a.cooldown-(a.cooldownPerRank||0)*a.castRank);a.left=a.duration+(a.id==='potion'?a.castRank:0);a.endsAt=s.t+a.left;a.elapsed=0;a.tick=0;a.direction={...p.facing};a.hit=new Set();
   if(a.id==='dash'||a.id==='jump'){p.action=null;a.start={x:p.x,y:p.y};}
   if(a.id==='spin')p.action=null;
   if(a.id==='note'){area(p,150*st.range,20*st.damage*(1+.25*a.castRank),220,0,1.2+.3*a.castRank);ring(p,150*st.range);}
   if(a.id==='volley')c.Villagers.fish(s,p.facing,{count:5+a.castRank+(st.fishCount||0),spread:Math.PI*70/180,damage:16});
-  if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=brew?4+(st.poisonDuration||0):5;a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
+  if(a.id==='cloud'||a.id==='brew'){const q={x:p.x,y:p.y};if(a.id==='brew')for(let i=0;i<20;i++)c.Village.move(q,p.facing.x*6,p.facing.y*6,14);const brew=a.id==='brew';a.left=a.duration+(brew?(st.poisonDuration||0):0);a.endsAt=s.t+a.left;s.abilityZones.push({...q,kind:a.id,r:(brew?90*(1+(st.poisonRange||0)):100)*st.range*(1+.1*a.castRank),left:a.left,tick:0,damage:(brew?12*(1+(st.poisonDamage||0)):6)*st.damage*(1+.25*a.castRank)});}
   if(a.id==='elixir')p.poisoned=0;
   c.Progression?.recordAbility?.();
   c.soundEffect('magic');hud();return true;
