@@ -1,6 +1,8 @@
 import {expansionUnits} from '../../../data/enemies/units.js';
+import {drawMalosinus} from './malosinus-art.js';
 
 export function drawExpansion(g,e){
+  if(drawMalosinus(g,e))return true;
   if(!expansionUnits[e.unit])return false;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));g.scale(Math.cos(e.heading)<0?-3:3,3);
   const step=e.moving?Math.round(Math.sin((e.walk||0)*6)*2):0;

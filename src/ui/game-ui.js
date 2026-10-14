@@ -387,6 +387,8 @@ function hud(){
         show('bossbar',bossActive);
       }
       if(boss){
+        const bossName=sessionContext.$('bossname'),name=boss.unit==='malosinus'?'КАЗНАЧЕЙ МАЛОСИНУС':'ЦЕНТУРИОН МАКСИМУС';
+        if(bossName.textContent!==name)bossName.textContent=name;
         const bossPct=sessionContext.Math.round(boss.hp/boss.max*1000)/10;
         if(bossPct!==lastBossHpPct){
           lastBossHpPct=bossPct;

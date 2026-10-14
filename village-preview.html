@@ -2,7 +2,7 @@
 <style>*{box-sizing:border-box}body{margin:0;background:#18251e;color:#f2ead0;font:15px/1.6 Georgia,serif}main{max-width:1220px;margin:auto;padding:24px}header{display:flex;justify-content:space-between;align-items:center;gap:20px}h1{margin:0;font-size:32px}a{color:#f6cb72}p{color:#bcc5af;max-width:880px}canvas{display:block;width:100%;border:1px solid #67784c;background:#89954e}nav{display:flex;gap:18px;flex-wrap:wrap;margin:16px 0}button{font:inherit;color:#f2ead0;background:#304332;border:1px solid #67784c;padding:6px 14px;cursor:pointer}</style>
 <main><header><h1>Карты сражений</h1><a href="index.html">Играть →</a></header>
 <p>Выбери локацию и изучи проходы перед боем. Лесная развилка, густые заросли и проезды римского лагеря.</p>
-<nav><label>Карта <select id="arena"></select></label><button id="overview">Вся карта</button><button id="square">Площадь крупно</button><label><input id="labels" type="checkbox" checked> Названия</label></nav>
+<nav><label>Карта <select id="arena"></select></label><button id="overview">Вся карта</button><button id="square">Площадь крупно</button><label><input id="labels" type="checkbox" checked> Названия</label><label><input id="bounds" type="checkbox"> Границы объектов</label></nav>
 <canvas id="map" width="1320" height="1000" aria-label="План выбранной карты с дорогами и препятствиями"></canvas>
 </main>
 <script data-entry="src/pages/village-preview.js" data-file-bundle="runtime/src/pages/village-preview.js">

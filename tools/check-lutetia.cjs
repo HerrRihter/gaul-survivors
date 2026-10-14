@@ -21,7 +21,8 @@ const {createServer}=require('./server.cjs');
    if(width===1280){
     await page.goto(`http://127.0.0.1:${server.address().port}/legion-preview.html#lutetia`);await page.waitForFunction(()=>document.querySelector('#artStatus').textContent==='Легион готов к бою');assert.equal(await page.locator('#cards canvas').count(),10);assert.equal(await page.locator('[data-unit=citizen]').count(),1);assert(!await page.locator('#cards').textContent().then(s=>s.includes('Матрона')));
     await page.screenshot({path:path.join(os.tmpdir(),'lutetia-roster.png'),fullPage:true});
-    await page.goto(`http://127.0.0.1:${server.address().port}/village-preview.html`);await page.selectOption('#arena','lutetia');await page.waitForLoadState('networkidle');await page.screenshot({path:path.join(os.tmpdir(),'lutetia-map.png'),fullPage:true});assert.deepEqual(errors,[]);
+    await page.goto(`http://127.0.0.1:${server.address().port}/village-preview.html`);await page.selectOption('#arena','lutetia');await page.waitForLoadState('networkidle');await page.screenshot({path:path.join(os.tmpdir(),'lutetia-map.png'),fullPage:true});
+    await page.check('#bounds');await page.screenshot({path:path.join(os.tmpdir(),'lutetia-bounds.png'),fullPage:true});assert.deepEqual(errors,[]);
    }
    console.log(`${width}x${height}: city selection, 6 merchants, 48 loaded animation frames, play/pause and previews passed`);await page.close();
   }

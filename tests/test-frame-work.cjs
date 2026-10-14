@@ -11,6 +11,12 @@ async function main(){
  h.session.activateAbility(1);writes=0;for(let i=0;i<60;i++)h.session.update(1/60);assert(writes<15,'Duration display updates at tenths, not every frame');
  h.session.pause();assert(h.nodes.get('ability0').disabled);h.session.pause();assert(!h.nodes.get('ability0').disabled,'Mode changes still update immediately');
  s.stats.regen=.15;s.p.hp=80.1;h.session.update(.01);writes=0;for(let i=0;i<60;i++)h.session.update(1/60);assert(writes<15,'Fractional regen does not rewrite unchanged HP text');
+ h.session.selectMap('lutetia');h.session.start();
+ let gradients=0;h.context.createRadialGradient=()=>{gradients++;return {addColorStop(){}};};
+ h.session.draw();const initialGradients=gradients;h.session.draw();
+ assert.equal(gradients,initialGradients,'City overlay is cached between frames');
+ h.env.window.innerWidth=1234;h.env.window.innerHeight=700;h.listeners.resize();h.session.draw();
+ assert(gradients>initialGradients,'City overlay is rebuilt after resize');
  const {VillageRenderer}=await loadModule(h.env,path.resolve('src/world/village/village-renderer.js'));
  const contexts=[];const doc={createElement(){const counts={ellipse:0,clip:0,drawImage:0},ctx=new Proxy(counts,{get:(o,k)=>k in o?()=>o[k]++:()=>{},set:()=>true});const canvas={getContext:()=>ctx};contexts.push(counts);return canvas;}};
  const renderer=VillageRenderer.create({document:doc,VillageArt:null,size:2200,objects:[],roads:[[0,1100,700,1100,1500,1100,2200,1100,180]],plaza:false,roughRoads:true});

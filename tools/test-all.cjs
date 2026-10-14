@@ -12,6 +12,7 @@ tests.unshift('test-structure.cjs');
 require('./check-structure.cjs').checkStructure({root});
 require('./check-game-contracts.cjs').checkGameContracts();
 tests.unshift('test-wave-contract.cjs');
+tests.unshift('test-malosinus.cjs');
 const generated=spawnSync(process.execPath,[path.join(root,'tools/generate-layouts.cjs'),'--check'],{cwd:root,stdio:'inherit'});
 if(generated.error||generated.status!==0)process.exit(1);
 const bundles=spawnSync(process.execPath,[path.join(root,'tools/generate-file-bundles.cjs'),'--check'],{cwd:root,stdio:'inherit'});

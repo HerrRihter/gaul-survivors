@@ -4,9 +4,11 @@ export let SceneRenderer;
 'use strict';
 SceneRenderer={create(sessionContext){
 let cachedVignette=null,cachedVignetteW=0,cachedVignetteH=0;
+let cityVignette=null;
 function getVignette(w,h){
   if(cachedVignette&&cachedVignetteW===w&&cachedVignetteH===h)return cachedVignette;
   cachedVignetteW=w;cachedVignetteH=h;
+  cityVignette=null;
   cachedVignette=sessionContext.ctx.createRadialGradient(w/2,h/2,150,w/2,h/2,600);
   cachedVignette.addColorStop(0,'transparent');
   cachedVignette.addColorStop(1,'#08171188');
@@ -145,8 +147,22 @@ function draw(){
       }
       sessionContext.ctx.restore();
       const vignette=getVignette(sessionContext.W,sessionContext.H);
-      sessionContext.ctx.fillStyle=vignette;
-      sessionContext.ctx.fillRect(0,0,sessionContext.W,sessionContext.H);
+      // On the dense city scene, reuse the rasterized overlay as well as the
+      // scaled buildings. Other maps retain their cheaper direct gradient.
+      if(s?.map==='lutetia'){
+        if(!cityVignette){
+          cityVignette=sessionContext.document.createElement('canvas');
+          cityVignette.width=Math.ceil(sessionContext.W);cityVignette.height=Math.ceil(sessionContext.H);
+          const ink=cityVignette.getContext('2d');
+          const shade=ink.createRadialGradient(sessionContext.W/2,sessionContext.H/2,150,sessionContext.W/2,sessionContext.H/2,600);
+          shade.addColorStop(0,'transparent');shade.addColorStop(1,'#08171188');ink.fillStyle=shade;
+          ink.fillRect(0,0,sessionContext.W,sessionContext.H);
+        }
+        sessionContext.ctx.drawImage(cityVignette,0,0);
+      }else{
+        sessionContext.ctx.fillStyle=vignette;
+        sessionContext.ctx.fillRect(0,0,sessionContext.W,sessionContext.H);
+      }
       sessionContext.ctx.restore();
     }
 return {background,draw};

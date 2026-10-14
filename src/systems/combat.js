@@ -48,7 +48,7 @@ function damage(e,n,dx=0,dy=0,source=sessionContext.state.p){
         if(sessionContext.Math.random()<.025)sessionContext.state.pickups.push({x:e.x,y:e.y,type:'food'});
         if(e.boss){
           sessionContext.state.bossDead=true;
-          sessionContext.toast('Центурион повержен! Продержись до пира.');
+          sessionContext.toast(sessionContext.Legion.units[e.unit].name+' повержен! Продержись до пира.');
           sessionContext.soundEffect('boss');
           sessionContext.Progression?.recordBossKill?.();
         }

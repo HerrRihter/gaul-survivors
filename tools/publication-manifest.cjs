@@ -7,7 +7,7 @@ module.exports={
     "village-preview.html"
   ],
   "groups": [
-    {purpose:'Lutetia city architecture, population and layout',consumers:['index.html','legion-preview.html','village-preview.html'],files:['src/world/lutetia.js','src/rendering/art/lutetia-art.js','src/systems/city-population.js','assets/runtime/world/lutetia/atlas-v1.png','assets/runtime/world/lutetia/townhouse-v2.png','assets/runtime/world/lutetia/villa-v2.png','assets/runtime/world/lutetia/fountain-v2.png','assets/runtime/world/lutetia/garden-v2.png']},
+    {purpose:'Lutetia city architecture, population and layout',consumers:['index.html','legion-preview.html','village-preview.html'],files:['src/world/lutetia.js','src/rendering/art/lutetia-art.js','src/systems/city-population.js','assets/runtime/world/lutetia/house-balcony-v3.png','assets/runtime/world/lutetia/house-cottage-v3.png','assets/runtime/world/lutetia/house-terrace-v3.png','assets/runtime/world/lutetia/house-portico-v3.png','assets/runtime/world/lutetia/house-shop-v3.png','assets/runtime/world/lutetia/house-stairs-v3.png','assets/runtime/world/lutetia/tree-broadleaf-v3.png','assets/runtime/world/lutetia/tree-cypress-v3.png','assets/runtime/world/lutetia/fountain-v3.png','assets/runtime/world/lutetia/guardpost-v3.png','assets/runtime/world/lutetia/garden-v2.png']},
     {purpose:'Local CC0 music, effects and source credits',consumers:['index.html'],files:[
       'assets/runtime/audio/CREDITS.md', 'assets/runtime/audio/Kenney-Impact-LICENSE.txt', 'assets/runtime/audio/Kenney-RPG-LICENSE.txt',
       ...['tavern','battle','victory','defeat'].map(name=>'assets/runtime/audio/music/'+name+'.mp3'),
@@ -27,7 +27,9 @@ module.exports={
         "runtime/src/pages/legion-preview.js",
         "runtime/src/pages/village-preview.js",
         "src/rendering/asset-paths.js",
+        "src/rendering/scaled-scenery.js",
         "src/systems/upgrades.js",
+        "src/systems/malosinus.js", "src/rendering/art/malosinus-art.js",
         "src/systems/abilities.js", "data/characters/abilities.js",
         "src/systems/persistence.js", "data/upgrades.js", "data/achievements.js",
         "data/projectiles/projectiles.js",

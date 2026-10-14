@@ -21,7 +21,7 @@ function spawn(unit,boss=false,position=null){
         x,
         y,
         unit,
-        type:boss?'boss':expansionUnits[unit]?unit:unit==='turtle'||unit==='ram'?unit:'roman',
+        type:unit==='malosinus'?unit:boss?'boss':expansionUnits[unit]?unit:unit==='turtle'||unit==='ram'?unit:'roman',
         hp:u.hp,
         max:u.hp,
         r:u.r,

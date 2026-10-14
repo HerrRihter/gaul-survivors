@@ -8,6 +8,8 @@ button.onclick=async()=>{
   const state=gameSession.state;
   // No rewards or record writes: avoid changing the player's stored progress.
   state.t=290;state.spawn=1e9;state.nextTurtle=state.nextRam=1e9;
+  for(const unit of Object.keys(state.waveNext))state.waveNext[unit]=1e9;
+  state.resultRecorded=true;
   state.bossSpawned=true;state.stats.damage=0;
   for(let i=0;i<120;i++)gameSession.spawn('roman');
   const samples=[],intervals=[];let previous=null;

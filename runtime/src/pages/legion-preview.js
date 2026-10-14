@@ -15,7 +15,8 @@ const {UnitArt} = require("src/rendering/art/unit-art.js");
 const {Village} = require("src/world/village/village.js");
 const {fitCharacterPreview,drawCharacterPreview} = require("src/ui/character-preview.js");
 const descriptions={
-citizen:'Три облика: пекарь, носильщик и писец. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
+malosinus:'Уникальный босс Лютеции. 2200 HP. Удар мешком денег: 65 урона; уходи из сектора во время замаха. Подбирает опыт и лечится на 12 HP за единицу.',
+citizen:'На иллюстрации — пекарь. В городе также встречаются носильщики и писцы. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
 auxiliary:'Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.',
 merchant:'Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.',
 courtesan:'Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.',
@@ -52,7 +53,7 @@ function showLocation(){
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const timing=waveTiming(schedule,unit),description=descriptions[unit]||'';
+ const timing=(schedule.boss?.unit===unit?'БОСС ЛОКАЦИИ · ':'')+waveTiming(schedule,unit),description=descriptions[unit]||'';
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${timing}</p><p>${description}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit==='citizen'?'citizen-0':unit;
@@ -72,21 +73,9 @@ function frame(t){
  let loaded=0,failed=0;
  for(const {unit,id,g,placement,wide}of previews){
   g.clearRect(0,0,g.canvas.width,g.canvas.height);g.imageSmoothingEnabled=false;
-  if(unit==='citizen'){
-   const frames=[0,1,2].map(v=>UnitArt.get('citizen',motion,progress,v));
-   if(frames.every(Boolean)){
-    loaded++;
-    frames.forEach((art,v)=>{
-     const fit=fitCharacterPreview(CharacterBounds['citizen-'+v],anchor,g.canvas.width/3,g.canvas.height);
-     fit.x+=v*g.canvas.width/3;
-     drawCharacterPreview(g,art,anchor,fit,reverse);
-    });
-   }else if([0,1,2].some(v=>UnitArt.status['citizen-'+v]==='fallback'))failed++;
-   continue;
-  }
   const art=UnitArt.get(unit,motion,progress)||AnimationArt.get(unit,0,motion,progress);
   if(!art){
-  if(drawExpansion(g,{unit,x:140,y:196,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){continue;}
+  if(drawExpansion(g,{unit,x:140,y:196,action:motion==='attack'?{elapsed:progress,duration:1}:null,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){loaded++;continue;}
    const missing=(UnitArt.status[id]||AnimationArt.status[id])==='fallback';if(missing)failed++;
    g.fillStyle='#b1c4a4';g.font='14px Consolas,monospace';g.textAlign='center';g.fillText(missing?'Кадры недоступны':'Загрузка…',g.canvas.width/2,g.canvas.height/2);continue;
   }
@@ -108,7 +97,9 @@ setInterval(drawMap,500);
 },
 "src/rendering/art/expansion-art.js": function(require, exports){
 const {expansionUnits} = require("data/enemies/units.js");
+const {drawMalosinus} = require("src/rendering/art/malosinus-art.js");
 function drawExpansion(g,e){
+  if(drawMalosinus(g,e))return true;
   if(!expansionUnits[e.unit])return false;
   g.save();g.translate(Math.round(e.x),Math.round(e.y));g.scale(Math.cos(e.heading)<0?-3:3,3);
   const step=e.moving?Math.round(Math.sin((e.walk||0)*6)*2):0;
@@ -194,6 +185,7 @@ const expansionUnits={
 
 const unitDefinitions={
   ...expansionUnits,
+  malosinus:{name:'Казначей Малосинус',hp:2200,speed:58,damage:65,r:29,range:100,wind:1.6,cooldown:2.6,xp:100,color:'#edc757',mark:'¤',healPerXp:12},
   roman:{name:'Легионер',hp:60,speed:56,damage:9,r:12,range:36,wind:.64,cooldown:1.25,xp:1,color:'#b4c79b',mark:'I'},
   spear:{name:'Копейщик',hp:90,speed:49,damage:15,r:12,range:108,wind:1.1,cooldown:2,xp:2,color:'#eed289',mark:'↗'},
   pilum:{name:'Метатель пилума',hp:75,speed:53,damage:13,r:12,range:310,wind:1.4,cooldown:2.8,xp:2,color:'#8bd2db',mark:'P'},
@@ -208,6 +200,62 @@ const units=unitDefinitions;
 Object.defineProperty(exports, "expansionUnits", {get: () => expansionUnits});
 Object.defineProperty(exports, "unitDefinitions", {get: () => unitDefinitions});
 Object.defineProperty(exports, "units", {get: () => units});
+},
+"src/rendering/art/malosinus-art.js": function(require, exports){
+const {actionTiming} = require("data/animations/action-timing.js");
+// Canvas-native silhouette, articulated money bag and walking sandals.
+function drawMalosinus(g,e){
+  if(e.unit!=='malosinus')return false;
+  g.save();g.translate(Math.round(e.x),Math.round(e.y));
+  g.scale(Math.cos(e.heading||0)<0?-1:1,1);
+  g.lineWidth=2.4;g.lineJoin='round';g.lineCap='round';g.strokeStyle='#24251e';
+  const poly=(points,color)=>{g.fillStyle=e.hit>0?'#fff1ca':color;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.closePath();g.fill();g.stroke();};
+  const oval=(x,y,rx,ry,color)=>{g.fillStyle=e.hit>0?'#fff1ca':color;g.beginPath();g.ellipse(x,y,rx,ry,0,0,Math.PI*2);g.fill();g.stroke();};
+  const line=(points,color='#24251e')=>{g.strokeStyle=color;g.beginPath();points.forEach(([x,y],i)=>i?g.lineTo(x,y):g.moveTo(x,y));g.stroke();g.strokeStyle='#24251e';};
+  const step=e.moving?Math.sin((e.walk||0)*6)*5:0;
+  poly([[-24,-86],[14,-90],[29,-44],[20,-13],[-33,-24],[-38,-52]],'#147861');
+  poly([[-17,-35],[-5,-34],[-11,-10+step],[-23,-4+step],[-31,-5+step]],'#f1d0a6');
+  poly([[5,-35],[15,-33],[20,-11-step],[34,-5-step],[24,-2-step],[9,-8-step]],'#f1d0a6');
+  poly([[-30,-10+step],[-16,-8+step],[-10,-3+step],[-32,1+step],[-37,-2+step]],'#f5edcf');
+  poly([[14,-9-step],[25,-9-step],[37,-3-step],[33,1-step],[12,-3-step]],'#f5edcf');
+  line([[-26,-8+step],[-21,-2+step],[-16,-6+step]]);line([[18,-7-step],[23,-2-step],[27,-6-step]]);
+  poly([[-20,-85],[12,-86],[19,-37],[-18,-32],[-26,-41]],'#b4d7a2');
+  poly([[-22,-49],[17,-49],[18,-43],[-23,-42]],'#e5bf4e');
+  for(let x=-17;x<15;x+=9)oval(x,-46,2.4,2.4,'#fff0a0');
+  poly([[-23,-38],[18,-37],[18,-32],[-17,-27],[-24,-31]],'#eee2b2');
+  poly([[-25,-85],[-34,-75],[-32,-56],[-23,-51],[-18,-58],[-25,-64],[-20,-75]],'#edc99f');
+  poly([[-14,-102],[-15,-88],[-23,-84],[5,-73],[17,-89],[7,-101]],'#f2d0a6');
+  // Bald crown, pronounced aquiline nose, raised brow and pinched mouth.
+  poly([[-16,-119],[-11,-133],[2,-136],[15,-130],[35,-133],[26,-122],[14,-116],[21,-105],[13,-99],[9,-86],[-1,-90],[-9,-106],[-17,-108]],'#f2d0a6');
+  oval(-15,-113,6,9,'#e3b98e');line([[-16,-117],[-12,-119],[-12,-111],[-16,-113]]);
+  poly([[3,-125],[10,-126],[14,-121],[6,-118]],'#fff9e6');oval(10,-122,1.4,2.5,'#24251e');
+  line([[0,-130],[8,-129],[14,-125]]);line([[16,-122],[11,-111],[22,-114]]);
+  line([[3,-102],[10,-105],[15,-103]]);line([[0,-98],[8,-96],[10,-99]]);
+  poly([[-27,-88],[-13,-86],[7,-82],[15,-92],[20,-85],[7,-69],[-19,-72],[-32,-80]],'#23947a');
+  line([[-25,-82],[-8,-77],[5,-78]],'#b4d7a2');oval(11,-85,5,4,'#edc757');
+  // The bag is held by its neck and swings through the telegraphed impact.
+  const a=e.action,progress=a?Math.min(1,a.elapsed/a.duration):0;
+  const impact=actionTiming.impactProgress;
+  const swing=a?(progress<impact?-1.5*progress/impact:-1.5+2.6*Math.min(1,(progress-impact)/.18)):.12;
+  g.save();g.translate(17,-74);g.rotate(swing);
+  poly([[0,-6],[10,-3],[22,9],[19,17],[11,12],[3,5]],'#efcda4');
+  poly([[19,9],[26,12],[30,24],[14,24]],'#a1783f');
+  oval(23,40,22,24,'#ae8045');
+  poly([[12,21],[20,18],[31,21],[29,27],[16,27]],'#e7c15c');
+  line([[11,34],[8,47],[14,55]],'#dcb878');line([[34,33],[37,45],[31,57]],'#735332');
+  oval(23,42,10,11,'#e5bb4e');
+  g.fillStyle='#735332';g.font='bold 17px serif';g.textAlign='center';g.fillText('¤',23,48);
+  g.restore();g.restore();return true;
+}
+
+Object.defineProperty(exports, "drawMalosinus", {get: () => drawMalosinus});
+},
+"data/animations/action-timing.js": function(require, exports){
+// Four visual phases; the hit event begins on the third frame. Rendering reads
+// this timing, while simulation owns event dispatch and damage.
+const actionTiming={frameCount:4,impactProgress:0.5,event:'hit',loop:false};
+
+Object.defineProperty(exports, "actionTiming", {get: () => actionTiming});
 },
 "src/systems/wave-schedule.js": function(require, exports){
 const {waveSchedules} = require("data/enemies/waves.js");
@@ -331,7 +379,7 @@ const waveSchedules = {
       {unit:'wine',first:70,populationCap:120,stages:[{time:0,every:42,cap:2}],message:'ЛЕГИОНЕР-ВИНОЧЕРПИЙ · Не наступай на винный след.'},
       {unit:'turtle',first:125,populationCap:null,stages:[{time:0,every:70,cap:1},{time:205,every:70,cap:2}],message:turtleMessage}
     ],
-    boss,
+    boss:{unit:'malosinus',time:230,message:'КАЗНАЧЕЙ МАЛОСИНУС · Берегись мешка денег! Подбирая опыт, он лечится.',sound:'boss'},
     population:{unit:'citizen',initial:24,maximum:40,every:2.5,growthEvery:15,variants:3},
     residents:['merchant'],
     notifications:[
@@ -463,7 +511,7 @@ const mapDefinitions={
  village:{notes:"Площадь в центре даёт место для манёвров. Дома и дерево барда создают укрытия и проходы. Частокол и стволы деревьев блокируют движение; через ворота можно пройти.",victoryTag:'ДЕРЕВНЯ НЕ СДАЁТСЯ',name:'Деревня',description:'Знакомые дома и легион. Исходная карта.'},
  forest:{notes:"Деревья и камни ограничивают проходы. На поляне в центре больше места, чтобы уклониться от кабана, сети или каменного отряда.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Лес',description:'Извилистая лесная дорога, камни и густые заросли. Остерегайся засад.'},
  camp:{notes:"Палатки и частокол образуют ряды укрытий. Пять горизонтальных и пять вертикальных проездов открыты для конницы. После 2:00 опасны все эти маршруты.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Римский лагерь',description:'Ряды палаток и широкие проезды. После 2:00 конница атакует по всему лагерю.'},
- lutetia:{notes:"Кривые улицы и рынок создают укрытия. Торговцы охраняют прилавки; гражданские бегают по улицам, куртизанки подбирают добычу.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду.'}
+ lutetia:{notes:"Кривые улицы и рынок создают укрытия. Торговцы охраняют прилавки; гражданские бегают по улицам, куртизанки подбирают добычу.",victoryTag:'ГАЛЛЫ ПОБЕЖДАЮТ',name:'Лютеция',description:'Кривые улицы, рынок и городская стража. Торговцы бросают товары, куртизанки подбирают опыт и еду. Босс Лютеции — казначей Малосинус: появляется в 3:50, бьёт мешком денег и лечится, подбирая опыт.'}
 };
 
 Object.defineProperty(exports, "mapDefinitions", {get: () => mapDefinitions});
@@ -492,9 +540,9 @@ VillageCollision=(()=>{
   for(const o of objects){
    const [w,h]=dimensions[o.art]||[1,1],height=o.width*h/w;
    const [fx,fy,fw,fh]=o.footprint||[0,0,0,0];
-   const outlines=o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art];
+   const outlines=o.footprintPolygons||(o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art]);
    for(const shape of outlines){
-    const points=shape.map(([x,y])=>o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
+    const points=shape.map(([x,y])=>o.footprintPolygons?({x:o.x+(o.flip?-x:x),y:o.y+y}):o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
     const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),stamp:0};polygons.push(p);
     const minBy=Math.max(0,Math.floor(p.minY/bucketSize)),maxBy=Math.min(bucketCols-1,Math.floor(p.maxY/bucketSize));
     const minBx=Math.max(0,Math.floor(p.minX/bucketSize)),maxBx=Math.min(bucketCols-1,Math.floor(p.maxX/bucketSize));
@@ -783,30 +831,38 @@ Object.defineProperty(exports, "SceneryArt", {get: () => SceneryArt});
 const {VillageCollision} = require("src/world/village/collision.js");
 const {VillageNavigation} = require("src/world/village/navigation.js");
 const {sceneryVisible} = require("src/world/village/village-renderer.js");
-const {LutetiaArt} = require("src/rendering/art/lutetia-art.js");
-const {VillageArt} = require("src/rendering/art/village-art.js");
+const {LutetiaArt,LutetiaShapes} = require("src/rendering/art/lutetia-art.js");
 const {UnitArt} = require("src/rendering/art/unit-art.js");
 function createLutetia(){
  const size=2200,objects=[];
- // Irregular neighbourhoods leave winding streets between raised courtyard islands.
- const blocks=[
-  [180,340,410],[640,300,360],[1490,290,360],[2050,350,410],
-  [160,820,390],[690,970,430],[1510,960,440],[2090,910,390],
-  [150,1350,420],[1990,1400,420],
-  [370,1750,450],[800,1850,400],[1510,1810,440],[2050,1900,400],
-  [160,2190,390],[730,2280,400],[1310,2230,400],[1900,2340,420]
- ];
- blocks.forEach(([x,y,width],i)=>objects.push({x,y,width,art:i%3===1?'villa-v2':'townhouse-v2',flip:i%3===0,footprint:[-width*.32,-width*.30,width*.64,width*.26],island:true}));
- objects.push({x:1800,y:650,width:410,art:'guardpost',footprint:[-135,-145,270,135],island:true});
- objects.push({x:1100,y:740,width:610,art:'garden-v2',footprint:[-230,-215,460,195],island:true});
- objects.push({x:1100,y:1460,width:390,art:'fountain-v2',footprint:[-150,-190,300,170],island:true});
- for(const [x,y,width] of [[65,540,170],[440,700,165],[2100,600,180],[450,1300,200],[1740,1290,180],[70,1660,180],[1820,1680,170],[450,2060,170],[1700,2120,190]])objects.push({x,y,width,art:'trees',footprint:[-25,-28,50,25]});
- const residents=[{unit:'merchant',x:790,y:1005},{unit:'merchant',x:1530,y:1030},{unit:'merchant',x:1750,y:730},{unit:'merchant',x:300,y:1410},{unit:'merchant',x:850,y:1920},{unit:'merchant',x:1880,y:1480}];
- residents.forEach((r,i)=>objects.push({x:r.x,y:r.y+8,width:116,art:'awning',color:['#bf4133','#d6aa48','#60834c','#4e7f98','#a54336','#54835a'][i]}));
+ // Compact residential rows frame the central garden and market square.
+ const houseArts=Object.keys(LutetiaShapes).filter(name=>name.startsWith('house-'));
+ function place(art,x,y,width,flip=false){
+  const footprintPolygons=[LutetiaShapes[art].map(([u,v])=>[(u-.5)*width,(v-1)*width])];
+  objects.push({x,y,width,art,flip,footprintPolygons,island:!art.startsWith('tree-')});
+ }
+ const columns=[180,455,740,1460,1745,2020];
+ const rows=[370,675,980,1450,1770,2090];
+ rows.forEach((y,row)=>columns.forEach((x,col)=>{
+  const variant=(row*2+col)%houseArts.length;
+  place(houseArts[variant],x+(row%2?12:-8),y+(col%2?14:0),280+(variant===5?15:0),col>=3);
+ }));
+ place('guardpost-v3',1100,340,210);
+ // The round terrace projects to an ellipse in this 768 x 622 sprite.
+ // Follow its stone rim, including the rear arc, instead of a bounding box.
+ const gardenWidth=380,gardenHeight=gardenWidth*622/768;
+ const gardenRim=Array.from({length:48},(_,i)=>{
+  const angle=i*Math.PI*2/48;
+  return [Math.cos(angle)*gardenWidth*.497,(.64+Math.sin(angle)*.352-1)*gardenHeight];
+ });
+ objects.push({x:1100,y:710,width:gardenWidth,art:'garden-v2',footprintPolygons:[gardenRim]});
+ place('fountain-v3',1100,1460,190);
+ for(const [i,x,y] of [[0,80,600],[1,910,830],[0,1300,850],[1,2120,640],[0,120,1670],[1,900,1690],[0,1300,1750],[1,2140,1710],[1,900,2060],[0,1300,2100]])place(i?'tree-cypress-v3':'tree-broadleaf-v3',x,y,i?170:210);
+ const residents=[{unit:'merchant',x:790,y:1040},{unit:'merchant',x:1530,y:1050},{unit:'merchant',x:1750,y:730},{unit:'merchant',x:300,y:1510},{unit:'merchant',x:850,y:1920},{unit:'merchant',x:1880,y:1500}];
  const lamps=[];
- for(const [x,y] of [[405,380],[830,340],[1370,350],[1900,390],[400,865],[825,995],[1320,1000],[1890,980],[535,1350],[1650,1390],[610,1760],[1320,1850],[1810,1920],[430,2190],[1020,2160],[1710,2250]])lamps.push({x,y,width:56,art:'lamp'});
+ for(const [x,y] of [[405,420],[830,420],[1370,420],[1900,440],[400,740],[825,1030],[1320,1040],[1890,1040],[535,1510],[1650,1510],[610,1840],[1320,1850],[1810,1840],[430,2160],[1020,2160],[1710,2160]])lamps.push({x,y,width:56,art:'lamp'});
  objects.push(...lamps);
- const collision=VillageCollision.create(objects.filter(o=>o.footprint),size);
+ const collision=VillageCollision.create(objects.filter(o=>o.footprint||o.footprintPolygons),size);
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
  const depthObjects=objects.map(o=>({...o,scenery:true})).sort((a,b)=>a.y-b.y);
  let ground=null;
@@ -824,22 +880,13 @@ function createLutetia(){
    paving=g.createPattern(tile,'repeat');
   }
   g.fillStyle=paving;g.fillRect(0,0,size,size);
-  // Curved limestone kerbs and paved aprons follow each building, rather than a grid.
-  for(const o of objects.filter(o=>o.island)){
-   const garden=o.art==='garden-v2',fountain=o.art==='fountain-v2';
-   const w=o.width*(garden?.98:fountain?1.12:1.02),h=o.width*(garden?.55:fountain?.55:.46),cy=o.y-h*.34;
-   g.beginPath();
-   if(garden||fountain)g.ellipse(o.x,cy,w/2,h/2,-.1,0,Math.PI*2);
-   else {
-    g.moveTo(o.x-w*.5,cy+h*.05);g.quadraticCurveTo(o.x-w*.55,cy-h*.2,o.x-w*.33,cy-h*.5);
-    g.lineTo(o.x+w*.27,cy-h*.5);g.quadraticCurveTo(o.x+w*.43,cy-h*.5,o.x+w*.49,cy-h*.05);
-    g.lineTo(o.x+w*.53,cy+h*.25);g.quadraticCurveTo(o.x+w*.55,cy+h*.48,o.x+w*.3,cy+h*.5);
-    g.lineTo(o.x-w*.29,cy+h*.5);g.quadraticCurveTo(o.x-w*.43,cy+h*.5,o.x-w*.5,cy+h*.05);g.closePath();
-   }
-   g.fillStyle='#c9bd9d';g.fill();g.lineWidth=9;g.strokeStyle='#8b8c77';g.stroke();g.lineWidth=5;g.strokeStyle='#e8dbb8';g.stroke();
-   g.save();g.clip();g.strokeStyle='#ada98e';g.lineWidth=1;
-   for(let y=cy-h;y<cy+h;y+=22){g.beginPath();g.moveTo(o.x-w,y);g.lineTo(o.x+w,y);g.stroke();for(let x=o.x-w;x<o.x+w;x+=34){g.beginPath();g.moveTo(x+(Math.round(y/22)%2)*17,y);g.lineTo(x+(Math.round(y/22)%2)*17,y+22);g.stroke();}}
-   g.restore();
+  // Narrow stone edging follows the same ground polygons as collision.
+  for(const polygon of collision.polygons){
+   if(!polygon.object.island)continue;
+   g.beginPath();polygon.points.forEach((p,i)=>i?g.lineTo(p.x,p.y):g.moveTo(p.x,p.y));g.closePath();
+   g.fillStyle='#c9bd9d';g.fill();g.lineJoin='round';
+   g.lineWidth=12;g.strokeStyle='#878b78';g.stroke();
+   g.lineWidth=8;g.strokeStyle='#dfd3b1';g.stroke();
   }
  }
  function drawGround(g){
@@ -855,13 +902,7 @@ function createLutetia(){
  function drawObject(g,o,p,view){
   if(!sceneryVisible(o,Math.max(o.width,120),view))return;
   g.save();if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.45)g.globalAlpha=.45;
-  if(o.art==='awning'){
-   const {x,y}=o;g.strokeStyle='#664529';g.lineWidth=4;g.beginPath();g.moveTo(x-48,y);g.lineTo(x-48,y-97);g.moveTo(x+48,y);g.lineTo(x+48,y-97);g.stroke();
-   for(let i=0;i<6;i++){g.fillStyle=i%2?'#f3dfb0':o.color;g.beginPath();g.moveTo(x-48+i*16,y-100);g.lineTo(x-32+i*16,y-100);g.lineTo(x-38+i*19,y-70);g.lineTo(x-57+i*19,y-70);g.closePath();g.fill();g.fillRect(x-57+i*19,y-70,19,7);}
-   g.strokeStyle='#755b37';g.lineWidth=2;g.beginPath();g.moveTo(x-48,y-100);g.lineTo(x+48,y-100);g.stroke();
-  }
-  else if(o.art==='lamp')drawLamp(g,o);
-  else if(o.art==='trees')VillageArt.draw(g,'trees',o.x,o.y,o.width);
+  if(o.art==='lamp')drawLamp(g,o);
   else if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width,o.flip)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.3,o.y-o.width*.3,o.width*.6,o.width*.3);}
   g.restore();
  }
@@ -872,33 +913,68 @@ Object.defineProperty(exports, "createLutetia", {get: () => createLutetia});
 },
 "src/rendering/art/lutetia-art.js": function(require, exports){
 const {AssetPaths} = require("src/rendering/asset-paths.js");
-// Only the architecture row is used. Characters use the game's shared frame loader.
-const cells={townhouse:[0,1],townhouseOchre:[1,1],guardpost:[2,1]};
-let atlas=null;
+const {scaledScenery} = require("src/rendering/scaled-scenery.js");
+// Ground outlines trace masonry, steps and planters, excluding roofs and foliage.
+// Coordinates refer to the original square PNG, before horizontal reflection.
+const LutetiaShapes={
+ 'house-balcony-v3':[[.10,.78],[.58,.76],[.93,.85],[.92,.94],[.56,.97],[.10,.92]],
+ 'house-cottage-v3':[[.10,.79],[.65,.77],[.95,.84],[.96,.89],[.64,.93],[.19,.89],[.19,.87],[.10,.87]],
+ 'house-terrace-v3':[[.09,.79],[.58,.77],[.94,.86],[.94,.94],[.57,.98],[.10,.94]],
+ 'house-portico-v3':[[.09,.71],[.68,.70],[.95,.77],[.94,.83],[.59,.86],[.14,.83]],
+ 'house-shop-v3':[[.08,.80],[.61,.79],[.95,.86],[.95,.96],[.56,.98],[.08,.94]],
+ 'house-stairs-v3':[[.07,.76],[.53,.74],[.94,.84],[.94,.92],[.70,.95],[.44,.94],[.39,.98],[.04,.94]],
+ 'tree-broadleaf-v3':[[.35,.90],[.64,.88],[.69,.94],[.62,.98],[.36,.98],[.31,.94]],
+ 'tree-cypress-v3':[[.37,.91],[.61,.91],[.67,.95],[.60,.98],[.38,.98],[.33,.95]],
+ 'fountain-v3':[[.05,.66],[.46,.55],[.96,.65],[.96,.82],[.52,.97],[.05,.83]],
+ 'guardpost-v3':[[.23,.78],[.53,.76],[.84,.80],[.85,.91],[.49,.96],[.22,.91]]
+};
 const sprites={},status={};
 if(typeof Image!=='undefined'){
- for(const name of ['townhouse-v2','villa-v2','fountain-v2','garden-v2']){
+ for(const name of [...Object.keys(LutetiaShapes),'garden-v2']){
   const sprite=new Image();status[name]='loading';sprite.onload=()=>status[name]='ready';sprite.onerror=()=>status[name]='error';sprite.src=AssetPaths.url('world/lutetia/'+name+'.png');sprites[name]=sprite;
  }
- const image=new Image();image.onload=()=>{atlas=image;};image.src=AssetPaths.url('world/lutetia/atlas-v1.png');
 }
 const LutetiaArt={
  status,
  draw(g,kind,x,y,width,flip=false){
-  if(sprites[kind]){
-   if(status[kind]!=='ready')return false;
-   const sprite=sprites[kind],height=width*sprite.naturalHeight/sprite.naturalWidth;
-   g.save();g.translate(x,y);if(flip)g.scale(-1,1);g.drawImage(sprite,-width/2,-height,width,height);g.restore();return true;
-  }
-  const cell=cells[kind];if(!cell||!atlas)return false;
-  const w=atlas.naturalWidth/3,h=atlas.naturalHeight/2;
-  g.save();g.translate(x,y);if(flip)g.scale(-1,1);
-  g.drawImage(atlas,cell[0]*w,cell[1]*h,w,h,-width/2,-width*.97,width,width);
-  g.restore();return true;
+  const sprite=sprites[kind];if(!sprite||status[kind]!=='ready')return false;
+  const height=width*sprite.naturalHeight/sprite.naturalWidth;
+  g.save();g.translate(x,y);if(flip)g.scale(-1,1);g.drawImage(scaledScenery(sprite,width,false),-width/2,-height,width,height);g.restore();return true;
  }
 };
 
+Object.defineProperty(exports, "LutetiaShapes", {get: () => LutetiaShapes});
 Object.defineProperty(exports, "LutetiaArt", {get: () => LutetiaArt});
+},
+"src/rendering/scaled-scenery.js": function(require, exports){
+// Keep static scenery near its screen resolution instead of repeatedly sampling
+// the large source PNGs. Bound the cache across maps and preview zoom changes.
+const cache=new Map();
+let pixels=0;
+const budget=16*1024*1024;
+function scaledScenery(image,width,smooth=true){
+ if(typeof document==='undefined'||!image.naturalWidth)return image;
+ const ratio=Math.min(globalThis.devicePixelRatio||1,2);
+ const w=Math.min(image.naturalWidth,Math.ceil(width*ratio));
+ if(w<=0||w>=image.naturalWidth)return image;
+ const h=Math.max(1,Math.round(w*image.naturalHeight/image.naturalWidth));
+ if(w*h>budget)return image;
+ let sizes=cache.get(image);
+ const key=w+':'+smooth;
+ if(sizes?.has(key))return sizes.get(key);
+ while(pixels+w*h>budget&&cache.size){
+  const [source,entries]=cache.entries().next().value;
+  for(const surface of entries.values())pixels-=surface.width*surface.height;
+  cache.delete(source);
+ }
+ sizes=cache.get(image)||new Map();cache.set(image,sizes);
+ const surface=document.createElement('canvas');surface.width=w;surface.height=h;
+ const ink=surface.getContext('2d');ink.imageSmoothingEnabled=smooth;
+ ink.drawImage(image,0,0,w,h);sizes.set(key,surface);pixels+=w*h;
+ return surface;
+}
+
+Object.defineProperty(exports, "scaledScenery", {get: () => scaledScenery});
 },
 "src/rendering/art/unit-art.js": function(require, exports){
 const {CharacterFrames} = require("src/rendering/character-frames.js");

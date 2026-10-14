@@ -11,7 +11,8 @@ import {Village} from '../world/village/village.js';
 import {fitCharacterPreview,drawCharacterPreview} from '../ui/character-preview.js';
 
 const descriptions={
-citizen:'Три облика: пекарь, носильщик и писец. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
+malosinus:'Уникальный босс Лютеции. 2200 HP. Удар мешком денег: 65 урона; уходи из сектора во время замаха. Подбирает опыт и лечится на 12 HP за единицу.',
+citizen:'На иллюстрации — пекарь. В городе также встречаются носильщики и писцы. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
 auxiliary:'Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.',
 merchant:'Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.',
 courtesan:'Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.',
@@ -48,7 +49,7 @@ function showLocation(){
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const timing=waveTiming(schedule,unit),description=descriptions[unit]||'';
+ const timing=(schedule.boss?.unit===unit?'БОСС ЛОКАЦИИ · ':'')+waveTiming(schedule,unit),description=descriptions[unit]||'';
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${timing}</p><p>${description}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit==='citizen'?'citizen-0':unit;
@@ -68,21 +69,9 @@ function frame(t){
  let loaded=0,failed=0;
  for(const {unit,id,g,placement,wide}of previews){
   g.clearRect(0,0,g.canvas.width,g.canvas.height);g.imageSmoothingEnabled=false;
-  if(unit==='citizen'){
-   const frames=[0,1,2].map(v=>UnitArt.get('citizen',motion,progress,v));
-   if(frames.every(Boolean)){
-    loaded++;
-    frames.forEach((art,v)=>{
-     const fit=fitCharacterPreview(CharacterBounds['citizen-'+v],anchor,g.canvas.width/3,g.canvas.height);
-     fit.x+=v*g.canvas.width/3;
-     drawCharacterPreview(g,art,anchor,fit,reverse);
-    });
-   }else if([0,1,2].some(v=>UnitArt.status['citizen-'+v]==='fallback'))failed++;
-   continue;
-  }
   const art=UnitArt.get(unit,motion,progress)||AnimationArt.get(unit,0,motion,progress);
   if(!art){
-  if(drawExpansion(g,{unit,x:140,y:196,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){continue;}
+  if(drawExpansion(g,{unit,x:140,y:196,action:motion==='attack'?{elapsed:progress,duration:1}:null,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){loaded++;continue;}
    const missing=(UnitArt.status[id]||AnimationArt.status[id])==='fallback';if(missing)failed++;
    g.fillStyle='#b1c4a4';g.font='14px Consolas,monospace';g.textAlign='center';g.fillText(missing?'Кадры недоступны':'Загрузка…',g.canvas.width/2,g.canvas.height/2);continue;
   }

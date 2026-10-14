@@ -1,4 +1,5 @@
 import {updateExpansion,updateHazards} from './expansion.js';
+import {updateMalosinus} from './malosinus.js';
 export let Simulation;
 'use strict';
 Simulation={create(sessionContext){
@@ -82,7 +83,7 @@ function update(dt){
         }
         e.vx*=sessionContext.Math.exp(-9*dt);
         e.vy*=sessionContext.Math.exp(-9*dt);
-        if(updateExpansion(e,sessionContext,dt))continue;
+        if(updateMalosinus(e,sessionContext,dt)||updateExpansion(e,sessionContext,dt))continue;
         if(!e.action&&!e.charge){
           const target=sessionContext.Math.atan2(p.y-e.y,p.x-e.x),delta=sessionContext.Math.atan2(sessionContext.Math.sin(target-e.heading),sessionContext.Math.cos(target-e.heading));
           e.heading+=sessionContext.clamp(delta,-dt*(e.r>30?.8:6),dt*(e.r>30?.8:6));

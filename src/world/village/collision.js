@@ -21,9 +21,9 @@ VillageCollision=(()=>{
   for(const o of objects){
    const [w,h]=dimensions[o.art]||[1,1],height=o.width*h/w;
    const [fx,fy,fw,fh]=o.footprint||[0,0,0,0];
-   const outlines=o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art];
+   const outlines=o.footprintPolygons||(o.footprint?[[[fx,fy],[fx+fw,fy],[fx+fw,fy+fh],[fx,fy+fh]]]:shapes[o.art]);
    for(const shape of outlines){
-    const points=shape.map(([x,y])=>o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
+    const points=shape.map(([x,y])=>o.footprintPolygons?({x:o.x+(o.flip?-x:x),y:o.y+y}):o.footprint?({x:o.x+x,y:o.y+y}):({x:o.x+(x-.5)*o.width,y:o.y+12+(y-1)*height}));
     const p={points,object:o,minX:Math.min(...points.map(p=>p.x)),maxX:Math.max(...points.map(p=>p.x)),minY:Math.min(...points.map(p=>p.y)),maxY:Math.max(...points.map(p=>p.y)),stamp:0};polygons.push(p);
     const minBy=Math.max(0,Math.floor(p.minY/bucketSize)),maxBy=Math.min(bucketCols-1,Math.floor(p.maxY/bucketSize));
     const minBx=Math.max(0,Math.floor(p.minX/bucketSize)),maxBx=Math.min(bucketCols-1,Math.floor(p.maxX/bucketSize));

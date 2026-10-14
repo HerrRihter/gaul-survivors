@@ -6,9 +6,27 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  const {session:t,env}=await createHarness();
  const {createArenas}=await loadModule(env,path.resolve(__dirname,'../src/world/arenas.js'));
  const city=createArenas(env.Village).get('lutetia');
- assert(city.objects.some(o=>o.art==='guardpost'));
+ assert(city.objects.some(o=>o.art==='guardpost-v3'));
  assert(city.objects.length>=16);assert.equal(city.residents.length,6);
- for(const art of ['fountain-v2','garden-v2']){
+ const houses=city.objects.filter(o=>o.art.startsWith('house-'));
+ assert.equal(houses.length,36,'Dense residential blocks');
+ assert.equal(new Set(houses.map(o=>o.art)).size,6,'All new house variants are used');
+ assert(!city.objects.some(o=>o.art==='awning'),'No standalone market awnings');
+ const garden=city.objects.find(o=>o.art==='garden-v2');
+ const gardenShape=city.collision.polygons.find(p=>p.object===garden);
+ assert(!city.blocked(gardenShape.maxX-4,gardenShape.maxY-4,2),'Round terrace corners remain walkable');
+ assert(city.blocked(gardenShape.maxX-4,(gardenShape.minY+gardenShape.maxY)/2,2),'Terrace side rim is solid');
+ for(const o of city.objects.filter(o=>o.footprintPolygons)){
+  const polygon=city.collision.polygons.find(p=>p.object===o);
+  o.footprintPolygons[0].forEach(([x,y],i)=>{
+   assert.equal(polygon.points[i].x,o.x+(o.flip?-x:x),'Ground outline follows sprite reflection');
+   assert.equal(polygon.points[i].y,o.y+y);
+  });
+  const center={x:polygon.points.reduce((s,p)=>s+p.x,0)/polygon.points.length,y:polygon.points.reduce((s,p)=>s+p.y,0)/polygon.points.length};
+  assert(city.blocked(center.x,center.y,0),'Solid masonry/planter interior');
+  assert(!city.clear({x:polygon.minX-20,y:center.y},{x:polygon.maxX+20,y:center.y},2),'Swept movement cannot cross object');
+ }
+ for(const art of ['fountain-v3','garden-v2']){
   const landmark=city.objects.find(o=>o.art===art);assert(landmark,'City includes '+art);
   assert(city.blocked(landmark.x,landmark.y-65,14),'Landmark has a solid ground footprint');
  }

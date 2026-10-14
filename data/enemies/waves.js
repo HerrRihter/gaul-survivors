@@ -56,7 +56,7 @@ export const waveSchedules = {
       {unit:'wine',first:70,populationCap:120,stages:[{time:0,every:42,cap:2}],message:'ЛЕГИОНЕР-ВИНОЧЕРПИЙ · Не наступай на винный след.'},
       {unit:'turtle',first:125,populationCap:null,stages:[{time:0,every:70,cap:1},{time:205,every:70,cap:2}],message:turtleMessage}
     ],
-    boss,
+    boss:{unit:'malosinus',time:230,message:'КАЗНАЧЕЙ МАЛОСИНУС · Берегись мешка денег! Подбирая опыт, он лечится.',sound:'boss'},
     population:{unit:'citizen',initial:24,maximum:40,every:2.5,growthEvery:15,variants:3},
     residents:['merchant'],
     notifications:[
