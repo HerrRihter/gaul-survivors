@@ -1,4 +1,4 @@
-import {heroUnlockPrices,permanentUpgrades} from '../../data/upgrades.js';
+import {heroUnlockPrices,permanentUpgrades,helmetRewards} from '../../data/upgrades.js';
 import {achievementDefinitions} from '../../data/achievements.js';
 export let Progression;
 'use strict';
@@ -47,7 +47,7 @@ Progression=(()=>{
  globalThis.addEventListener?.('pagehide',flush);
  globalThis.document?.addEventListener?.('visibilitychange',()=>{if(document.hidden)flush();});
  function earn(amount){if(!Number.isSafeInteger(amount)||amount<=0)return 0;data.helmets+=amount;deferSave();return amount;}
- function kill(){data.kills++;const reward=data.kills%10===0?1:0;data.helmets+=reward;deferSave();return reward;}
+ function kill(){data.kills++;const reward=data.kills%helmetRewards.killsPerHelmet===0?1:0;data.helmets+=reward;deferSave();return reward;}
  const owned=id=>data.unlocked.includes(id);
  const cost=id=>Object.hasOwn(upgrades,id)?(upgrades[id].hero?50:30)*(data.levels[id]+1):prices[id];
  function buyHero(id){if(!Object.hasOwn(prices,id)||owned(id)||data.helmets<prices[id])return false;data.helmets-=prices[id];data.unlocked.push(id);save();return true;}

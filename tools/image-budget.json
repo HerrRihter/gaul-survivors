@@ -1,0 +1,23 @@
+[
+  {"file": "assets/runtime/characters/heroes/asterix/portrait.png", "max": [256, 256], "drawnAt": "128 px canvas (hero-art.js)"},
+  {"file": "assets/runtime/characters/heroes/obelix/portrait.png", "max": [256, 256], "drawnAt": "128 px canvas (hero-art.js)"},
+  {"file": "assets/runtime/projectiles/menhir-flight-v2.png", "crop": [59, 151, 1567, 706], "max": [256, 256], "drawnAt": "124x72 sprite (menhir-art.js, menhir-layout.json)"},
+  {"file": "assets/runtime/projectiles/projectiles-v2.png", "max": [384, 256], "drawnAt": "fish 34 px, pilum 72 px (data/projectiles/projectiles.js boxes x0.25)"},
+  {"file": "assets/runtime/ui/roman-helmet-v1.png", "crop": [302, 128, 851, 908], "max": [128, 128], "drawnAt": "64 px canvas (villager-art.js, villager-layout.json helmet)"},
+  {"file": "assets/runtime/world/village/village-ground-v1.png", "max": [1100, 1100], "drawnAt": "550 world px tile (village-renderer.js)"},
+  {"file": "assets/runtime/world/village/village-gate.png", "max": [550, 1000], "drawnAt": "275 world px (village-data.js)"},
+  {"file": "assets/runtime/world/scenery/weapons-v1.png", "max": [210, 1000], "drawnAt": "105 world px (arenas.js)"},
+  {"file": "assets/runtime/world/scenery/supplies-v1.png", "max": [350, 1000], "drawnAt": "up to 175 world px"},
+  {"file": "assets/runtime/world/scenery/fire-v1.png", "max": [340, 1000], "drawnAt": "170 world px"},
+  {"file": "assets/runtime/world/scenery/standard-v1.png", "max": [170, 1000], "drawnAt": "up to 85 world px"},
+  {"file": "assets/runtime/world/lutetia/house-balcony-v3.png", "max": [600, 600], "drawnAt": "280-295 world px (lutetia.js)"},
+  {"file": "assets/runtime/world/lutetia/house-cottage-v3.png", "max": [600, 600], "drawnAt": "280-295 world px"},
+  {"file": "assets/runtime/world/lutetia/house-portico-v3.png", "max": [600, 600], "drawnAt": "280-295 world px"},
+  {"file": "assets/runtime/world/lutetia/house-shop-v3.png", "max": [600, 600], "drawnAt": "280-295 world px"},
+  {"file": "assets/runtime/world/lutetia/house-stairs-v3.png", "max": [600, 600], "drawnAt": "280-295 world px"},
+  {"file": "assets/runtime/world/lutetia/house-terrace-v3.png", "max": [600, 600], "drawnAt": "280-295 world px"},
+  {"file": "assets/runtime/world/lutetia/guardpost-v3.png", "max": [420, 420], "drawnAt": "210 world px"},
+  {"file": "assets/runtime/world/lutetia/fountain-v3.png", "max": [380, 380], "drawnAt": "190 world px"},
+  {"file": "assets/runtime/world/lutetia/tree-broadleaf-v3.png", "max": [420, 420], "drawnAt": "210 world px"},
+  {"file": "assets/runtime/world/lutetia/tree-cypress-v3.png", "max": [340, 340], "drawnAt": "170 world px"}
+]

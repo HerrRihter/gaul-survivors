@@ -1,7 +1,7 @@
-import {expansionUnits} from '../../data/enemies/units.js';
+import {unitDefinitions} from '../../data/enemies/units.js';
 export function updateCityPedestrian(e,c,dt){
- const civilian=expansionUnits[e.unit]?.civilian;
- if(!civilian&&e.unit!=='courtesan')return false;
+ const ai=unitDefinitions[e.unit]?.ai,civilian=ai==='civilian';
+ if(!civilian&&ai!=='thief')return false;
  const s=c.state,p=s.p;
  e.action=null;e.moving=false;
  const move=(angle,speed)=>{

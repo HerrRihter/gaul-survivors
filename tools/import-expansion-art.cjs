@@ -14,16 +14,18 @@ async function bounds(buffer){
  return {left,top,width:right-left,height:bottom-top};
 }
 async function main(){
+ specs.malosinus={height:132,actions:['idle','walk','attack','hurt']};
  const [id,source]=process.argv.slice(2),spec=specs[id];if(!spec||!source)throw Error('Usage: node tools/import-expansion-art.cjs <unit> <transparent-sheet.png>');
+ const actionNames=spec.actions||['walk','attack','hurt'],poseCount=actionNames.length*4;
  const archive=path.join(root,'assets/source/expansion-v1');fs.mkdirSync(archive,{recursive:true});
  const saved=path.join(archive,id+'.png');if(path.resolve(source)!==saved)fs.copyFileSync(source,saved);
  const meta=await sharp(saved).metadata();if(!meta.hasAlpha)throw Error('Source must have real transparency');
  const raw=await sharp(saved).ensureAlpha().raw().toBuffer();
  const {labels,items}=require('./sprite-sheet-components.cjs').components(raw,meta.width,meta.height);
- const main=items.filter(c=>c.area>1000).sort((a,b)=>b.area-a.area).slice(0,12);
- if(main.length!==12)throw Error(id+': expected 12 disconnected poses');
+ const main=items.filter(c=>c.area>1000).sort((a,b)=>b.area-a.area).slice(0,poseCount);
+ if(main.length!==poseCount)throw Error(id+': expected '+poseCount+' disconnected poses');
  main.sort((a,b)=>(a.top+a.bottom)-(b.top+b.bottom));
- const ordered=[];for(let row=0;row<3;row++)ordered.push(...main.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));
+ const ordered=[];for(let row=0;row<actionNames.length;row++)ordered.push(...main.slice(row*4,row*4+4).sort((a,b)=>a.left-b.left));
  const owner=new Map(main.map(c=>[c.id,c.id]));
  for(const c of items){
   if(owner.has(c.id)||c.area<5)continue;
@@ -54,8 +56,8 @@ async function main(){
  const heights=cells.slice(0,4).map(c=>c.box.height).sort((a,b)=>a-b);
  const scale=Math.min(spec.height/((heights[1]+heights[2])/2),118/Math.max(...cells.map(c=>Math.max(c.footX,c.box.width-c.footX))),220/Math.max(...cells.map(c=>c.box.height)));
  const folder=spec.folder||id,actions={},metrics=[];
- for(let row=0;row<3;row++){
-  const action=['walk','attack','hurt'][row];actions[action]=[];
+ for(let row=0;row<actionNames.length;row++){
+  const action=actionNames[row];actions[action]=[];
   const dir=path.join(root,'assets/runtime/characters/enemies',folder,'animations',action);fs.mkdirSync(dir,{recursive:true});
   for(let col=0;col<4;col++){
    const {cell,box,footX}=cells[row*4+col];
@@ -67,9 +69,9 @@ async function main(){
   }
  }
  const file=path.join(root,'data/animations/character-frames.json'),manifest=JSON.parse(fs.readFileSync(file,'utf8'));
- manifest.characters[id]={renderer:'unit',actions,idle:{action:'attack',index:3}};
+ manifest.characters[id]={renderer:'unit',actions,idle:actions.idle?{action:'idle',index:0}:{action:'attack',index:3}};
  fs.writeFileSync(file,JSON.stringify(manifest,null,2)+'\n');
  fs.writeFileSync(path.join(archive,id+'-layout.json'),JSON.stringify({source:path.relative(root,saved),scale,metrics},null,2)+'\n');
- console.log(id+': imported 12 RGBA frames, fixed scale '+scale.toFixed(4));
+ console.log(id+': imported '+poseCount+' RGBA frames, fixed scale '+scale.toFixed(4));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

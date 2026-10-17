@@ -69,7 +69,7 @@ mobile.session.update(.01);assert(mobile.session.state.p.x>startX,'Touch movemen
 canvas.events.pointercancel();const stoppedX=mobile.session.state.p.x;
 mobile.session.update(.01);assert.equal(mobile.session.state.p.x,stoppedX,'Pointer cancellation clears the stick');
 mobile.session.keys.add('KeyD');mobile.listeners.blur();
-assert.equal(mobile.session.keys.size,0);assert.equal(mobile.session.mode,'pause','Focus loss resets input and pauses');
+assert.equal(mobile.session.keys.size,0);assert.equal(mobile.session.mode,'play','Focus loss resets input; auto-pause is temporarily off (AUTO_PAUSE in src/core/input.js)');
 mobile.env.window.innerWidth=390;mobile.env.window.innerHeight=844;mobile.env.window.devicePixelRatio=3;
 mobile.listeners.resize();assert.equal(canvas.width,780);assert.equal(canvas.height,1688,'Portrait canvas retains DPR cap and zoom');
 mobile.env.window.innerWidth=844;mobile.env.window.innerHeight=390;mobile.listeners.resize();

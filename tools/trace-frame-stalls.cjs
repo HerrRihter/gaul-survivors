@@ -15,6 +15,6 @@ const {createServer}=require('./server.cjs');
   await page.evaluate(()=>new Promise(resolve=>{let n=0;function tick(){if(++n<180)requestAnimationFrame(tick);else resolve();}requestAnimationFrame(tick);}));
   const done=new Promise(r=>cdp.once('Tracing.tracingComplete',r));await cdp.send('Tracing.end');await done;
   const report=events.filter(e=>e.ph==='X'&&e.dur>8000).sort((a,b)=>b.dur-a.dur).slice(0,60).map(e=>({name:e.name,ms:e.dur/1000,ts:e.ts,pid:e.pid,tid:e.tid,args:e.args}));
-  fs.writeFileSync(process.argv[2]||'docs/MICROFREEZE-trace.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report.slice(0,18)));
+  fs.writeFileSync(process.argv[2]||'docs/benchmarks/microfreeze-trace.json',JSON.stringify(report,null,2));console.log(JSON.stringify(report.slice(0,18)));
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 })().catch(e=>{console.error(e);process.exitCode=1;});

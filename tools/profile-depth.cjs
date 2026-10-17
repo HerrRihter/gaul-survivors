@@ -16,7 +16,7 @@ async function main(){
   method:'50 batches of 100 orders after 300 warmup iterations; same deterministic scene',
   before,after,p50ReductionPercent:(1-after.p50Ms/before.p50Ms)*100,
   limits:'CPU ordering microbenchmark only; not total browser frame time or mobile performance'};
- require('node:fs').writeFileSync(require('node:path').join(__dirname,'../docs/DEPTH-PROFILE.json'),JSON.stringify(report,null,2)+'\n');
+ require('node:fs').writeFileSync(require('node:path').join(__dirname,'../docs/benchmarks/depth-profile.json'),JSON.stringify(report,null,2)+'\n');
  console.log(JSON.stringify(report,null,2));
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

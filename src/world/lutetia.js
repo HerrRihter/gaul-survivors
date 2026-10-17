@@ -1,4 +1,5 @@
 import {VillageCollision} from './village/collision.js';
+import {createReachability} from './connectivity.js';
 import {VillageNavigation} from './village/navigation.js';
 import {sceneryVisible} from './village/village-renderer.js';
 import {LutetiaArt,LutetiaShapes} from '../rendering/art/lutetia-art.js';
@@ -77,5 +78,6 @@ export function createLutetia(){
   else if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width,o.flip)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.3,o.y-o.width*.3,o.width*.6,o.width*.3);}
   g.restore();
  }
- return {size,objects,roads:[],residents,depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
+ const reachable=createReachability(collision.blocked,size);
+ return {size,objects,roads:[],residents,depthObjects,houses:[],collision,...navigation,reachable,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
 }

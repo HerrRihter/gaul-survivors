@@ -23,9 +23,15 @@ function background(cx,cy){
       sessionContext.ctx.restore();
     }
 function draw(){
-      const s=sessionContext.state,p=s?s.p:{x:1100,y:1010},cx=sessionContext.clamp(p.x-sessionContext.W/2,0,sessionContext.WORLD-sessionContext.W),cy=sessionContext.clamp(p.y-sessionContext.H/2,0,sessionContext.WORLD-sessionContext.H);
+      const s=sessionContext.state,p=s?s.p:{x:1100,y:1010},ratio=sessionContext.canvas.width/sessionContext.W||1,snap=v=>sessionContext.Math.round(v*ratio)/ratio,cx=snap(sessionContext.clamp(p.x-sessionContext.W/2,0,sessionContext.WORLD-sessionContext.W)),cy=snap(sessionContext.clamp(p.y-sessionContext.H/2,0,sessionContext.WORLD-sessionContext.H));
       sessionContext.ctx.save();
-      if(s&&s.shake&&sessionContext.mode==='play'&&sessionContext.gameSettings?.shake!==false)sessionContext.ctx.translate(sessionContext.rand(-s.shake,s.shake),sessionContext.rand(-s.shake,s.shake));
+      // Camera and shake land on whole device pixels: fractional offsets made Firefox
+      // resample the full-screen scene and tripled frame time while the hero was hit.
+      // The shake sways along a smooth curve and fades out with the square of its strength.
+      if(s&&s.shake&&sessionContext.mode==='play'&&sessionContext.gameSettings?.shake!==false){
+        const amp=s.shake*s.shake/4,phase=s.t*48;
+        sessionContext.ctx.translate(snap(sessionContext.Math.sin(phase)*amp),snap(sessionContext.Math.cos(phase*1.3)*amp*.7));
+      }
       background(cx,cy);
       sessionContext.ctx.save();
       sessionContext.ctx.translate(-cx,-cy);
@@ -74,7 +80,7 @@ function draw(){
             continue;
           }
           if(!e.player&&(e.x<minX-100||e.x>maxX+100||e.y<minY-100||e.y>maxY+100))continue;
-          const size=e.boss?3.5:e.type==='obelix'?3.5:e.player?3:e.type==='monster'?3:2.5;
+          const size=e.boss?3.5:e.player?(sessionContext.Villagers.defs[e.type]?.spriteScale||3):2.5;
           sessionContext.ctx.fillStyle='#14291e66';
           sessionContext.ctx.beginPath();
           sessionContext.ctx.ellipse(e.x,e.y,12*size/2,4*size/2,0,0,sessionContext.Math.PI*2);
@@ -95,12 +101,12 @@ function draw(){
             sessionContext.ctx.fill();
             sessionContext.ctx.restore();
             sessionContext.ctx.fillStyle='#f6cb72';
-            sessionContext.ctx.fillRect(e.x-3,e.y-(typeof sessionContext.HeroArt!=='undefined'&&sessionContext.HeroArt.get(e.type)?(e.type==='obelix'?94:67):15*size+6),6,2);
+            sessionContext.ctx.fillRect(e.x-3,e.y-(typeof sessionContext.HeroArt!=='undefined'&&sessionContext.HeroArt.get(e.type)?sessionContext.Villagers.defs[e.type].markerHeight:15*size+6),6,2);
           }else if(e.hp<e.max&&!e.boss){
             sessionContext.ctx.fillStyle='#233429';
-            sessionContext.ctx.fillRect(e.x-12,e.y-(sessionContext.Legion.units[e.unit].labelHeight?sessionContext.Legion.units[e.unit].labelHeight-12:e.unit==='ram'?132:e.unit==='turtle'?116:84),24,3);
+            sessionContext.ctx.fillRect(e.x-12,e.y-((sessionContext.Legion.units[e.unit].labelHeight||96)-12),24,3);
             sessionContext.ctx.fillStyle='#c4956d';
-            sessionContext.ctx.fillRect(e.x-12,e.y-(sessionContext.Legion.units[e.unit].labelHeight?sessionContext.Legion.units[e.unit].labelHeight-12:e.unit==='ram'?132:e.unit==='turtle'?116:84),24*e.hp/e.max,3);
+            sessionContext.ctx.fillRect(e.x-12,e.y-((sessionContext.Legion.units[e.unit].labelHeight||96)-12),24*e.hp/e.max,3);
           }
         }
         for(const b of s.enemyShots)sessionContext.Legion.projectile(sessionContext.ctx,b);
@@ -149,7 +155,7 @@ function draw(){
       const vignette=getVignette(sessionContext.W,sessionContext.H);
       // On the dense city scene, reuse the rasterized overlay as well as the
       // scaled buildings. Other maps retain their cheaper direct gradient.
-      if(s?.map==='lutetia'){
+      if(s&&sessionContext.arenaDefinitions?.[s.map]?.cachedVignette){
         if(!cityVignette){
           cityVignette=sessionContext.document.createElement('canvas');
           cityVignette.width=Math.ceil(sessionContext.W);cityVignette.height=Math.ceil(sessionContext.H);

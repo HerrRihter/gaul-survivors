@@ -10,19 +10,7 @@ import {UnitArt} from '../rendering/art/unit-art.js';
 import {Village} from '../world/village/village.js';
 import {fitCharacterPreview,drawCharacterPreview} from '../ui/character-preview.js';
 
-const descriptions={
-malosinus:'Уникальный босс Лютеции. 2200 HP. Удар мешком денег: 65 урона; уходи из сектора во время замаха. Подбирает опыт и лечится на 12 HP за единицу.',
-citizen:'На иллюстрации — пекарь. В городе также встречаются носильщики и писцы. Хаотично бегает, не атакует. При столкновении — 1 урон; не даёт опыта или добычи.',
-auxiliary:'Пузатая городская стража с круглыми щитами. Длинный выпад копьём: уходи с линии замаха.',
-merchant:'Не покидает прилавок. 650 HP; бросает яблоки, хлеб и кувшины. Прячься за домами.',
-courtesan:'Подбирает опыт и еду, затем убегает. Избегает героя и не преследует его.',
-boar:'Кабан предупреждает о рывке и несётся по прямой.',
-stoneSquad:'Мощный разбег, затем камень падает на отряд. Отойди от зоны падения.',
-netter:'Ждёт в засаде и бросает сеть. Стан на 1,25 с, затем защита от повторного стана.',
-tower:'Медленная осадная башня со стрелками. Залп из трёх стрел.',
-cavalry:'Пересекает карту и уходит. С 2:00 атаки учащаются и охватывают проезды по всему лагерю.',
-caius:'Не атакует. Каждые 100 потерянных HP дают 1 опыт и 1 шлем.',
-wine:'Оставляет винный след на 6 с. Отравление держится 2,5 с после выхода.',roman:'Короткий удар мечом. Прерывается попаданием.',spear:'Дальний выпад по зафиксированной линии. Уйди вбок во время замаха.',pilum:'Держится на дистанции и метает пилум. Снаряд останавливается о дом.',veteran:'Тяжёлый удар с долгой подготовкой; меньше отбрасывается.',turtle:'Шесть солдат как один строй. Щиты поглощают 65% урона спереди; обходи сбоку или сзади.',ram:'Отряд с тараном разгоняется по отмеченной полосе. Столкновение с домом останавливает разгон.',boss:'Центурион завершает наступление. Победи его и продержись до пира.'};
+// Descriptions and roles come from data/enemies/units.js; times from the wave schedule.
 
 const anchor=CharacterFrameManifest.anchor,previews=[];
 const arenas=createArenas(Village);
@@ -49,7 +37,7 @@ function showLocation(){
  for(const unit of units){
  const u=unitDefinitions[unit];
  const card=document.createElement('article');card.className='card';
- const timing=(schedule.boss?.unit===unit?'БОСС ЛОКАЦИИ · ':'')+waveTiming(schedule,unit),description=descriptions[unit]||'';
+ const timing=(schedule.boss?.unit===unit?'БОСС ЛОКАЦИИ · ':'')+waveTiming(schedule,unit),description=u.desc||'';
  card.innerHTML=`<canvas width="280" height="210" data-unit="${unit}" aria-label="${u.name}"></canvas><h2>${u.name}</h2><div class="stats">${u.hp} HP · ${u.damage} урона · ${u.xp} опыта</div><p style="color:#e5c480">${timing}</p><p>${description}</p>`;
  document.getElementById('cards').append(card);
  const canvas=card.querySelector('canvas'),id=unit==='roman'?'roman-0':unit==='citizen'?'citizen-0':unit;

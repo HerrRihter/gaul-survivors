@@ -44,7 +44,7 @@ module.exports={
         "src/ui/menu-portraits.js",
         "src/ui/character-preview.js",
         "data/animations/character-bounds.js",
-        "assets/runtime/world/scenery/command-v1.png", "assets/runtime/world/scenery/supplies-v1.png", "assets/runtime/world/scenery/fire-v1.png", "assets/runtime/world/scenery/standard-v1.png", "assets/runtime/world/scenery/tent-round-v1.png", "assets/runtime/world/scenery/weapons-v1.png", "assets/runtime/world/scenery/tent-v1.png", "assets/runtime/world/scenery/rocks-v1.png", "src/rendering/art/scenery-art.js", "src/world/arenas.js", "src/systems/expansion.js", "src/rendering/art/expansion-art.js",
+        "assets/runtime/world/scenery/command-v1.png", "assets/runtime/world/scenery/supplies-v1.png", "assets/runtime/world/scenery/fire-v1.png", "assets/runtime/world/scenery/standard-v1.png", "assets/runtime/world/scenery/tent-round-v1.png", "assets/runtime/world/scenery/weapons-v1.png", "assets/runtime/world/scenery/tent-v1.png", "assets/runtime/world/scenery/rocks-v1.png", "src/rendering/art/scenery-art.js", "src/world/arenas.js", "src/world/connectivity.js", "src/systems/expansion.js", "src/rendering/art/expansion-art.js",
         "src/app/game-session.js",
         "src/main.js", "src/core/math.js", "src/core/action-timeline.js", "src/rendering/depth-order.js", "data/animations/action-timing.js",
         "src/world/village/village-data.js",
@@ -69,7 +69,7 @@ module.exports={
         "src/pages/village-preview.js",
         "styles/game.css",
         "data/characters/heroes.js",
-        "data/enemies/units.js", "data/enemies/waves.js"
+        "data/enemies/units.js", "data/enemies/waves.js", "data/text.js"
       ]
     },
     {
@@ -79,7 +79,6 @@ module.exports={
         "legion-preview.html"
       ],
       "files": [
-        "src/rendering/art/roman-art-legacy.js",
         "src/rendering/art/roman-art.js",
         "src/rendering/art/animation-art.js",
         "src/rendering/art/unit-art.js",

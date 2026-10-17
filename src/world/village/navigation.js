@@ -42,11 +42,14 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   const {free,edges}=grid(r),tx=Math.floor(p.x/cell),ty=Math.floor(p.y/cell),target=tx+ty*cols;
   const cached=maps.get(r);if(cached&&cached.target===target&&clear(center(cached.seed),p,2))return cached;
   // A hero can stand in a gap that siege units cannot enter: route to the nearest reachable approach.
-  let seed=-1,best=Infinity;
+  // The approach must belong to the main region: a nearby isolated patch would give a
+  // field that never reaches the units, and they would stand still.
+  let seed=-1,best=Infinity;const main=mainRegion(r);
   for(let y=Math.max(0,ty-7);y<=Math.min(cols-1,ty+7);y++)for(let x=Math.max(0,tx-7);x<=Math.min(cols-1,tx+7);x++){
-   const k=x+y*cols;if(!free[k])continue;const c=center(k),d=Math.hypot(c.x-p.x,c.y-p.y);
+   const k=x+y*cols;if(!free[k]||!main[k])continue;const c=center(k),d=Math.hypot(c.x-p.x,c.y-p.y);
    if(d<best&&clear(c,p,2)){best=d;seed=k;}
   }
+  if(seed<0)seed=nearestApproach(p,r);
   if(seed<0)return null;
   const old=maps.get(r);if(old&&old.seed===seed){old.target=target;return old;}
   const costs=new Int16Array(cols*cols).fill(-1);let n=1;sharedQueue[0]=seed;costs[seed]=0;
@@ -58,6 +61,24 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
    if(edge&8){const nk=k-cols;if(costs[nk]<0){costs[nk]=c;sharedQueue[n++]=nk;}}
   }
   const out={seed,costs,target};maps.set(r,out);return out;
+ }
+ // The hero can stand where a body this size never fits (deep in the forest). Instead of
+ // freezing, head for the closest cell of the main walkable region for this body.
+ const regions=new Map();
+ function mainRegion(r){
+  if(regions.has(r))return regions.get(r);
+  const {free,edges}=grid(r),main=new Uint8Array(cols*cols),mid=Math.floor(cols/2);
+  let start=mid+mid*cols;
+  if(!free[start]){let best=Infinity;for(let k=0;k<free.length;k++)if(free[k]){const c=center(k),d=Math.hypot(c.x-size/2,c.y-size/2);if(d<best){best=d;start=k;}}}
+  if(free[start]){let n=1;sharedQueue[0]=start;main[start]=1;
+   for(let q=0;q<n;q++){const k=sharedQueue[q],edge=edges[k];
+    for(const [bit,nk] of [[1,k+1],[2,k-1],[4,k+cols],[8,k-cols]])if(edge&bit&&!main[nk]){main[nk]=1;sharedQueue[n++]=nk;}}}
+  regions.set(r,main);return main;
+ }
+ function nearestApproach(p,r){
+  const main=mainRegion(r);let seed=-1,best=Infinity;
+  for(let k=0;k<main.length;k++)if(main[k]){const c=center(k),d=(c.x-p.x)**2+(c.y-p.y)**2;if(d<best){best=d;seed=k;}}
+  return seed;
  }
  function direction(a,p,r=14){
   const d=Math.hypot(p.x-a.x,p.y-a.y);

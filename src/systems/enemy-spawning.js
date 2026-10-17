@@ -1,5 +1,4 @@
 import {prepareExpansion} from './expansion.js';
-import {expansionUnits} from '../../data/enemies/units.js';
 import {getWaveSchedule,normalWave,selectWaveUnit,scheduleStage} from './wave-schedule.js';
 import {replenishPopulation} from './population.js';
 export let EnemySpawning;
@@ -8,20 +7,22 @@ EnemySpawning={create(sessionContext){
 function spawn(unit,boss=false,position=null){
       const s=sessionContext.state,p=s.p,u=sessionContext.Legion.units[unit];
       if(!u)throw new Error('Unknown unit: '+unit);
+      // Spawn only where this body size can walk to the hero, never in an enclosed glade.
+      const world=sessionContext.Village,open=(x,y)=>!world.blocked(x,y,u.r)&&(!world.reachable||world.reachable(x,y,u.r));
       let x,y;
       if(position){x=position.x;y=position.y;}
       for(let i=0;!position&&i<100;i++){
         const a=sessionContext.rand(0,sessionContext.Math.PI*2),r=sessionContext.rand(520,640);
         x=sessionContext.clamp(p.x+sessionContext.Math.cos(a)*r,u.r+10,sessionContext.WORLD-u.r-10);
         y=sessionContext.clamp(p.y+sessionContext.Math.sin(a)*r,u.r+10,sessionContext.WORLD-u.r-10);
-        if(!sessionContext.Village.blocked(x,y,u.r)&&sessionContext.Math.hypot(x-p.x,y-p.y)>260)break;
+        if(open(x,y)&&sessionContext.Math.hypot(x-p.x,y-p.y)>260)break;
       }
-      if(sessionContext.Village.blocked(x,y,u.r))return;
+      if(position?world.blocked(x,y,u.r):!open(x,y))return;
       const e={
         x,
         y,
         unit,
-        type:unit==='malosinus'?unit:boss?'boss':expansionUnits[unit]?unit:unit==='turtle'||unit==='ram'?unit:'roman',
+        type:u.spriteType||(boss?'boss':'roman'),
         hp:u.hp,
         max:u.hp,
         r:u.r,
@@ -30,12 +31,12 @@ function spawn(unit,boss=false,position=null){
         boss,
         hit:0,
         cd:0,
-        phase:unit==='spear'?1:unit==='pilum'?2:sessionContext.rand(0,3),
+        phase:u.spriteVariant??sessionContext.rand(0,3),
         vx:0,
         vy:0,
         heading:sessionContext.Math.atan2(p.y-y,p.x-x)
       };
-      if(unit==='citizen')e.variant=Number.isInteger(position?.variant)?((position.variant%3)+3)%3:sessionContext.Math.floor(e.phase);
+      if(u.variants)e.variant=Number.isInteger(position?.variant)?((position.variant%u.variants)+u.variants)%u.variants:sessionContext.Math.floor(e.phase);
       prepareExpansion(e,sessionContext);
       s.enemies.push(e);
       return e;

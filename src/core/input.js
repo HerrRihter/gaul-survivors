@@ -39,12 +39,15 @@ sessionContext.window.addEventListener('keydown',e=>{
       sessionContext.keys.add(e.code);
     });
 sessionContext.window.addEventListener('keyup',e=>sessionContext.keys.delete(e.code));
+// TEMPORARY: auto-pause on focus loss / hidden tab is off. Set to true to restore it.
+const AUTO_PAUSE=false;
 sessionContext.window.addEventListener('blur',()=>{
+      // Always drop held keys: otherwise the hero keeps running after Alt+Tab.
       sessionContext.resetInput();
-      if(sessionContext.mode==='play')sessionContext.pause();
+      if(AUTO_PAUSE&&sessionContext.mode==='play')sessionContext.pause();
     });
 sessionContext.document.addEventListener('visibilitychange',()=>{
-      if(sessionContext.document.hidden&&sessionContext.mode==='play')sessionContext.pause();
+      if(AUTO_PAUSE&&sessionContext.document.hidden&&sessionContext.mode==='play')sessionContext.pause();
     });
 sessionContext.canvas.style.touchAction='none';
 sessionContext.canvas.addEventListener('pointerdown',e=>{

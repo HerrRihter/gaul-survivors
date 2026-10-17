@@ -1,25 +1,28 @@
 'use strict';
 
+const fs = require('node:fs');
 const path = require('node:path');
 const {spawnSync} = require('node:child_process');
 const root = path.resolve(__dirname, '..');
-const tests = ['test-audio.cjs', 'test.cjs', 'test-expansion.cjs', 'test-lutetia.cjs', 'test-city-population.cjs', 'test-expansion-art.cjs', 'test-animation.cjs', 'test-progression.cjs',
-  'test-upgrades.cjs', 'test-abilities.cjs', 'test-frame-work.cjs', 'test-projectile-art.cjs', 'test-unit-art.cjs',
-  'test-villager-art.cjs', 'test-hero-art.cjs', 'test-menu-portraits.cjs', 'test-village-collision.cjs',
-  'test-session.cjs', 'test-rendering.cjs', 'test-character-frames.cjs', 'test-character-preview.cjs', 'test-file-launch.cjs', 'test-site.cjs'];
-let failed = 0;
-tests.unshift('test-structure.cjs');
+
+// Generated files are not committed: build them from the sources before testing.
+for (const tool of ['generate-layouts.cjs', 'generate-file-bundles.cjs']) {
+  const result = spawnSync(process.execPath, [path.join(root, 'tools', tool)], {cwd: root, stdio: 'inherit'});
+  if (result.error || result.status !== 0) process.exit(1);
+}
 require('./check-structure.cjs').checkStructure({root});
 require('./check-game-contracts.cjs').checkGameContracts();
-tests.unshift('test-wave-contract.cjs');
-tests.unshift('test-malosinus.cjs');
-const generated=spawnSync(process.execPath,[path.join(root,'tools/generate-layouts.cjs'),'--check'],{cwd:root,stdio:'inherit'});
-if(generated.error||generated.status!==0)process.exit(1);
-const bundles=spawnSync(process.execPath,[path.join(root,'tools/generate-file-bundles.cjs'),'--check'],{cwd:root,stdio:'inherit'});
-if(bundles.error||bundles.status!==0)process.exit(1);
+
+// Every tests/test*.cjs runs automatically: contracts first, the site build last.
+const first = ['test-structure.cjs', 'test-content.cjs', 'test-wave-contract.cjs'], last = ['test-site.cjs'];
+const rank = name => first.includes(name) ? first.indexOf(name) - first.length : last.includes(name) ? 1 : 0;
+const tests = fs.readdirSync(path.join(root, 'tests')).filter(name => /^test.*\.cjs$/.test(name))
+  .sort((a, b) => rank(a) - rank(b) || a.localeCompare(b));
+
+let failed = 0;
 for (const test of tests) {
   console.log(`\nRunning ${test}`);
-  const result = spawnSync(process.execPath, ['--experimental-vm-modules',path.join(root, 'tests', test)], {cwd: root, stdio: 'inherit'});
+  const result = spawnSync(process.execPath, ['--experimental-vm-modules', path.join(root, 'tests', test)], {cwd: root, stdio: 'inherit'});
   if (result.error || result.status !== 0) {
     failed++;
     console.error(`FAIL: ${test}: ${result.error?.message || result.signal || result.status}`);

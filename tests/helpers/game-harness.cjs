@@ -51,7 +51,7 @@ async function createHarness({createSession = true} = {}) {
   };
   vm.createContext(env);
   for (const file of ['src/systems/upgrades.js', 'src/systems/persistence.js', 'src/rendering/art/projectile-art.js', 'src/entities/heroes.js',
-    'src/rendering/art/roman-art-legacy.js', 'src/rendering/art/roman-art.js', 'src/world/village/collision.js', 'src/world/village/village-data.js', 'src/world/village/navigation.js', 'src/world/village/village-renderer.js', 'src/world/village/village.js',
+    'src/rendering/art/roman-art.js', 'src/world/village/collision.js', 'src/world/village/village-data.js', 'src/world/village/navigation.js', 'src/world/village/village-renderer.js', 'src/world/village/village.js',
     'src/entities/legion.js', 'src/systems/corpses.js', 'src/ui/menu-portraits.js', 'src/rendering/canvas.js','src/core/audio.js','src/rendering/sprite-renderer.js','src/ui/game-ui.js','src/app/game-flow.js','src/systems/enemy-spawning.js','src/systems/combat.js','src/systems/simulation.js','src/rendering/scene-renderer.js','src/core/input.js','src/core/game-loop.js','src/app/game-session.js']) {
     await loadModule(env,path.join(root,file));
   }

@@ -32,7 +32,7 @@ function update(dt){
       p.y=sessionContext.clamp(p.y,100,sessionContext.WORLD-12);
       const travel=sessionContext.Math.hypot(p.x-oldX,p.y-oldY);
       p.moving=travel>.01;
-      p.walk=(p.walk||0)+travel/(['antisanitarix','automatix','panoramix'].includes(sessionContext.selected)?90:55);
+      p.walk=(p.walk||0)+travel/sessionContext.Villagers.defs[sessionContext.selected].walkStride;
       sessionContext.updateSpawning(dt);
       if(p.hurt){
         p.hurt.elapsed+=dt;
@@ -90,21 +90,21 @@ function update(dt){
         }
         sessionContext.advanceAction(e,dt,a=>{
           const angle=sessionContext.Math.atan2(a.aim.y-e.y,a.aim.x-e.x),ax=sessionContext.Math.cos(angle),ay=sessionContext.Math.sin(angle),px=p.x-e.x,py=p.y-e.y,along=px*ax+py*ay,across=sessionContext.Math.abs(px*ay-py*ax);
-          if(e.unit==='pilum'){
-            s.enemyShots.push({x:e.x,y:e.y,vx:ax*235,vy:ay*235,life:2,damage:e.damage});
+          if(u.attack==='pilum'){
+            s.enemyShots.push({x:e.x,y:e.y,vx:ax*u.projectileSpeed,vy:ay*u.projectileSpeed,life:2,damage:e.damage});
             sessionContext.soundEffect('throw');
           }
-  else if(e.unit==='ram'){
-            e.charge={x:ax,y:ay,left:1.3};
+  else if(u.attack==='charge'){
+            e.charge={x:ax,y:ay,left:u.chargeTime};
             e.heading=angle;
           }
-  else if(e.unit==='spear'){
+  else if(u.attack==='lunge'){
             if(along>=-8&&along<u.range+14&&across<24&&sessionContext.Village.clear(e,p,2))sessionContext.hurtPlayer(e);
           }
   else if(sessionContext.dist(e,p)<u.range+8&&along>=-8&&sessionContext.Village.clear(e,p,2))sessionContext.hurtPlayer(e);
         });
         if(e.charge){
-          const q=e.charge,ox=e.x,oy=e.y,chargeSpeed=320*(1-(e.abilitySlow||0));
+          const q=e.charge,ox=e.x,oy=e.y,chargeSpeed=u.chargeSpeed*(1-(e.abilitySlow||0));
           sessionContext.Village.move(e,q.x*chargeSpeed*dt,q.y*chargeSpeed*dt,e.r);
           q.left-=dt;
           if(sessionContext.dist(e,p)<e.r+14)sessionContext.hurtPlayer(e);
@@ -123,7 +123,7 @@ function update(dt){
           e.cd=u.cooldown;
           e.heading=sessionContext.Math.atan2(p.y-e.y,p.x-e.x);
         }
-        const moving=!e.action&&!e.hurt&&d>(e.unit==='pilum'?220:e.r+10),speed=e.speed*(1+s.t/1800)*(1-(e.abilitySlow||0)),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
+        const moving=!e.action&&!e.hurt&&d>(u.keepDistance??e.r+10),speed=e.speed*(1+s.t/1800)*(1-(e.abilitySlow||0)),dir=moving?sessionContext.Village.direction(e,p,e.r):null,ox=e.x,oy=e.y;
         sessionContext.Village.move(e,(moving?dir.x*speed*dt:0)+e.vx*dt,(moving?dir.y*speed*dt:0)+e.vy*dt,e.r);
         const travel=sessionContext.Math.hypot(e.x-ox,e.y-oy);
         e.moving=travel>.01;
@@ -136,7 +136,7 @@ function update(dt){
           b.x+=b.vx*dt/n;
           b.y+=b.vy*dt/n;
           if(sessionContext.Village.blocked(b.x,b.y,2))b.life=0;else if(sessionContext.dist(b,p)<17){
-            if(b.kind==='net'&&!sessionContext.abilities.protectedMove()&&!(p.netGrace>0)&&p.inv<=0){p.stun=1.25;p.netGrace=4;p.action=null;}
+            if(b.stun&&!sessionContext.abilities.protectedMove()&&!(p.netGrace>0)&&p.inv<=0){p.stun=b.stun;p.netGrace=b.stunGrace;p.action=null;}
             sessionContext.hurtPlayer(b);
             b.life=0;
           }

@@ -12,7 +12,7 @@ async function main(){
   assert(camp.clear({x:40,y:n},{x:2160,y:n},30),'Horizontal cavalry route must stay open');
   assert(camp.clear({x:n,y:40},{x:n,y:2160},30),'Vertical cavalry route must stay open');
  }
- assert(arenas.get('forest').objects.length>150,'Forest is densely populated');
+ assert(arenas.get('forest').objects.length>140,'Forest stays dense after clearing closed glades');
  for(const map of ['village','forest','camp']){
   t.selectMap(map);t.start();assert.equal(t.state.map,map);
   assert(!arenas.get(map).blocked(1100,1100,44),'Central spawn fits all units');

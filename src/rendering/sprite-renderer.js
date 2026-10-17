@@ -62,13 +62,12 @@ function sprite(g,name,x,y,size=2,flip=false,bob=0,flash=false,phase=0,actor=nul
   else if(hero){
         g.drawImage(hero,-48,-91,96,96);
       }
-  else if(roman){
-        const frame=sessionContext.Math.floor((sessionContext.state?sessionContext.state.step:sessionContext.performance.now()/1000)*7+phase)%4;
-        const art=sessionContext.RomanArt.get(sessionContext.Math.floor(phase)%3,frame,name==='boss');
+  else if(roman&&sessionContext.RomanArt.get(sessionContext.Math.floor(phase)%3,0,name==='boss')){
+        const art=sessionContext.RomanArt.get(sessionContext.Math.floor(phase)%3,0,name==='boss');
         const scale=name==='boss'?1.5:1.25;
         g.drawImage(art,-24*scale,-61*scale,48*scale,64*scale);
       }
-  else g.drawImage(spriteCache[name],-8*size,-15*size,16*size,16*size);
+  else g.drawImage(spriteCache[name]||spriteCache.roman,-8*size,-15*size,16*size,16*size);
       g.restore();
     }
 return {sprite};

@@ -8,6 +8,7 @@ export function seedPopulation(c) {
     for (let attempt = 0; attempt < 80; attempt++) {
       const position = {x:c.rand(100, c.WORLD-100), y:c.rand(120, c.WORLD-100)};
       if (c.dist(position, c.state.p) < 140 || c.Village.blocked(position.x, position.y, radius)) continue;
+      if (c.Village.reachable && !c.Village.reachable(position.x, position.y, radius)) continue;
       c.spawn(spec.unit, false, {...position, variant:i % spec.variants});
       break;
     }

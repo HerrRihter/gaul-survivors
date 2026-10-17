@@ -55,7 +55,7 @@ async function main(){
   const report={map,hero,hudMutations,renderingMetrics,frames:intervals.length,interval:stats(intervals),update:stats(timings.filter(t=>t.kind==='update').map(t=>t.ms)),draw:stats(timings.filter(t=>t.kind==='draw').map(t=>t.ms)),slowest:timings.sort((a,b)=>b.ms-a.ms).slice(0,8),hot};
   reports.push(report);console.log(JSON.stringify(report));await page.close();
  }
- fs.writeFileSync(path.resolve(process.argv[2]||'docs/COMBAT-PROFILE.json'),JSON.stringify({browser:await browser.version(),viewport:[1920,1080],enemyCount,cpuRate,note:'Headless Edge, real RAF loop, seeded random, mixed enemies, moving player and active abilities, 600 frames per map; CPU sampling and DOM/layout counters enabled.',reports},null,2));
+ fs.writeFileSync(path.resolve(process.argv[2]||'docs/benchmarks/combat-profile.json'),JSON.stringify({browser:await browser.version(),viewport:[1920,1080],enemyCount,cpuRate,note:'Headless Edge, real RAF loop, seeded random, mixed enemies, moving player and active abilities, 600 frames per map; CPU sampling and DOM/layout counters enabled.',reports},null,2));
  }finally{await browser.close();await new Promise(r=>server.close(r));}
 }
 main().catch(e=>{console.error(e);process.exitCode=1;});

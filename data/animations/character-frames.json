@@ -728,6 +728,39 @@
         "action": "walk",
         "index": 0
       }
+    },
+    "malosinus": {
+      "renderer": "unit",
+      "actions": {
+        "idle": [
+          "characters/enemies/malosinus/animations/idle/0.png",
+          "characters/enemies/malosinus/animations/idle/1.png",
+          "characters/enemies/malosinus/animations/idle/2.png",
+          "characters/enemies/malosinus/animations/idle/3.png"
+        ],
+        "walk": [
+          "characters/enemies/malosinus/animations/walk/0.png",
+          "characters/enemies/malosinus/animations/walk/1.png",
+          "characters/enemies/malosinus/animations/walk/2.png",
+          "characters/enemies/malosinus/animations/walk/3.png"
+        ],
+        "attack": [
+          "characters/enemies/malosinus/animations/attack/0.png",
+          "characters/enemies/malosinus/animations/attack/1.png",
+          "characters/enemies/malosinus/animations/attack/2.png",
+          "characters/enemies/malosinus/animations/attack/3.png"
+        ],
+        "hurt": [
+          "characters/enemies/malosinus/animations/hurt/0.png",
+          "characters/enemies/malosinus/animations/hurt/1.png",
+          "characters/enemies/malosinus/animations/hurt/2.png",
+          "characters/enemies/malosinus/animations/hurt/3.png"
+        ]
+      },
+      "idle": {
+        "action": "idle",
+        "index": 0
+      }
     }
   }
 }

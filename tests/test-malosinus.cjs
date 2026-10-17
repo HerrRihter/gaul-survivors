@@ -30,6 +30,7 @@ async function main(){
  const s=h.session.state;s.t=230;h.session.update(0);
  const boss=s.enemies.find(e=>e.boss);assert.equal(boss.unit,'malosinus');assert.equal(boss.type,'malosinus');
  h.session.update(0);assert.equal(h.nodes.get('bossname').textContent,'КАЗНАЧЕЙ МАЛОСИНУС');
+ h.session.damage(boss,1);assert(boss.visualHurt,'Surviving treasurer displays a hurt pose');
  h.session.damage(boss,99999);assert(s.bossDead);assert(s.gems.some(g=>g.v===100));
  console.log('PASS: city-only boss, XP consumption, capped healing, no resurrection, windup, single impact, dodge, cover, HUD and death.');
 }

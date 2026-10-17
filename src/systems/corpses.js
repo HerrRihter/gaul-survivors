@@ -1,3 +1,4 @@
+import {unitDefinitions} from '../../data/enemies/units.js';
 import {drawExpansion} from '../rendering/art/expansion-art.js';
 import {UnitArt} from '../rendering/art/unit-art.js';
 import {AnimationArt} from '../rendering/art/animation-art.js';
@@ -19,7 +20,7 @@ Corpses=(()=>{
  }
  function add(list,e,sprite,impact={x:1,y:0}){
   const length=Math.hypot(impact.x,impact.y),nx=length>0?impact.x/length:1,ny=length>0?impact.y/length:0;
-  const count=e.unit==='turtle'?6:e.unit==='ram'?4:1;
+  const count=unitDefinitions[e.unit]?.corpses||1;
   for(let i=0;i<count;i++){
    const soldier=count>1?{unit:'roman',type:'roman',phase:i%3}:e;
    list.push({x:e.x+(count>1?(i%3-1)*24:0),y:e.y+(count>1?(Math.floor(i/3)-.5)*24:0),age:0,

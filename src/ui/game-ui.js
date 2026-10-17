@@ -1,4 +1,5 @@
 import {abilityDefinitions} from '../../data/characters/abilities.js';
+import {helmetRewards} from '../../data/upgrades.js';
 export let GameUI;
 'use strict';
 GameUI={create(sessionContext){
@@ -66,6 +67,8 @@ function openRunHeroSelect(){
       show('runHeroSelect',true);
     }
 function renderShop(){
+      const rules=sessionContext.$('shopRules');
+      if(rules)rules.textContent=`1 шлем за каждые ${helmetRewards.killsPerHelmet} убийств. С солдат с вероятностью ${Math.round(helmetRewards.dropChance*100)}% выпадает ещё ${helmetRewards.dropValue} шлема — подбери их на поле. Собранные шлемы остаются у тебя после поражения.`;
       updateRecord();
       const root=sessionContext.$('shopHeroes');
       root.replaceChildren();
@@ -117,7 +120,7 @@ function renderShop(){
         };
         sessionContext.$('shopUpgrades').append(b);
       }
-      sessionContext.$('shopWallet').textContent='У вас '+sessionContext.Progression.data.helmets+' шлемов · до следующей награды: '+(10-sessionContext.Progression.data.kills%10)+' убийств'+(sessionContext.Progression.persistent?'':' · Не удалось сохранить прогресс. Не закрывай игру.');
+      sessionContext.$('shopWallet').textContent='У вас '+sessionContext.Progression.data.helmets+' шлемов · до следующей награды: '+(helmetRewards.killsPerHelmet-sessionContext.Progression.data.kills%helmetRewards.killsPerHelmet)+' убийств'+(sessionContext.Progression.persistent?'':' · Не удалось сохранить прогресс. Не закрывай игру.');
     }
 function closeShop(){
       show('shop',false);
@@ -387,7 +390,7 @@ function hud(){
         show('bossbar',bossActive);
       }
       if(boss){
-        const bossName=sessionContext.$('bossname'),name=boss.unit==='malosinus'?'КАЗНАЧЕЙ МАЛОСИНУС':'ЦЕНТУРИОН МАКСИМУС';
+        const bossName=sessionContext.$('bossname'),u=sessionContext.Legion.units[boss.unit],name=(u.title||u.name).toUpperCase();
         if(bossName.textContent!==name)bossName.textContent=name;
         const bossPct=sessionContext.Math.round(boss.hp/boss.max*1000)/10;
         if(bossPct!==lastBossHpPct){

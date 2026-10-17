@@ -59,11 +59,11 @@ export const CharacterFrames={
  get(id,action='idle',progress=0){
   const entry=loaded.get(id),spec=CharacterFrameManifest.characters[id];
   if(!spec||entry?.status!=='ready')return null;
-  if(action==='idle')return entry.images.get(spec.actions[spec.idle.action][spec.idle.index]);
+  if(action==='idle'&&!spec.actions.idle)return entry.images.get(spec.actions[spec.idle.action][spec.idle.index]);
   const sequence=spec.actions[action]||spec.actions.walk;
   if(!sequence?.length)return null;
   const p=Number.isFinite(progress)?progress:0;
-  const index=action==='walk'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
+  const index=action==='walk'||action==='idle'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
   return entry.images.get(sequence[index]);
  },
 };

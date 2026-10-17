@@ -18,5 +18,18 @@ const {frameHarness}=require('./helpers/frame-harness.cjs');
   e.hurt={elapsed:.2,duration:.4,flip:false};U.draw(g,e);assert.equal(rendered[0],U.get(name,'hurt',.5));
  }
  assert.equal(U.get('roman'),null);
+ for(const action of ['idle','walk','attack','hurt']){
+  const poses=[0,.25,.5,.75].map(p=>U.get('malosinus',action,p));
+  assert.equal(new Set(poses).size,4,'Malosinus has four independent '+action+' poses');
+  assert.equal(U.get('malosinus',action,1),poses[action==='idle'||action==='walk'?0:3]);
+ }
+ let pose;
+ const g={save(){},restore(){},translate(){},scale(){},drawImage(image){pose=image;}};
+ const boss={unit:'malosinus',x:0,y:0,heading:0,idleTime:.9};
+ U.draw(g,boss);assert.equal(pose,U.get('malosinus','idle',.5));
+ boss.action={elapsed:.8,duration:1.6,flip:false};
+ U.draw(g,boss);assert.equal(pose,U.get('malosinus','attack',.5),'Bag impact uses the third pose');
+ boss.visualHurt={elapsed:.17,duration:.34,flip:true};
+ U.draw(g,boss);assert.equal(pose,U.get('malosinus','hurt',.5),'Boss hit reaction is visible');
  console.log('PASS: 60 separate specialist poses, anchors, looping, priorities and facing.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

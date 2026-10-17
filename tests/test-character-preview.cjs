@@ -6,7 +6,7 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  await loadModule(env,path.resolve(__dirname,'../data/animations/character-bounds.js'));
  await loadModule(env,path.resolve(__dirname,'../src/ui/character-preview.js'));
  const anchor=[128,236];
- for(const id of ['roman-0','boss','spear','pilum','veteran','turtle','ram']){
+ for(const id of ['roman-0','boss','spear','pilum','veteran','turtle','ram','malosinus']){
   const b=env.CharacterBounds[id],p=env.fitCharacterPreview(b,anchor,280,210);
   for(const flip of [false,true]){
    const xs=[b.left,b.right].map(x=>p.x+(x-anchor[0])*p.scale*(flip?-1:1));

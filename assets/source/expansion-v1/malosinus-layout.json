@@ -1,0 +1,230 @@
+{
+  "source": "assets\\source\\expansion-v1\\malosinus.png",
+  "scale": 0.43564356435643564,
+  "metrics": [
+    {
+      "action": "idle",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 212,
+        "height": 304
+      },
+      "width": 92,
+      "height": 132,
+      "left": 89,
+      "top": 104
+    },
+    {
+      "action": "idle",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 198,
+        "height": 302
+      },
+      "width": 86,
+      "height": 132,
+      "left": 90,
+      "top": 104
+    },
+    {
+      "action": "idle",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 204,
+        "height": 297
+      },
+      "width": 89,
+      "height": 129,
+      "left": 88,
+      "top": 107
+    },
+    {
+      "action": "idle",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 208,
+        "height": 308
+      },
+      "width": 91,
+      "height": 134,
+      "left": 89,
+      "top": 102
+    },
+    {
+      "action": "walk",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 262,
+        "height": 292
+      },
+      "width": 114,
+      "height": 127,
+      "left": 64,
+      "top": 109
+    },
+    {
+      "action": "walk",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 229,
+        "height": 291
+      },
+      "width": 100,
+      "height": 127,
+      "left": 80,
+      "top": 109
+    },
+    {
+      "action": "walk",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 285,
+        "height": 288
+      },
+      "width": 124,
+      "height": 125,
+      "left": 54,
+      "top": 111
+    },
+    {
+      "action": "walk",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 233,
+        "height": 287
+      },
+      "width": 102,
+      "height": 125,
+      "left": 75,
+      "top": 111
+    },
+    {
+      "action": "attack",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 255,
+        "height": 266
+      },
+      "width": 111,
+      "height": 116,
+      "left": 71,
+      "top": 120
+    },
+    {
+      "action": "attack",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 303,
+        "height": 285
+      },
+      "width": 132,
+      "height": 124,
+      "left": 47,
+      "top": 112
+    },
+    {
+      "action": "attack",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 391,
+        "height": 246
+      },
+      "width": 170,
+      "height": 107,
+      "left": 65,
+      "top": 129
+    },
+    {
+      "action": "attack",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 251,
+        "height": 251
+      },
+      "width": 109,
+      "height": 109,
+      "left": 95,
+      "top": 127
+    },
+    {
+      "action": "hurt",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 241,
+        "height": 318
+      },
+      "width": 105,
+      "height": 139,
+      "left": 74,
+      "top": 97
+    },
+    {
+      "action": "hurt",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 205,
+        "height": 289
+      },
+      "width": 89,
+      "height": 126,
+      "left": 78,
+      "top": 110
+    },
+    {
+      "action": "hurt",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 324,
+        "height": 305
+      },
+      "width": 141,
+      "height": 133,
+      "left": 47,
+      "top": 103
+    },
+    {
+      "action": "hurt",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 226,
+        "height": 300
+      },
+      "width": 98,
+      "height": 131,
+      "left": 80,
+      "top": 105
+    }
+  ]
+}

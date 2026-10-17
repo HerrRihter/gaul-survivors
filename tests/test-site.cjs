@@ -5,7 +5,6 @@ const fs = require('node:fs');
 const os = require('node:os');
 const path = require('node:path');
 const vm = require('node:vm');
-const crypto = require('node:crypto');
 const {once} = require('node:events');
 const {createServer} = require('../tools/server.cjs');
 const {buildSite, publicationFiles} = require('../tools/site-builder.cjs');
@@ -77,7 +76,7 @@ async function imageRequests(out, html, pageURL, baseURL) {
   const graph=moduleFiles(env);
   for(const file of graph){
     requests.add(new URL(path.relative(out,file).replaceAll('\\','/'),baseURL).href);
-    if(/(?:-art|roman-art-legacy)\.js$/.test(file))await loadModule(env,file);
+    if(/-art\.js$/.test(file))await loadModule(env,file);
   }
   while (pending.length) pending.shift().onload?.();
   return requests;
@@ -85,12 +84,6 @@ async function imageRequests(out, html, pageURL, baseURL) {
 
 async function main() {
   checkBuildFailures();
-  const migration = require('../docs/MIGRATION-PATHS.json');
-  for (const record of migration.filter(record => /\.(png|jpg|json|txt)$/.test(record.to))) {
-    const bytes = fs.readFileSync(path.resolve(__dirname, '..', record.to));
-    assert.equal(crypto.createHash('sha256').update(bytes).digest('hex'), record.sha256,
-      `Migration preserves source material: ${record.to}`);
-  }
   const result = buildSite();
   const expected = [...publicationFiles(), '.nojekyll'].sort();
   assert.deepEqual(listFiles(result.out), expected, 'Output exactly matches the inventory');

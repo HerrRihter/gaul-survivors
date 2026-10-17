@@ -3,12 +3,15 @@
   "private": true,
   "type": "module",
   "scripts": {
+    "predev": "npm run generate",
     "dev": "node tools/server.cjs",
     "test": "node tools/test-all.cjs",
     "check:structure": "node tools/check-structure.cjs",
     "check:contracts": "node tools/check-game-contracts.cjs",
     "generate": "node tools/generate-layouts.cjs && node tools/generate-file-bundles.cjs",
+    "prebuild": "npm run generate",
     "build": "node tools/build-site.cjs",
+    "prestart": "npm run generate",
     "start": "node tools/server.cjs"
   }
 }

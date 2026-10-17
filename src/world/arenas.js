@@ -5,16 +5,18 @@ import {VillageRenderer,sceneryVisible} from './village/village-renderer.js';
 import {VillageArt} from '../rendering/art/village-art.js';
 import {SceneryArt} from '../rendering/art/scenery-art.js';
 import {createLutetia} from './lutetia.js';
+import {openPockets,createReachability} from './connectivity.js';
 
 export const arenaDefinitions=mapDefinitions;
 export const campLanes=[180,640,1100,1560,2020];
 const scenery=SceneryArt;
 export function createArenas(village){
- const factories={village:()=>village,forest:()=>createArena('forest'),camp:()=>createArena('camp'),lutetia:createLutetia};
- const cache={};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=factories[id]());}};
+ // Maps choose a generator by `layout`; several maps may share one with their own seed.
+ const factories={village:()=>village,forest:map=>createArena(map),camp:map=>createArena(map),lutetia:createLutetia};
+ const cache={};return {get(id){if(!Object.hasOwn(arenaDefinitions,id))id='village';return cache[id]||(cache[id]=factories[arenaDefinitions[id].layout](arenaDefinitions[id]));}};
 }
-function createArena(id){
- const size=2200,objects=[],roads=[];let seed=id==='forest'?731:192;
+function createArena(map){
+ const id=map.layout,size=2200,objects=[],roads=[];let seed=map.seed;
  const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const add=(x,y,art,width,footprint)=>objects.push({x,y,kind:art,art,width,...(footprint?{footprint}:{})});
  if(id==='forest'){
@@ -35,6 +37,9 @@ function createArena(id){
    if(random()<.18)add(px,py,'rocks',85+random()*45,[-32,-29,64,29]);
    else add(px,py,'trees',175+random()*65);
   }
+  // Overlapping crowns can wall off glades: clear trees until bodies of these radii
+  // (hero 14, boars 20) can walk from the central clearing to every open patch.
+  openPockets(objects,size,map.openFor||[14]);
  }else{
   for(const lane of campLanes){const width=lane===1100?180:128;roads.push([0,lane,700,lane,1500,lane,size,lane,width],[lane,0,lane,700,lane,1500,lane,size,width]);}
   let block=0;
@@ -83,5 +88,6 @@ function createArena(id){
   else {g.fillStyle=o.art==='tent'?'#c9b887':'#79847a';g.fillRect(o.x-o.width/2,o.y-60,o.width,60);}
   g.restore();
  }
- return {size,objects,roads,residents:[],depthObjects,houses:[],collision,...navigation,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
+ const reachable=createReachability(collision.blocked,size);
+ return {size,objects,roads,residents:[],depthObjects,houses:[],collision,...navigation,reachable,blocked:collision.blocked,clear:collision.clear,drawGround:renderer.drawGround,drawObject,draw(g){renderer.drawGround(g);for(const o of depthObjects)drawObject(g,o);}};
 }

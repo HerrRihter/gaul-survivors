@@ -1,34 +1,29 @@
-import {abilityDefinitions,abilityUpgradeDescriptions,abilityUpgradeMax,abilityUpgradeId} from '../../data/characters/abilities.js';
-import {permanentUpgradeDefinitions,heroTrainingDefinitions} from '../../data/upgrades.js';
+import {abilityDefinitions,abilityUpgradeMax,abilityUpgradeId} from '../../data/characters/abilities.js';
+import {heroDefinitions} from '../../data/characters/heroes.js';
+import {permanentUpgradeDefinitions,heroTrainingDefinitions,runUpgradeDefinitions,supplyDefinitions} from '../../data/upgrades.js';
 export let UpgradeSystem;
 'use strict';
 UpgradeSystem={create(Progression){
  const add=(key,value)=>s=>s.stats[key]=(s.stats[key]||0)+value;
- const item=(id,name,desc,key,value,max=3)=>({id,name,desc,icon:'✦',max,apply:add(key,value)});
- const common=[
-  item('might','Сила деревни','+15% к базовому урону всех атак.','damage',.15,5),
-  item('tempo','Второе дыхание','+12% к темпу атак и периодического урона.','haste',.12,5),
-  item('area','Широкий размах','+12% к размеру оружия и областей урона.','range',.12,5),
-  item('boots','Крылатые сандалии','+8% к скорости передвижения.','speed',.08,5),
-  {id:'vitality',name:'Большой пир',desc:'+20 к максимуму здоровья и восстановление 30 HP.',icon:'♥',max:5,apply:s=>{s.p.max+=20;s.p.hp=Math.min(s.p.max,s.p.hp+30);}},
-  item('recovery','Секрет друида','Восстановление ещё 0,5 HP в секунду.','regen',.5,5),
-  item('armor','Галльская закалка','На 1 меньше урона от каждого попадания; минимум 1.','armor',1,5),
-  item('magnet','Притяжение трофеев','+30 к радиусу притяжения опыта и шлемов.','magnet',30,5)
- ];
- const heroes={
-  asterix:[item('punchTempo','Быстрые кулаки','+15% к темпу ударов кулаком.','punchTempo',.15),item('punchReach','Выпад','+12 к дальности удара кулаком.','punchReach',12),item('punchForce','Римлянин в полёте','+55 к силе отбрасывания кулаком.','punchForce',55)],
-  obelix:[item('stoneCount','Охапка менгиров','Ещё один менгир в каждом броске веером.','stoneCount',1,2),item('stoneDamage','Тяжёлый гранит','+20% к базовому урону менгиров.','stoneDamage',.2),item('stoneSize','Камень побольше','+15% к размеру менгиров и области попадания.','stoneSize',.15)],
-  cacofonix:[item('musicRange','Во весь голос','+15% к радиусу музыкальной ауры.','musicRange',.15),item('musicDamage','Фальшивая нота','+20% к базовому урону музыки.','musicDamage',.2),item('musicPush','Прочь со сцены','Музыка отталкивает врагов; +35 к силе толчка.','musicPush',35)],
-  antisanitarix:[item('fishCount','Двойной улов','Ещё одна рыба в каждом броске веером.','fishCount',1,2),item('fishReturn','Рыба с душком','+30% к урону рыбы на обратном пути.','fishReturn',.3),item('fishSpeed','Ловкий бросок','+15% к скорости рыбы и дальности её вылета.','fishSpeed',.15)],
-  automatix:[item('hammerDamage','Закалённый молот','+25% к базовому урону молота.','hammerDamage',.25),item('hammerReach','Длинная рукоять','+12 к дальности удара молотом. Сектор остаётся 180°.','hammerReach',12),item('hammerForce','Кузнечный размах','+65 к силе отбрасывания молотом.','hammerForce',65)],
-  panoramix:[item('poisonDuration','Стойкий настой','Ядовитые лужи живут на 1 секунду дольше.','poisonDuration',1),item('poisonRange','Полная фляга','+20% к радиусу ядовитых луж.','poisonRange',.2),item('poisonDamage','Крепкое варево','+25% к базовому урону яда.','poisonDamage',.25)]
- };
+ // Special stats change the hero or the wallet rather than state.stats (see data/upgrades.js).
+ function effect(def){
+  if(def.stat==='maxHp')return s=>{s.p.max+=def.value;s.p.hp=Math.min(s.p.max,s.p.hp+def.heal);};
+  if(def.stat==='reserve')return s=>{s.p.max+=def.value;s.p.hp+=def.value;};
+  if(def.stat==='fullHeal')return s=>s.p.hp=s.p.max;
+  if(def.stat==='helmets')return s=>{Progression.earn(def.value);s.earned+=def.value;};
+  return add(def.stat,def.value);
+ }
+ const card=def=>({id:def.id,name:def.name,desc:def.desc,icon:def.icon||'✦',max:def.max??3,apply:effect(def)});
+ const common=runUpgradeDefinitions.map(card);
+ const heroes=Object.fromEntries(Object.entries(heroDefinitions).map(([hero,def])=>[hero,def.upgrades.map(card)]));
  const abilities=Object.fromEntries(Object.entries(abilityDefinitions).map(([hero,defs])=>[hero,defs.map(a=>({
-  id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:abilityUpgradeDescriptions[a.id],icon:'◆',max:abilityUpgradeMax,
-  available:()=>a.id!=='forge'||Progression.armorRank<Progression.upgrades.armor.max,
-  apply:s=>{if(a.id==='forge'){const slot=s.abilities?.find(x=>x.id==='forge');if(slot)slot.cd=Math.max(0,slot.cd-(slot.cooldownPerRank||0));}}
+  id:abilityUpgradeId(a.id),ability:a.id,name:a.name,desc:a.upgrade,icon:'◆',max:abilityUpgradeMax,
+  // Ranks of an ability that grants armour stop being offered once armour is maxed.
+  available:()=>!a.grantsArmorRank||Progression.armorRank<Progression.upgrades.armor.max,
+  // A rank that shortens the cooldown also shortens the current one.
+  apply:s=>{if(a.cooldownPerRank){const slot=s.abilities?.find(x=>x.id===a.id);if(slot)slot.cd=Math.max(0,slot.cd-(slot.cooldownPerRank||0));}}
  }))]));
- const fallback=[{id:'herbs',name:'Травяной запас',desc:'+0,1 HP регенерации в секунду.',icon:'♥',apply:add('regen',.1)},{id:'food',name:'Перекус',desc:'Восстановить всё здоровье.',icon:'♥',apply:s=>s.p.hp=s.p.max},{id:'loot',name:'Римские трофеи',desc:'Получить 3 шлема в лавку.',icon:'◈',apply:s=>{Progression.earn(3);s.earned+=3;}},{id:'reserve',name:'Запас сил',desc:'+5 к максимуму и текущему здоровью.',icon:'♥',apply:s=>{s.p.max+=5;s.p.hp+=5;}}];
+ const fallback=supplyDefinitions.map(def=>({...card(def),max:undefined}));
  function pool(hero,s){return [...common.map(u=>({...u,group:'Общее'})),...(heroes[hero]||[]).map(u=>({...u,group:'Оружие героя'})),...(abilities[hero]||[]).map(u=>({...u,group:'Активное умение'}))].filter(u=>(s.upgradeRanks?.[u.id]||0)<u.max&&(!u.available||u.available(s)));}
  function offer(hero,s,random=Math.random){const all=pool(hero,s),special=all.filter(u=>u.group==='Оружие героя'),result=[];
   if(special.length)result.push(special[Math.floor(random()*special.length)]);

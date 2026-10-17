@@ -1,7 +1,8 @@
 // The treasurer competes for dropped XP; already earned player XP is never touched.
 export function updateMalosinus(e,c,dt){
-  if(e.unit!=='malosinus')return false;
+  if(c.Legion.units[e.unit]?.ai!=='treasurer')return false;
   if(e.hp<=0)return true;
+  e.idleTime=(e.idleTime||0)+dt;
   const s=c.state,p=s.p,u=c.Legion.units[e.unit];
   let target=p,nearest=320,healed=0;
   for(const gem of s.gems){
@@ -23,9 +24,9 @@ export function updateMalosinus(e,c,dt){
   c.advanceAction(e,dt,a=>{
     const angle=Math.atan2(a.aim.y-e.y,a.aim.x-e.x);
     const delta=Math.atan2(Math.sin(Math.atan2(p.y-e.y,p.x-e.x)-angle),Math.cos(Math.atan2(p.y-e.y,p.x-e.x)-angle));
-    s.fx.push({kind:'slash',x:e.x,y:e.y-8,r:u.range,angle,half:1.1,life:.3,max:.3});
+    s.fx.push({kind:'slash',x:e.x,y:e.y-8,r:u.range,angle,half:u.swingHalf,life:.3,max:.3});
     c.soundEffect('stone');
-    if(c.dist(e,p)<u.range&&Math.abs(delta)<=1.1&&c.Village.clear(e,p,2))c.hurtPlayer(e);
+    if(c.dist(e,p)<u.range&&Math.abs(delta)<=u.swingHalf&&c.Village.clear(e,p,2))c.hurtPlayer(e);
   });
   if(!e.action&&e.cd<=0&&c.dist(e,p)<u.range&&c.Village.clear(e,p,2)){
     c.beginAction(e,u.wind,p);e.cd=u.cooldown;
