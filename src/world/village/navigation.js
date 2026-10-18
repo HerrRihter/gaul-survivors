@@ -8,10 +8,20 @@ VillageNavigation={create({size,cell,cols,blocked,clear}){
   for(let i=0;i<n;i++){
    moveNext.x=a.x+sx;moveNext.y=a.y+sy;
    if(clear(a,moveNext,r)){a.x=moveNext.x;a.y=moveNext.y;continue;}
+   const ox=a.x,oy=a.y;
    moveNextX.x=moveNext.x;moveNextX.y=a.y;
    if(clear(a,moveNextX,r))a.x=moveNext.x;
    moveNextY.x=a.x;moveNextY.y=moveNext.y;
    if(clear(a,moveNextY,r))a.y=moveNext.y;
+   if(a.x!==ox||a.y!==oy)continue;
+   // Neither axis slides: try the step turned 45 degrees either way, so bodies glide
+   // along slanted walls and out of wedges. Against a flat wall both turns still push
+   // into it and are rejected, so nothing drifts sideways.
+   for(const turn of [1,-1]){
+    const tx=(sx-turn*sy)*.5,ty=(turn*sx+sy)*.5;
+    moveNext.x=a.x+tx;moveNext.y=a.y+ty;
+    if(clear(a,moveNext,r)){a.x=moveNext.x;a.y=moveNext.y;break;}
+   }
   }
  }
  const grids=new Map(),maps=new Map(),queries=new Map();

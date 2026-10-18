@@ -5,20 +5,61 @@ import {sceneryVisible} from './village/village-renderer.js';
 import {LutetiaArt,LutetiaShapes} from '../rendering/art/lutetia-art.js';
 import {UnitArt} from '../rendering/art/unit-art.js';
 
-export function createLutetia(){
- const size=2200,objects=[];
- // Compact residential rows frame the central garden and market square.
+export function createLutetia(map={}){
+ const size=2200,objects=[];let seed=map.seed||512;
+ const random=()=>{seed=(Math.imul(seed,1664525)+1013904223)>>>0;return seed/4294967296;};
  const houseArts=Object.keys(LutetiaShapes).filter(name=>name.startsWith('house-'));
+ // Footprints are stored unflipped; collision mirrors them together with the sprite.
+ const outline=(art,width)=>LutetiaShapes[art].map(([u,v])=>[(u-.5)*width,(v-1)*width]);
  function place(art,x,y,width,flip=false){
-  const footprintPolygons=[LutetiaShapes[art].map(([u,v])=>[(u-.5)*width,(v-1)*width])];
-  objects.push({x,y,width,art,flip,footprintPolygons,island:!art.startsWith('tree-')});
+  objects.push({x,y,width,art,flip,footprintPolygons:[outline(art,width)],island:!art.startsWith('tree-')});
+  return objects.at(-1);
  }
- const columns=[180,455,740,1460,1745,2020];
- const rows=[370,675,980,1450,1770,2090];
- rows.forEach((y,row)=>columns.forEach((x,col)=>{
-  const variant=(row*2+col)%houseArts.length;
-  place(houseArts[variant],x+(row%2?12:-8),y+(col%2?14:0),280+(variant===5?15:0),col>=3);
- }));
+ const worldPoints=o=>o.footprintPolygons[0].map(([x,y])=>[o.x+(o.flip?-x:x),o.y+y]);
+ const span=(art,width,flip)=>{const xs=outline(art,width).map(([x])=>flip?-x:x);return [Math.min(...xs),Math.max(...xs)];};
+ function hull(points){
+  const sorted=[...points].sort((p,q)=>p[0]-q[0]||p[1]-q[1]),cross=(o,a,b)=>(a[0]-o[0])*(b[1]-o[1])-(a[1]-o[1])*(b[0]-o[0]);
+  const half=list=>{const out=[];for(const p of list){while(out.length>1&&cross(out.at(-2),out.at(-1),p)<=0)out.pop();out.push(p);}out.pop();return out;};
+  return [...half(sorted),...half(sorted.reverse())];
+ }
+ // A terrace is 1-3 attached houses. Their footprints overlap slightly and share one
+ // convex ground block, so no slit between two houses can wedge a character.
+ const overlap=8;
+ function terrace(left,y,count,limit){
+  const placed=[];let cursor=left,last=null;
+  for(let i=0;i<count;i++){
+   let art;do art=houseArts[Math.floor(random()*houseArts.length)];while(art===last);
+   const width=Math.round(266+random()*30),flip=random()<.5,[l,r]=span(art,width,flip);
+   const x=cursor-l-(placed.length?overlap:0);
+   if(x+r>limit)break;
+   placed.push(place(art,x,y,width,flip));cursor=x+r;last=art;
+  }
+  if(placed.length>1){
+   const block=hull(placed.flatMap(worldPoints)),ax=placed[0].x;
+   objects.push({x:ax,y,width:0,art:'block',flip:false,island:false,footprintPolygons:[block.map(([px,py])=>[px-ax,py-y])]});
+  }
+  return placed.length?cursor:left;
+ }
+ // Two residential quarters either side of the market avenue. Each row is filled with
+ // terraces of 1-3 houses and alleys between them, then shifted by a random part of the
+ // leftover width, so rows waver instead of lining up.
+ const lamps=[];
+ // The avenue between the quarters keeps at least 60 px of street around the garden rim.
+ for(const [x0,x1] of [[30,850],[1350,2170]])for(const baseY of [330,640,950,1500,1800,2110]){
+  const first=objects.length,firstLamp=lamps.length;
+  let cursor=x0,right=x0,terraces=0;
+  for(;;){
+   const y=baseY+Math.round((random()-.5)*36),roll=random();
+   const end=terrace(cursor,y,roll<.2?1:roll<.6?2:3,x1);
+   if(end===cursor)break;
+   right=end;
+   if(terraces++%2===0)lamps.push({x:end+22,y:y+8,width:56,art:'lamp'});
+   cursor=end+(random()<.12?190+random()*50:90+random()*45);
+  }
+  const shift=Math.round((x1-right)*random());
+  for(const o of objects.slice(first))o.x+=shift;
+  for(const o of lamps.slice(firstLamp))o.x+=shift;
+ }
  place('guardpost-v3',1100,340,210);
  // The round terrace projects to an ellipse in this 768 x 622 sprite.
  // Follow its stone rim, including the rear arc, instead of a bounding box.
@@ -29,10 +70,34 @@ export function createLutetia(){
  });
  objects.push({x:1100,y:710,width:gardenWidth,art:'garden-v2',footprintPolygons:[gardenRim]});
  place('fountain-v3',1100,1460,190);
- for(const [i,x,y] of [[0,80,600],[1,910,830],[0,1300,850],[1,2120,640],[0,120,1670],[1,900,1690],[0,1300,1750],[1,2140,1710],[1,900,2060],[0,1300,2100]])place(i?'tree-cypress-v3':'tree-broadleaf-v3',x,y,i?170:210);
- const residents=[{unit:'merchant',x:790,y:1040},{unit:'merchant',x:1530,y:1050},{unit:'merchant',x:1750,y:730},{unit:'merchant',x:300,y:1510},{unit:'merchant',x:850,y:1920},{unit:'merchant',x:1880,y:1500}];
- const lamps=[];
- for(const [x,y] of [[405,420],[830,420],[1370,420],[1900,440],[400,740],[825,1030],[1320,1040],[1890,1040],[535,1510],[1650,1510],[610,1840],[1320,1850],[1810,1840],[430,2160],[1020,2160],[1710,2160]])lamps.push({x,y,width:56,art:'lamp'});
+
+ // Candidate points on a 20 px grid of open street.
+ const centre={x:size/2,y:size/2};
+ const grid=accept=>{const out=[];for(let y=150;y<size-60;y+=20)for(let x=80;x<size-80;x+=20)if(accept(x,y))out.push({x,y});return out;};
+ const nearest=(p,list)=>list.reduce((best,q)=>Math.hypot(p.x-q.x,p.y-q.y)<Math.hypot(p.x-best.x,p.y-best.y)?q:best);
+ // Even coverage: start from mutually distant points, then move each to the middle of the
+ // candidates closest to it (k-means) and snap back onto a valid candidate. Centres of
+ // equal shares of the street area land evenly inside the city, not on its border.
+ function spread(count,candidates){
+  if(!candidates.length)return [];
+  const chosen=[nearest(centre,candidates)];
+  while(chosen.length<Math.min(count,candidates.length)){
+   let best=null,score=-1;
+   for(const c of candidates){let d=Infinity;for(const a of chosen)d=Math.min(d,Math.hypot(c.x-a.x,c.y-a.y));if(d>score){score=d;best=c;}}
+   chosen.push(best);
+  }
+  for(let round=0;round<12;round++){
+   const groups=chosen.map(()=>[]);
+   for(const c of candidates){let k=0,d=Infinity;chosen.forEach((a,i)=>{const e=Math.hypot(c.x-a.x,c.y-a.y);if(e<d){d=e;k=i;}});groups[k].push(c);}
+   groups.forEach((group,i)=>{if(!group.length)return;const mean={x:group.reduce((t,c)=>t+c.x,0)/group.length,y:group.reduce((t,c)=>t+c.y,0)/group.length};chosen[i]=nearest(mean,group);});
+  }
+  return chosen;
+ }
+ const houses=VillageCollision.create(objects.filter(o=>o.footprintPolygons),size);
+ // Trees stand on open ground, never right in front of a facade.
+ const trees=[];
+ for(const [i,{x,y}] of spread(map.trees||10,grid((x,y)=>!houses.blocked(x,y,90)&&!houses.blocked(x,y-140,70)&&Math.hypot(x-centre.x,y-centre.y)>260)).entries())
+  trees.push(place(i%2?'tree-cypress-v3':'tree-broadleaf-v3',x,y,i%2?170:210));
  objects.push(...lamps);
  const collision=VillageCollision.create(objects.filter(o=>o.footprint||o.footprintPolygons),size);
  const navigation=VillageNavigation.create({size,cell:25,cols:88,...collision});
@@ -74,10 +139,15 @@ export function createLutetia(){
  function drawObject(g,o,p,view){
   if(!sceneryVisible(o,Math.max(o.width,120),view))return;
   g.save();if(p&&p.y<o.y&&p.y>o.y-o.width&&Math.abs(p.x-o.x)<o.width*.45)g.globalAlpha=.45;
+  if(o.art==='block'){g.restore();return;}
   if(o.art==='lamp')drawLamp(g,o);
   else if(!LutetiaArt.draw(g,o.art,o.x,o.y,o.width,o.flip)){g.fillStyle='#bcad88';g.fillRect(o.x-o.width*.3,o.y-o.width*.3,o.width*.6,o.width*.3);}
   g.restore();
  }
  const reachable=createReachability(collision.blocked,size);
+ // Merchants keep a stall in front of a facade, spread evenly over the city.
+ const merchantRadius=35;
+ const residents=spread(map.merchants||6,grid((x,y)=>!collision.blocked(x,y,merchantRadius+25)&&collision.blocked(x,y-75,30)&&reachable(x,y,merchantRadius)&&Math.hypot(x-centre.x,y-centre.y)>320&&trees.every(t=>Math.hypot(x-t.x,y-t.y)>130)))
+  .map(({x,y})=>({unit:'merchant',x,y}));
  return {size,objects,roads:[],residents,depthObjects,houses:[],collision,...navigation,reachable,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
 }

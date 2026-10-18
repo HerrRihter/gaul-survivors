@@ -6,10 +6,12 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  const {session:t,env}=await createHarness();
  const {createArenas}=await loadModule(env,path.resolve(__dirname,'../src/world/arenas.js'));
  const city=createArenas(env.Village).get('lutetia');
+ const {mapDefinitions}=await loadModule(env,path.resolve(__dirname,'../data/maps/maps.js'));
+ const merchants=mapDefinitions.lutetia.merchants;
  assert(city.objects.some(o=>o.art==='guardpost-v3'));
- assert(city.objects.length>=16);assert.equal(city.residents.length,6);
+ assert(city.objects.length>=16);assert.equal(city.residents.length,merchants,'Merchant count comes from map data');
  const houses=city.objects.filter(o=>o.art.startsWith('house-'));
- assert.equal(houses.length,36,'Dense residential blocks');
+ assert(houses.length>=30,'Dense residential blocks');
  assert.equal(new Set(houses.map(o=>o.art)).size,6,'All new house variants are used');
  assert(!city.objects.some(o=>o.art==='awning'),'No standalone market awnings');
  const garden=city.objects.find(o=>o.art==='garden-v2');
@@ -33,6 +35,11 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  assert(city.objects.filter(o=>o.art==='lamp').length>=12,'Streets have lighting');
  assert(!city.blocked(1100,1100,46),'All units fit in market spawn');
  for(const r of city.residents)assert(!city.blocked(r.x,r.y,35),'Merchant has free starting position');
+ // Stalls cover the whole city: every quarter of the map has merchants, none sit at the border.
+ const quarters=new Set(city.residents.map(r=>(r.x<1100?'W':'E')+(r.y<1100?'N':'S')));
+ assert.equal(quarters.size,4,'Merchants in every quarter');
+ for(const r of city.residents)assert(r.x>60&&r.x<2140&&r.y>140&&r.y<2160,'Merchant stall stays off the map border');
+ for(const a of city.residents)for(const b of city.residents)if(a!==b)assert(Math.hypot(a.x-b.x,a.y-b.y)>200,'Stalls are spread apart');
  city.prepare([14,17,29,35],{x:1100,y:1100});
  for(const target of [{x:440,y:70},{x:60,y:1100},{x:2100,y:1100},{x:1100,y:2100}]){
   const p={x:1100,y:1100};
@@ -41,7 +48,7 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  }
  function reset(){t.selectMap('lutetia');t.start();t.state.attack=1e6;t.state.spawn=1e6;t.state.waveNext={courtesan:1e6,wine:1e6};t.state.populationNext=1e6;}
  function ticks(n){for(let i=0;i<n;i++)t.update(.02);}
- reset();assert.equal(t.state.enemies.filter(e=>e.unit==='merchant').length,6,'Merchants exist before first tick');
+ reset();assert.equal(t.state.enemies.filter(e=>e.unit==='merchant').length,merchants,'Merchants exist before first tick');
  assert.equal(t.state.enemies.filter(e=>e.unit.startsWith('citizen')).length,24);
  let merchant=t.state.enemies[1],x=merchant.x,y=merchant.y;
  t.state.enemies=[merchant];t.state.p.x=x;t.state.p.y=y+160;t.damage(merchant,1,300,100);
@@ -64,6 +71,6 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  for(let i=0;i<6001;i++)t.update(.05);
  assert(t.state.bossSpawned,'City retains final boss and run completion');
  assert(t.state.enemies.length<=135,'Population stays bounded');
- t.menu();t.selectMap('lutetia');t.start();assert.equal(t.state.enemies.filter(e=>e.unit==='merchant').length,6,'Restart resets merchants');assert.equal(t.state.enemies.filter(e=>e.unit.startsWith('citizen')).length,24);
+ t.menu();t.selectMap('lutetia');t.start();assert.equal(t.state.enemies.filter(e=>e.unit==='merchant').length,merchants,'Restart resets merchants');assert.equal(t.state.enemies.filter(e=>e.unit.startsWith('citizen')).length,24);
  console.log('PASS: Lutetia navigation, starting merchants, immobility, goods damage, loot theft, dodge, roster, full run and reset.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

@@ -31,6 +31,19 @@ async function main(){
     }
   }
 
+  // Lutetia: two pieces of masonry are either joined or a real street apart. A gap the
+  // hero (diameter 28) can enter but that is narrower than 60 px wedges bodies in corners.
+  {
+    const city=arenas.get('lutetia'),P=city.collision.polygons;
+    const seg=(p,a,b)=>{const dx=b.x-a.x,dy=b.y-a.y,t=Math.max(0,Math.min(1,((p.x-a.x)*dx+(p.y-a.y)*dy)/(dx*dx+dy*dy||1)));return Math.hypot(p.x-a.x-t*dx,p.y-a.y-t*dy);};
+    const gap=(A,B)=>{let m=Infinity;for(const [U,V] of [[A,B],[B,A]])for(const p of U.points)for(let i=0;i<V.points.length;i++)m=Math.min(m,seg(p,V.points[i],V.points[(i+1)%V.points.length]));return m;};
+    for(let i=0;i<P.length;i++)for(let j=i+1;j<P.length;j++){
+      if(P[i].minX>P[j].maxX+60||P[j].minX>P[i].maxX+60||P[i].minY>P[j].maxY+60||P[j].minY>P[i].maxY+60)continue;
+      const d=gap(P[i],P[j]);
+      assert(d<28||d>=60,`lutetia: ${Math.round(d)} px slit between ${P[i].object.art} and ${P[j].object.art}`);
+    }
+  }
+
   // Trees are one solid hull: no gap between trunks fits the hero.
   const forest=arenas.get('forest');
   for(const tree of forest.objects.filter(o=>o.art==='trees')){
