@@ -28,7 +28,9 @@ const ids=['citizen-0','citizen-1','citizen-2'],rows=[0,1,3];
    files.push(file.replace('assets/runtime/',''));
   }
   // Civilians have no attack action; aliases satisfy the shared preview/corpse interface.
-  manifest.characters[id]={renderer:'unit',actions:{walk:files,attack:[files[0]],hurt:[files[2]]},idle:{action:'walk',index:0}};
+  // Everyday activities keep their own frames once drawn; until then they show the standing pose.
+  const old=manifest.characters[id]?.actions||{},activity=name=>old[name]&&!old[name].every(f=>f===old.walk?.[0])?old[name]:[files[0]];
+  manifest.characters[id]={renderer:'unit',actions:{walk:files,attack:[files[0]],hurt:[files[2]],talk:activity('talk'),shop:activity('shop'),rest:activity('rest')},idle:{action:'walk',index:0},loop:['talk','shop','rest']};
  }
  fs.writeFileSync('data/animations/character-frames.json',JSON.stringify(manifest,null,2)+'\n');
  console.log('Packaged one citizen with three skins, 12 running poses; unused third source row excluded.');

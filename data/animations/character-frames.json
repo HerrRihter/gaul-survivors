@@ -680,12 +680,35 @@
         ],
         "hurt": [
           "characters/civilians/citizen-0/animations/walk/2.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-0/animations/talk/0.png",
+          "characters/civilians/citizen-0/animations/talk/1.png",
+          "characters/civilians/citizen-0/animations/talk/2.png",
+          "characters/civilians/citizen-0/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-0/animations/shop/0.png",
+          "characters/civilians/citizen-0/animations/shop/1.png",
+          "characters/civilians/citizen-0/animations/shop/2.png",
+          "characters/civilians/citizen-0/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-0/animations/rest/0.png",
+          "characters/civilians/citizen-0/animations/rest/1.png",
+          "characters/civilians/citizen-0/animations/rest/2.png",
+          "characters/civilians/citizen-0/animations/rest/3.png"
         ]
       },
       "idle": {
         "action": "walk",
         "index": 0
-      }
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
     },
     "citizen-1": {
       "renderer": "unit",
@@ -701,12 +724,35 @@
         ],
         "hurt": [
           "characters/civilians/citizen-1/animations/walk/2.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-1/animations/talk/0.png",
+          "characters/civilians/citizen-1/animations/talk/1.png",
+          "characters/civilians/citizen-1/animations/talk/2.png",
+          "characters/civilians/citizen-1/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-1/animations/shop/0.png",
+          "characters/civilians/citizen-1/animations/shop/1.png",
+          "characters/civilians/citizen-1/animations/shop/2.png",
+          "characters/civilians/citizen-1/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-1/animations/rest/0.png",
+          "characters/civilians/citizen-1/animations/rest/1.png",
+          "characters/civilians/citizen-1/animations/rest/2.png",
+          "characters/civilians/citizen-1/animations/rest/3.png"
         ]
       },
       "idle": {
         "action": "walk",
         "index": 0
-      }
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
     },
     "citizen-2": {
       "renderer": "unit",
@@ -722,12 +768,35 @@
         ],
         "hurt": [
           "characters/civilians/citizen-2/animations/walk/2.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-2/animations/talk/0.png",
+          "characters/civilians/citizen-2/animations/talk/1.png",
+          "characters/civilians/citizen-2/animations/talk/2.png",
+          "characters/civilians/citizen-2/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-2/animations/shop/0.png",
+          "characters/civilians/citizen-2/animations/shop/1.png",
+          "characters/civilians/citizen-2/animations/shop/2.png",
+          "characters/civilians/citizen-2/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-2/animations/rest/0.png",
+          "characters/civilians/citizen-2/animations/rest/1.png",
+          "characters/civilians/citizen-2/animations/rest/2.png",
+          "characters/civilians/citizen-2/animations/rest/3.png"
         ]
       },
       "idle": {
         "action": "walk",
         "index": 0
-      }
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
     },
     "malosinus": {
       "renderer": "unit",
@@ -761,6 +830,270 @@
         "action": "idle",
         "index": 0
       }
+    },
+    "citizen-3": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-3/animations/walk/0.png",
+          "characters/civilians/citizen-3/animations/walk/1.png",
+          "characters/civilians/citizen-3/animations/walk/2.png",
+          "characters/civilians/citizen-3/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-3/animations/talk/0.png",
+          "characters/civilians/citizen-3/animations/talk/1.png",
+          "characters/civilians/citizen-3/animations/talk/2.png",
+          "characters/civilians/citizen-3/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-3/animations/shop/0.png",
+          "characters/civilians/citizen-3/animations/shop/1.png",
+          "characters/civilians/citizen-3/animations/shop/2.png",
+          "characters/civilians/citizen-3/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-3/animations/rest/0.png",
+          "characters/civilians/citizen-3/animations/rest/1.png",
+          "characters/civilians/citizen-3/animations/rest/2.png",
+          "characters/civilians/citizen-3/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-3/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-3/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
+    },
+    "citizen-4": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-4/animations/walk/0.png",
+          "characters/civilians/citizen-4/animations/walk/1.png",
+          "characters/civilians/citizen-4/animations/walk/2.png",
+          "characters/civilians/citizen-4/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-4/animations/talk/0.png",
+          "characters/civilians/citizen-4/animations/talk/1.png",
+          "characters/civilians/citizen-4/animations/talk/2.png",
+          "characters/civilians/citizen-4/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-4/animations/shop/0.png",
+          "characters/civilians/citizen-4/animations/shop/1.png",
+          "characters/civilians/citizen-4/animations/shop/2.png",
+          "characters/civilians/citizen-4/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-4/animations/rest/0.png",
+          "characters/civilians/citizen-4/animations/rest/1.png",
+          "characters/civilians/citizen-4/animations/rest/2.png",
+          "characters/civilians/citizen-4/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-4/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-4/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
+    },
+    "citizen-5": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-5/animations/walk/0.png",
+          "characters/civilians/citizen-5/animations/walk/1.png",
+          "characters/civilians/citizen-5/animations/walk/2.png",
+          "characters/civilians/citizen-5/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-5/animations/talk/0.png",
+          "characters/civilians/citizen-5/animations/talk/1.png",
+          "characters/civilians/citizen-5/animations/talk/2.png",
+          "characters/civilians/citizen-5/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-5/animations/shop/0.png",
+          "characters/civilians/citizen-5/animations/shop/1.png",
+          "characters/civilians/citizen-5/animations/shop/2.png",
+          "characters/civilians/citizen-5/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-5/animations/rest/0.png",
+          "characters/civilians/citizen-5/animations/rest/1.png",
+          "characters/civilians/citizen-5/animations/rest/2.png",
+          "characters/civilians/citizen-5/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-5/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-5/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
+    },
+    "citizen-6": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-6/animations/walk/0.png",
+          "characters/civilians/citizen-6/animations/walk/1.png",
+          "characters/civilians/citizen-6/animations/walk/2.png",
+          "characters/civilians/citizen-6/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-6/animations/talk/0.png",
+          "characters/civilians/citizen-6/animations/talk/1.png",
+          "characters/civilians/citizen-6/animations/talk/2.png",
+          "characters/civilians/citizen-6/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-6/animations/shop/0.png",
+          "characters/civilians/citizen-6/animations/shop/1.png",
+          "characters/civilians/citizen-6/animations/shop/2.png",
+          "characters/civilians/citizen-6/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-6/animations/rest/0.png",
+          "characters/civilians/citizen-6/animations/rest/1.png",
+          "characters/civilians/citizen-6/animations/rest/2.png",
+          "characters/civilians/citizen-6/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-6/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-6/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
+    },
+    "citizen-7": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-7/animations/walk/0.png",
+          "characters/civilians/citizen-7/animations/walk/1.png",
+          "characters/civilians/citizen-7/animations/walk/2.png",
+          "characters/civilians/citizen-7/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-7/animations/talk/0.png",
+          "characters/civilians/citizen-7/animations/talk/1.png",
+          "characters/civilians/citizen-7/animations/talk/2.png",
+          "characters/civilians/citizen-7/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-7/animations/shop/0.png",
+          "characters/civilians/citizen-7/animations/shop/1.png",
+          "characters/civilians/citizen-7/animations/shop/2.png",
+          "characters/civilians/citizen-7/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-7/animations/rest/0.png",
+          "characters/civilians/citizen-7/animations/rest/1.png",
+          "characters/civilians/citizen-7/animations/rest/2.png",
+          "characters/civilians/citizen-7/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-7/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-7/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
+    },
+    "citizen-8": {
+      "renderer": "unit",
+      "actions": {
+        "walk": [
+          "characters/civilians/citizen-8/animations/walk/0.png",
+          "characters/civilians/citizen-8/animations/walk/1.png",
+          "characters/civilians/citizen-8/animations/walk/2.png",
+          "characters/civilians/citizen-8/animations/walk/3.png"
+        ],
+        "talk": [
+          "characters/civilians/citizen-8/animations/talk/0.png",
+          "characters/civilians/citizen-8/animations/talk/1.png",
+          "characters/civilians/citizen-8/animations/talk/2.png",
+          "characters/civilians/citizen-8/animations/talk/3.png"
+        ],
+        "shop": [
+          "characters/civilians/citizen-8/animations/shop/0.png",
+          "characters/civilians/citizen-8/animations/shop/1.png",
+          "characters/civilians/citizen-8/animations/shop/2.png",
+          "characters/civilians/citizen-8/animations/shop/3.png"
+        ],
+        "rest": [
+          "characters/civilians/citizen-8/animations/rest/0.png",
+          "characters/civilians/citizen-8/animations/rest/1.png",
+          "characters/civilians/citizen-8/animations/rest/2.png",
+          "characters/civilians/citizen-8/animations/rest/3.png"
+        ],
+        "attack": [
+          "characters/civilians/citizen-8/animations/walk/0.png"
+        ],
+        "hurt": [
+          "characters/civilians/citizen-8/animations/walk/2.png"
+        ]
+      },
+      "idle": {
+        "action": "walk",
+        "index": 0
+      },
+      "loop": [
+        "talk",
+        "shop",
+        "rest"
+      ]
     }
   }
 }

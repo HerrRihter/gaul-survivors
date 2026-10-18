@@ -52,12 +52,14 @@ document.getElementById('freeze').onclick=e=>{frozen=!frozen;e.target.textConten
 document.getElementById('reverse').onchange=e=>{reverse=e.target.checked;};
 function frame(t){
  const dt=Math.min(.05,(t-lastTime)/1000||0);lastTime=t;if(!frozen)phase+=dt;
- const duration=motion==='attack'?1.8:motion==='hurt'?1.2:1.1;
+ const activity=['talk','shop','rest'].includes(motion);
+ const duration=motion==='attack'||activity?1.8:motion==='hurt'?1.2:1.1;
  const progress=(phase%duration)/duration;
  let loaded=0,failed=0;
  for(const {unit,id,g,placement,wide}of previews){
   g.clearRect(0,0,g.canvas.width,g.canvas.height);g.imageSmoothingEnabled=false;
-  const art=UnitArt.get(unit,motion,progress)||AnimationArt.get(unit,0,motion,progress);
+  const pose=activity&&unit!=='citizen'?'idle':motion;
+  const art=UnitArt.get(unit,pose,progress)||AnimationArt.get(unit,0,pose,progress);
   if(!art){
   if(drawExpansion(g,{unit,x:140,y:196,action:motion==='attack'?{elapsed:progress,duration:1}:null,heading:reverse?Math.PI:0,moving:motion==='walk',walk:phase,hit:motion==='hurt'?1:0,crush:unit==='stoneSquad'&&motion==='attack'?Math.max(.01,.65-progress*.65):0})){loaded++;continue;}
    const missing=(UnitArt.status[id]||AnimationArt.status[id])==='fallback';if(missing)failed++;

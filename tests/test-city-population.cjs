@@ -23,7 +23,7 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  reset();thief=t.spawn('courtesan',false,{x:1100,y:1100});t.state.p.x=1500;t.state.gems=[{x:1110,y:1100,v:3}];
  t.update(.02);assert.equal(t.state.gems.length,0);const after=thief.x;t.update(.02);assert(thief.x<after,'After stealing, thief runs away from hero');
  const types=['citizen'];
- for(let variant=0;variant<3;variant++){
+ for(let variant=0;variant<9;variant++){
   const unit='citizen';
   reset();const citizen=t.spawn(unit,false,{x:1100,y:1100,variant});
   assert.equal(citizen.variant,variant,'Skin is selected independently of unit type');
@@ -36,11 +36,11 @@ const {loadModule}=require('./helpers/load-modules.cjs');
  reset();t.state.populationNext=0;t.state.t=240;for(let i=0;i<150;i++){t.state.t+=3;t.update(.01);}assert(t.state.enemies.filter(e=>types.includes(e.unit)).length<=40,'Crowd remains bounded');
  const frames=await require('./helpers/frame-harness.cjs').frameHarness('src/rendering/art/unit-art.js');frames.images.forEach(i=>i.onload());
  const art=frames.env.UnitArt,images=new Set();
- for(let variant=0;variant<3;variant++){
+ for(let variant=0;variant<9;variant++){
   let drawn;const g={save(){},restore(){},translate(){},scale(){},drawImage(image){drawn=image;}};
   art.draw(g,{unit:'citizen',variant,x:0,y:0,heading:0,moving:true,walk:.4});
   assert.equal(drawn,art.get('citizen','walk',.4,variant));assert(drawn.url.includes('/citizen-'+variant+'/'));images.add(drawn);
  }
- assert.equal(images.size,3,'Three distinct skins share one gameplay unit');
- console.log('PASS: wave gates, siege caps, independent crowd budget, fleeing thieves, three civilian skins, contact-only damage and no rewards.');
+ assert.equal(images.size,9,'Nine distinct skins share one gameplay unit');
+ console.log('PASS: wave gates, siege caps, independent crowd budget, fleeing thieves, nine civilian skins, contact-only damage and no rewards.');
 })().catch(e=>{console.error(e);process.exitCode=1;});

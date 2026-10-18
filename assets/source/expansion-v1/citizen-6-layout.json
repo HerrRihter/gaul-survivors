@@ -1,0 +1,230 @@
+{
+  "source": "assets\\source\\expansion-v1\\citizen-6.png",
+  "scale": 0.2792452830188679,
+  "metrics": [
+    {
+      "action": "walk",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 207,
+        "height": 263
+      },
+      "width": 58,
+      "height": 73,
+      "left": 100,
+      "top": 163
+    },
+    {
+      "action": "walk",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 175,
+        "height": 265
+      },
+      "width": 49,
+      "height": 74,
+      "left": 107,
+      "top": 162
+    },
+    {
+      "action": "walk",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 211,
+        "height": 265
+      },
+      "width": 59,
+      "height": 74,
+      "left": 100,
+      "top": 162
+    },
+    {
+      "action": "walk",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 146,
+        "height": 266
+      },
+      "width": 41,
+      "height": 74,
+      "left": 107,
+      "top": 162
+    },
+    {
+      "action": "talk",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 176,
+        "height": 282
+      },
+      "width": 49,
+      "height": 79,
+      "left": 103,
+      "top": 157
+    },
+    {
+      "action": "talk",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 205,
+        "height": 282
+      },
+      "width": 57,
+      "height": 79,
+      "left": 98,
+      "top": 157
+    },
+    {
+      "action": "talk",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 225,
+        "height": 282
+      },
+      "width": 63,
+      "height": 79,
+      "left": 105,
+      "top": 157
+    },
+    {
+      "action": "talk",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 149,
+        "height": 282
+      },
+      "width": 42,
+      "height": 79,
+      "left": 107,
+      "top": 157
+    },
+    {
+      "action": "shop",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 195,
+        "height": 269
+      },
+      "width": 54,
+      "height": 75,
+      "left": 101,
+      "top": 161
+    },
+    {
+      "action": "shop",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 256,
+        "height": 276
+      },
+      "width": 71,
+      "height": 77,
+      "left": 103,
+      "top": 159
+    },
+    {
+      "action": "shop",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 175,
+        "height": 271
+      },
+      "width": 49,
+      "height": 76,
+      "left": 107,
+      "top": 160
+    },
+    {
+      "action": "shop",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 160,
+        "height": 275
+      },
+      "width": 45,
+      "height": 77,
+      "left": 105,
+      "top": 159
+    },
+    {
+      "action": "rest",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 177,
+        "height": 283
+      },
+      "width": 49,
+      "height": 79,
+      "left": 102,
+      "top": 157
+    },
+    {
+      "action": "rest",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 173,
+        "height": 287
+      },
+      "width": 48,
+      "height": 80,
+      "left": 105,
+      "top": 156
+    },
+    {
+      "action": "rest",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 239,
+        "height": 288
+      },
+      "width": 67,
+      "height": 80,
+      "left": 91,
+      "top": 156
+    },
+    {
+      "action": "rest",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 170,
+        "height": 282
+      },
+      "width": 47,
+      "height": 79,
+      "left": 102,
+      "top": 157
+    }
+  ]
+}

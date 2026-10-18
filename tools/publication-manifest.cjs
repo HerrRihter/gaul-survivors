@@ -7,7 +7,7 @@ module.exports={
     "village-preview.html"
   ],
   "groups": [
-    {purpose:'Lutetia city architecture, population and layout',consumers:['index.html','legion-preview.html','village-preview.html'],files:['src/world/lutetia.js','src/rendering/art/lutetia-art.js','src/systems/city-population.js','assets/runtime/world/lutetia/house-balcony-v3.png','assets/runtime/world/lutetia/house-cottage-v3.png','assets/runtime/world/lutetia/house-terrace-v3.png','assets/runtime/world/lutetia/house-portico-v3.png','assets/runtime/world/lutetia/house-shop-v3.png','assets/runtime/world/lutetia/house-stairs-v3.png','assets/runtime/world/lutetia/tree-broadleaf-v3.png','assets/runtime/world/lutetia/tree-cypress-v3.png','assets/runtime/world/lutetia/fountain-v3.png','assets/runtime/world/lutetia/guardpost-v3.png','assets/runtime/world/lutetia/garden-v2.png']},
+    {purpose:'Lutetia city architecture, population and layout',consumers:['index.html','legion-preview.html','village-preview.html'],files:['src/world/lutetia.js','src/rendering/art/lutetia-art.js','src/systems/city-population.js','src/systems/city-life.js','assets/runtime/world/lutetia/house-balcony-v3.png','assets/runtime/world/lutetia/house-cottage-v3.png','assets/runtime/world/lutetia/house-terrace-v3.png','assets/runtime/world/lutetia/house-portico-v3.png','assets/runtime/world/lutetia/house-shop-v3.png','assets/runtime/world/lutetia/house-stairs-v3.png','assets/runtime/world/lutetia/tree-broadleaf-v3.png','assets/runtime/world/lutetia/tree-cypress-v3.png','assets/runtime/world/lutetia/fountain-v3.png','assets/runtime/world/lutetia/guardpost-v3.png','assets/runtime/world/lutetia/garden-v2.png']},
     {purpose:'Local CC0 music, effects and source credits',consumers:['index.html'],files:[
       'assets/runtime/audio/CREDITS.md', 'assets/runtime/audio/Kenney-Impact-LICENSE.txt', 'assets/runtime/audio/Kenney-RPG-LICENSE.txt',
       ...['tavern','battle','victory','defeat'].map(name=>'assets/runtime/audio/music/'+name+'.mp3'),
@@ -57,9 +57,9 @@ module.exports={
         "src/app/game-flow.js",
         "src/systems/enemy-spawning.js",
         "src/systems/wave-schedule.js",
-        "src/systems/population.js",
+        "src/systems/population.js", "src/systems/separation.js",
         "src/ui/wave-preview.js",
-        "data/maps/maps.js",
+        "data/maps/maps.js", "data/maps/city-life.js",
         "src/systems/combat.js",
         "src/systems/simulation.js",
         "src/rendering/scene-renderer.js",

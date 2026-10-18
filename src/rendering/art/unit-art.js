@@ -1,15 +1,16 @@
 import {CharacterFrames} from '../character-frames.js';
 const names=Object.keys(CharacterFrames.manifest.characters).filter(id=>CharacterFrames.manifest.characters[id].renderer==='unit');
+const citizens=names.filter(id=>/^citizen-\d+$/.test(id)).sort((a,b)=>Number(a.split('-')[1])-Number(b.split('-')[1]));
 function get(name,action='idle',progress=0,variant=0){
- const id=name==='citizen'?'citizen-'+((Math.floor(variant)%3+3)%3):name;
+ const id=name==='citizen'?citizens[((Math.floor(variant)%citizens.length)+citizens.length)%citizens.length]:name;
  return names.includes(id)?CharacterFrames.get(id,action,progress):null;
 }
  function draw(g,e){
   const reaction=e.hurt||e.visualHurt,attack=e.action?.warning?null:e.action;
   const ramImpact=e.unit==='ram'&&e.charge&&e.charge.left>1.14;
   const strike=e.strike;
-  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':'idle';
-  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:action==='idle'?(e.idleTime||0)/1.8:e.walk||0;
+  const action=e.crush?'hurt':reaction?'hurt':ramImpact?'attack':strike?'attack':e.charge?'walk':attack?'attack':e.moving?'walk':e.activity||'idle';
+  const progress=e.crush?Math.min(1,(.65-e.crush)/.65):reaction?reaction.elapsed/reaction.duration:ramImpact?.6:strike?Math.min(1,strike.elapsed/strike.duration):attack&&!e.charge?attack.elapsed/attack.duration:action==='idle'?(e.idleTime||0)/1.8:action===e.activity?(e.activityTime||0)/1.8:e.walk||0;
   const frame=get(e.unit,action,progress,e.variant??e.phase??0);if(!frame)return false;
   const flip=reaction?reaction.flip:attack?attack.flip:Math.cos(e.heading)<0;
   if(!flip){g.drawImage(frame,Math.round(e.x)-CharacterFrames.manifest.anchor[0],Math.round(e.y)-CharacterFrames.manifest.anchor[1]);return true;}

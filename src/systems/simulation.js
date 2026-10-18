@@ -1,4 +1,6 @@
 import {updateExpansion,updateHazards} from './expansion.js';
+import {updateCityLife} from './city-life.js';
+import {separateUnits} from './separation.js';
 import {updateMalosinus} from './malosinus.js';
 export let Simulation;
 'use strict';
@@ -16,6 +18,7 @@ function update(dt){
       p.hp=sessionContext.Math.min(p.max,p.hp+st.regen*dt);
       let mx=(sessionContext.keys.has('KeyD')||sessionContext.keys.has('ArrowRight')?1:0)-(sessionContext.keys.has('KeyA')||sessionContext.keys.has('ArrowLeft')?1:0)+sessionContext.stick.x,my=(sessionContext.keys.has('KeyS')||sessionContext.keys.has('ArrowDown')?1:0)-(sessionContext.keys.has('KeyW')||sessionContext.keys.has('ArrowUp')?1:0)+sessionContext.stick.y;
       updateHazards(sessionContext,dt);
+      updateCityLife(sessionContext,dt);
       if(p.stun>0||abilityMoving){mx=0;my=0;}
       const ml=sessionContext.Math.hypot(mx,my);
       if(ml>1){
@@ -210,6 +213,7 @@ function update(dt){
       }
       s.pickups=s.pickups.filter(i=>!i.dead);
       s.enemies=s.enemies.filter(e=>e.hp>0);
+      separateUnits(sessionContext,dt);
       for(const f of s.fx){
         f.life-=dt;
         if(f.kind==='spark'){

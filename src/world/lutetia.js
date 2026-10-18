@@ -149,5 +149,13 @@ export function createLutetia(map={}){
  const merchantRadius=35;
  const residents=spread(map.merchants||6,grid((x,y)=>!collision.blocked(x,y,merchantRadius+25)&&collision.blocked(x,y-75,30)&&reachable(x,y,merchantRadius)&&Math.hypot(x-centre.x,y-centre.y)>320&&trees.every(t=>Math.hypot(x-t.x,y-t.y)>130)))
   .map(({x,y})=>({unit:'merchant',x,y}));
- return {size,objects,roads:[],residents,depthObjects,houses:[],collision,...navigation,reachable,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
+ // Points of interest for city life: doors in front of facades, queue spots at the stalls,
+ // and open squares (fountain, garden, guardpost, small squares between terraces).
+ const walkable=(x,y)=>!collision.blocked(x,y,16)&&reachable(x,y,12);
+ const doors=objects.filter(o=>o.art.startsWith('house-')).map(o=>({x:o.x,y:o.y+18})).filter(d=>walkable(d.x,d.y));
+ const stalls=residents.map(m=>({x:m.x,y:m.y,queue:[-48,0,48].map(dx=>({x:m.x+dx,y:m.y+62})).filter(q=>walkable(q.x,q.y))}));
+ const plazas=[{x:1100,y:1530},{x:1040,y:1520},{x:1160,y:1520},{x:1100,y:910},{x:1010,y:880},{x:1190,y:880},{x:1100,y:420},
+  ...spread(6,grid((x,y)=>!collision.blocked(x,y,110)&&Math.hypot(x-centre.x,y-centre.y)>300))].filter(q=>walkable(q.x,q.y)&&residents.every(m=>Math.hypot(q.x-m.x,q.y-m.y)>150));
+ const pointsOfInterest={doors,stalls,plazas};
+ return {size,objects,roads:[],residents,pointsOfInterest,depthObjects,houses:[],collision,...navigation,reachable,blocked:collision.blocked,clear:collision.clear,drawGround,drawObject,draw(g){drawGround(g);const sorted=[...depthObjects,...residents].sort((a,b)=>a.y-b.y);for(const o of sorted)if(o.unit)UnitArt.draw(g,{...o,heading:0});else drawObject(g,o);}};
 }

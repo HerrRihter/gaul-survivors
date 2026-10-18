@@ -57,7 +57,7 @@ export const waveSchedules = {
       {unit:'turtle',first:125,populationCap:null,stages:[{time:0,every:70,cap:1},{time:205,every:70,cap:2}],message:turtleMessage}
     ],
     boss:{unit:'malosinus',time:230,message:'КАЗНАЧЕЙ МАЛОСИНУС · Берегись мешка денег! Подбирая опыт, он лечится.',sound:'boss'},
-    population:{unit:'citizen',initial:24,maximum:40,every:2.5,growthEvery:15,variants:3},
+    population:{unit:'citizen',initial:24,maximum:40,every:2.5,growthEvery:15,variants:9},
     residents:['merchant'],
     notifications:[
       {time:40,message:'ПИЛУМЫ · Метатели занимают улицы. Используй дома как укрытия.'},

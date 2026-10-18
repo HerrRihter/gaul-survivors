@@ -15,10 +15,13 @@ async function bounds(buffer){
 }
 async function main(){
  specs.malosinus={height:132,actions:['idle','walk','attack','hurt']};
+ for(let i=0;i<3;i++)specs['citizen-'+i]={height:[70,76,74][i],category:'civilians',actions:['talk','shop','rest'],merge:true};
+ for(let i=3;i<6;i++)specs['citizen-'+i]={height:[70,76,74][i-3],category:'civilians',actions:['walk','talk','shop','rest']};
+ for(let i=6;i<9;i++)specs['citizen-'+i]={height:[74,76,74][i-6],category:'civilians',actions:['walk','talk','shop','rest']};
  const [id,source]=process.argv.slice(2),spec=specs[id];if(!spec||!source)throw Error('Usage: node tools/import-expansion-art.cjs <unit> <transparent-sheet.png>');
  const actionNames=spec.actions||['walk','attack','hurt'],poseCount=actionNames.length*4;
  const archive=path.join(root,'assets/source/expansion-v1');fs.mkdirSync(archive,{recursive:true});
- const saved=path.join(archive,id+'.png');if(path.resolve(source)!==saved)fs.copyFileSync(source,saved);
+ const saved=path.join(archive,id+(spec.merge?'-activities':'')+'.png');if(path.resolve(source)!==saved)fs.copyFileSync(source,saved);
  const meta=await sharp(saved).metadata();if(!meta.hasAlpha)throw Error('Source must have real transparency');
  const raw=await sharp(saved).ensureAlpha().raw().toBuffer();
  const {labels,items}=require('./sprite-sheet-components.cjs').components(raw,meta.width,meta.height);
@@ -55,21 +58,26 @@ async function main(){
  }
  const heights=cells.slice(0,4).map(c=>c.box.height).sort((a,b)=>a-b);
  const scale=Math.min(spec.height/((heights[1]+heights[2])/2),118/Math.max(...cells.map(c=>Math.max(c.footX,c.box.width-c.footX))),220/Math.max(...cells.map(c=>c.box.height)));
- const folder=spec.folder||id,actions={},metrics=[];
+ const folder=spec.folder||id,category=spec.category||'enemies',actions={},metrics=[];
  for(let row=0;row<actionNames.length;row++){
   const action=actionNames[row];actions[action]=[];
-  const dir=path.join(root,'assets/runtime/characters/enemies',folder,'animations',action);fs.mkdirSync(dir,{recursive:true});
+  const dir=path.join(root,'assets/runtime/characters',category,folder,'animations',action);fs.mkdirSync(dir,{recursive:true});
   for(let col=0;col<4;col++){
    const {cell,box,footX}=cells[row*4+col];
    const width=Math.max(1,Math.round(box.width*scale)),height=Math.max(1,Math.round(box.height*scale));
    const sprite=await sharp(cell).extract(box).resize(width,height).ensureAlpha().png().toBuffer();
    const left=Math.round(128-footX*scale),top=236-height;
    await sharp({create:{width:256,height:256,channels:4,background:{r:0,g:0,b:0,alpha:0}}}).composite([{input:sprite,left,top}]).png({palette:false}).toFile(path.join(dir,col+'.png'));
-   actions[action].push('characters/enemies/'+folder+'/animations/'+action+'/'+col+'.png');metrics.push({action,frame:col,source:box,width,height,left,top});
+   actions[action].push('characters/'+category+'/'+folder+'/animations/'+action+'/'+col+'.png');metrics.push({action,frame:col,source:box,width,height,left,top});
   }
  }
  const file=path.join(root,'data/animations/character-frames.json'),manifest=JSON.parse(fs.readFileSync(file,'utf8'));
- manifest.characters[id]={renderer:'unit',actions,idle:actions.idle?{action:'idle',index:0}:{action:'attack',index:3}};
+ if(spec.merge){
+  const old=manifest.characters[id];if(!old)throw Error('Import walking poses first: '+id);
+  manifest.characters[id]={...old,actions:{...old.actions,...actions},loop:[...new Set([...(old.loop||[]),...actionNames])]};
+ }else if(category==='civilians'){
+  manifest.characters[id]={renderer:'unit',actions:{...actions,attack:[actions.walk[0]],hurt:[actions.walk[2]]},idle:{action:'walk',index:0},loop:['talk','shop','rest']};
+ }else manifest.characters[id]={renderer:'unit',actions,idle:actions.idle?{action:'idle',index:0}:{action:'attack',index:3}};
  fs.writeFileSync(file,JSON.stringify(manifest,null,2)+'\n');
  fs.writeFileSync(path.join(archive,id+'-layout.json'),JSON.stringify({source:path.relative(root,saved),scale,metrics},null,2)+'\n');
  console.log(id+': imported '+poseCount+' RGBA frames, fixed scale '+scale.toFixed(4));

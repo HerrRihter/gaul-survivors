@@ -13,13 +13,13 @@ import {describe} from '../text.js';
 //   frontGuard   damage multiplier for hits from the front arc (shield wall)
 //   knockback    fraction of push received (default: 0.12 for bodies wider than 30, else 1)
 //   keepDistance stops approaching at this distance; stationary never moves
-//   corpses      bodies left by a squad; labelHeight lifts the name above tall art
+//   corpses      bodies left by a squad; labelHeight lifts the health bar above tall art
 // `role` and `desc` feed the intel page; numbers come from the same definition ({field}).
 // Key order is the spawn-preparation order of navigation grids; keep new units at the end.
 const definitions={
-  citizen:{name:'Горожанин',ai:'civilian',spriteType:'citizen',civilian:true,variants:3,
+  citizen:{name:'Горожанин',ai:'civilian',spriteType:'citizen',civilian:true,variants:9,
     hp:28,speed:110,damage:1,r:12,range:0,wind:0,cooldown:0,xp:0,color:'#dfc59c',
-    role:'Горожанин',desc:'На иллюстрации — пекарь. В городе также встречаются носильщики и писцы. Хаотично бегает, не атакует. При столкновении — {damage} урон; не даёт опыта или добычи.'},
+    role:'Горожанин',desc:'Девять обликов: пекари, носильщики и писцы в разной одежде, зажиточный горожанин, строитель и житель в простой тунике. Беседует, делает покупки и отдыхает на площади; при опасности убегает. Не атакует. При столкновении — {damage} урон; не даёт опыта или добычи.'},
   auxiliary:{name:'Ауксиларий',ai:'specialist',attack:'lunge',spriteType:'auxiliary',labelHeight:108,
     hp:115,speed:51,damage:13,r:17,range:105,wind:1.05,cooldown:2.1,xp:3,color:'#d5b776',
     role:'Стража',desc:'Пузатая городская стража с круглыми щитами. Длинный выпад копьём на {range} px: уходи с линии замаха.'},

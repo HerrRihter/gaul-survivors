@@ -1,5 +1,6 @@
 import {drawHazards} from './art/expansion-art.js';
 import {orderActors} from './depth-order.js';
+import {drawCityGround,drawCityAir} from '../systems/city-life.js';
 export let SceneRenderer;
 'use strict';
 SceneRenderer={create(sessionContext){
@@ -68,6 +69,7 @@ function draw(){
           sessionContext.ctx.fillStyle='#efdcab';
           sessionContext.ctx.fillRect(a.x+5,a.y-2,5,3);
         }
+        drawCityGround(sessionContext.ctx,s,sceneryView);
         for(const e of s.enemies){
           if(e.x<minX-70||e.x>maxX+70||e.y<minY-70||e.y>maxY+70)continue;
           sessionContext.Legion.telegraph(sessionContext.ctx,e);
@@ -147,6 +149,7 @@ function draw(){
           sessionContext.ctx.fillText(t.v,t.x,t.y);
         }
         sessionContext.ctx.globalAlpha=1;
+        drawCityAir(sessionContext.ctx,s,sceneryView);
       }else{
         for(const o of sessionContext.Village.depthObjects)sessionContext.Village.drawObject(sessionContext.ctx,o);
         for(let i=0;i<14;i++)sessionContext.sprite(sessionContext.ctx,'roman',1300+(i%5)*47,890+sessionContext.Math.floor(i/5)*60,2,i%2===0,sessionContext.Math.sin(sessionContext.performance.now()/300+i));

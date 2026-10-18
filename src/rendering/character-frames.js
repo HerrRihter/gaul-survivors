@@ -63,7 +63,8 @@ export const CharacterFrames={
   const sequence=spec.actions[action]||spec.actions.walk;
   if(!sequence?.length)return null;
   const p=Number.isFinite(progress)?progress:0;
-  const index=action==='walk'||action==='idle'?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
+  // walk, idle and the actions listed in `loop` (citizens' everyday activities) repeat.
+  const index=action==='walk'||action==='idle'||spec.loop?.includes(action)?Math.floor(((p%1)+1)%1*sequence.length):Math.min(sequence.length-1,Math.floor(Math.max(0,p)*sequence.length));
   return entry.images.get(sequence[index]);
  },
 };

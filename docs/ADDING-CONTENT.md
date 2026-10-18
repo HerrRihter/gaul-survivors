@@ -30,6 +30,7 @@
 - Путь: `assets/runtime/characters/<heroes|enemies|civilians>/<id>/animations/<action>/<n>.png` (проверяет `npm run check:structure`).
 - Регистрация в `data/animations/character-frames.json` → `characters.<id>`: `renderer` (`villager` — герои, `unit` — противники), `actions` с путями от `assets/runtime/`, `idle`.
 - Большие исходные листы и промпты — в `assets/source/`, они не публикуются.
+- Горожане (`citizen-0…8`) дополнительно имеют бытовые действия `talk` (беседа на площади), `shop` (у прилавка), `rest` (стоит на площади) — они перечислены в `loop` и повторяются по кругу. Каждое действие имеет четыре отдельных рисованных кадра. Для замены положите кадры в `characters/civilians/citizen-N/animations/<действие>/<n>.png` и замените пути в `character-frames.json`. Какое действие когда играет — `citizens.activities` в `data/maps/city-life.js`.
 - Производные файлы (`data/animations/*.js` кроме `action-timing.js`, папка `runtime/`) не хранятся в git: их создаёт `npm run generate`, который сам запускается перед `dev`, `start`, `build` и `test`.
 
 ---

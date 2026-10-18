@@ -1,0 +1,174 @@
+{
+  "source": "assets\\source\\expansion-v1\\citizen-2-activities.png",
+  "scale": 0.23604465709728867,
+  "metrics": [
+    {
+      "action": "talk",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 179,
+        "height": 312
+      },
+      "width": 42,
+      "height": 74,
+      "left": 104,
+      "top": 162
+    },
+    {
+      "action": "talk",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 217,
+        "height": 315
+      },
+      "width": 51,
+      "height": 74,
+      "left": 104,
+      "top": 162
+    },
+    {
+      "action": "talk",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 259,
+        "height": 313
+      },
+      "width": 61,
+      "height": 74,
+      "left": 102,
+      "top": 162
+    },
+    {
+      "action": "talk",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 178,
+        "height": 314
+      },
+      "width": 42,
+      "height": 74,
+      "left": 104,
+      "top": 162
+    },
+    {
+      "action": "shop",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 228,
+        "height": 305
+      },
+      "width": 54,
+      "height": 72,
+      "left": 101,
+      "top": 164
+    },
+    {
+      "action": "shop",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 281,
+        "height": 314
+      },
+      "width": 66,
+      "height": 74,
+      "left": 102,
+      "top": 162
+    },
+    {
+      "action": "shop",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 229,
+        "height": 312
+      },
+      "width": 54,
+      "height": 74,
+      "left": 101,
+      "top": 162
+    },
+    {
+      "action": "shop",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 184,
+        "height": 314
+      },
+      "width": 43,
+      "height": 74,
+      "left": 102,
+      "top": 162
+    },
+    {
+      "action": "rest",
+      "frame": 0,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 188,
+        "height": 321
+      },
+      "width": 44,
+      "height": 76,
+      "left": 102,
+      "top": 160
+    },
+    {
+      "action": "rest",
+      "frame": 1,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 194,
+        "height": 327
+      },
+      "width": 46,
+      "height": 77,
+      "left": 102,
+      "top": 159
+    },
+    {
+      "action": "rest",
+      "frame": 2,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 180,
+        "height": 322
+      },
+      "width": 42,
+      "height": 76,
+      "left": 104,
+      "top": 160
+    },
+    {
+      "action": "rest",
+      "frame": 3,
+      "source": {
+        "left": 2,
+        "top": 2,
+        "width": 181,
+        "height": 321
+      },
+      "width": 43,
+      "height": 76,
+      "left": 103,
+      "top": 160
+    }
+  ]
+}
