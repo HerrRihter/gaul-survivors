@@ -95,8 +95,9 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   // a limb from its part drawing: root at uv (0.5, 0.1), joint (0.5, 0.5), end (0.5, 0.9) → drawn height = length / 0.8
   // cut: the fraction of the texture above the limb's root that is not drawn (a hero arm's round shoulder joint: the arm starts at the
   // body's side contour instead); the bones keep the limb's length
-  function limb(tex, p, ang, face, len, w0, u, id, names, cut = 0) {
-    const r0 = cut ? cut + 0.01 : 0.1, j0 = (r0 + 0.9) / 2, h = len / (0.9 - r0), w = Math.min(w0 * 1.6, L.hsz(tex, h)),
+  // wk: the rig's width factor for this limb (legK, armK): a drawing thinner than the character needs is drawn wider
+  function limb(tex, p, ang, face, len, w0, u, id, names, cut = 0, wk = 1) {
+    const r0 = cut ? cut + 0.01 : 0.1, j0 = (r0 + 0.9) / 2, h = len / (0.9 - r0), w = Math.min(w0 * 1.6 * wk, L.hsz(tex, h) * wk),
       kp = L.twoBone({ tex, p, a1: ang[0], a2: ang[1], face, w, h, split: j0, root: [0.5, r0], joint: [0.5, j0], r: 0, u, top: cut });
     const a = (ang[0] + ang[1]) * D2R, end = [kp[0] - Math.sin(a) * face * len / 2, kp[1] + Math.cos(a) * len / 2];
     if (id) { L.joint(id, names[0], p); L.joint(id, names[1], kp); L.joint(id, names[2], end); }
@@ -131,7 +132,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       legs.push({ side, hip: hips[s], tgt, sv: gl * sv / A }); }
     const legL = R0.leg / 2;
     const drawLeg = (lg) => { const ang = ik(lg.hip, lg.tgt, legL, legL, face, 1);
-      const [kp, an] = limb(ak + '_leg', lg.hip, ang, face, R0.leg, R0.legW, uL, tr, lg.side < 0 ? ['hipL', 'kneeL', 'ankleL'] : ['hipR', 'kneeR', 'ankleR']);
+      const [kp, an] = limb(ak + '_leg', lg.hip, ang, face, R0.leg, R0.legW, uL, tr, lg.side < 0 ? ['hipL', 'kneeL', 'ankleL'] : ['hipR', 'kneeR', 'ankleR'], 0, R0.legK || 1);
       const fw = R0.foot[0], fh = fw * G.tex(ak + '_foot').h / G.tex(ak + '_foot').w, fx = an[0] - fw * (face > 0 ? 0.32 : 0.68);
       L.sprite(ak + '_foot', fx, an[1] - fh * 0.42, { w: fw, h: fh, flip: face < 0, u: uL });
       if (tr) { const sole = an[1] + fh * 0.5; L.joint(tr, lg.side < 0 ? 'heelL' : 'heelR', [fx + fw * (face > 0 ? 0.12 : 0.88), sole]); L.joint(tr, lg.side < 0 ? 'toeL' : 'toeR', [fx + fw * (face > 0 ? 0.9 : 0.1), sole]); } };
@@ -148,7 +149,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       return { side, sh, hand }; });
     const drawArm = (a, dark) => { const ang = ik(a.sh, a.hand, R0.arm / 2, R0.arm / 2, face, -1);
       const uu = dark ? Object.assign({}, u, { tint: [0.62, 0.72, 0.85, 1] }) : u;
-      limb(ak + '_arm', a.sh, ang, face, R0.arm, R0.armW, uu, tr, a.side < 0 ? ['shL', 'elbowL', 'handL'] : ['shR', 'elbowR', 'handR'], 0); };
+      limb(ak + '_arm', a.sh, ang, face, R0.arm, R0.armW, uu, tr, a.side < 0 ? ['shL', 'elbowL', 'handL'] : ['shR', 'elbowR', 'handR'], 0, R0.armK || 1); };
     const far = arms.find((a) => a.side === -face), nearA = arms.find((a) => a.side === face);
     const bodyDraw = () => { const bh = R0.body * breath * (1 - 0.24 * hk), bw = L.hsz(ak + '_body', R0.body) * (1 + 0.22 * hk), tilt = dieA * face * 0.45 + lean;
       L.sprite(ak + '_body', 0, 0, { m: M.of(M.t(cx, gy - hipY + 6), M.r(tilt), M.s(R0.flip && face < 0 ? -1 : 1, 1)), w: bw, h: bh, pivot: [bw / 2, bh], u });
@@ -169,7 +170,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   function hexapod(o) {
     const R0 = RIGS[o.k], face = o.face, ph = o.dist / R0.stride, gl = o.g, A = R0.stride * 0.3, tr = o.id || null;
     const fade = o.die >= 0 ? 1 - clamp01((o.die - 0.35) / 0.3) : 1, dieA = o.die >= 0 ? clamp01(o.die / 0.35) : 0; if (fade <= 0) return;
-    const hk = o.hitA !== undefined && o.hitA < 0.3 ? (1 - o.hitA / 0.3) ** 1.5 : 0, bh = R0.body * (1 + 0.02 * Math.sin(o.t * 3 + o.ph * 7)) * (1 - 0.22 * hk), bw = L.hsz('bug_body', R0.body) * (1 + 0.2 * hk), gy = o.y - (o.z || 0) - (o.wind ? 10 * o.wind : 0);
+    const hk = o.hitA !== undefined && o.hitA < 0.3 ? (1 - o.hitA / 0.3) ** 1.5 : 0, bh = R0.body * (1 + 0.02 * Math.sin(o.t * 3 + o.ph * 7)) * (1 - 0.22 * hk), bw = L.hsz(o.k + '_body', R0.body) * (1 + 0.2 * hk), gy = o.y - (o.z || 0) - (o.wind ? 10 * o.wind : 0);
     const u = actorU(o, face, fade);
     const cy = gy - bh * 0.42 - R0.hipY + dieA * 12;
     if (tr) { L.joint(tr, 'ground', [o.x, gy]); L.joint(tr, 'top', [o.x, cy - bh * 0.5]); L.joint(tr, 'hip', [o.x, cy]); }
@@ -178,8 +179,8 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       const at = [o.x + side * bw * 0.26, cy + (i - 1) * bh * 0.2], rest = [at[0] + side * R0.reach * (1 - 0.6 * dieA), at[1] + (i - 1) * 14 + bh * 0.3];
       const tg = [rest[0] + gl * sv * o.ux, rest[1] + gl * sv * o.uy * 0.5 - gl * lf];
       let ang = ik(at, tg, R0.leg / 2, R0.leg / 2, side, 1);
-      limb('bug_leg', at, ang, side, R0.leg, R0.legW, u, tr, ['hip' + side + i, 'knee' + side + i, 'ankle' + side + i]); }
-    L.sprite('bug_body', 0, 0, { m: M.of(M.t(o.x + (o.hitDir || 0) * 6 * hk, cy + bh * 0.5), M.r(dieA * 0.3 * face + (o.hitDir || 0) * 0.2 * hk), M.s(face < 0 ? -1 : 1, 1 - 0.25 * dieA)), w: bw, h: bh, pivot: [bw / 2, bh], u });
+      limb(o.k + '_leg', at, ang, side, R0.leg, R0.legW, u, tr, ['hip' + side + i, 'knee' + side + i, 'ankle' + side + i]); }
+    L.sprite(o.k + '_body', 0, 0, { m: M.of(M.t(o.x + (o.hitDir || 0) * 6 * hk, cy + bh * 0.5), M.r(dieA * 0.3 * face + (o.hitDir || 0) * 0.2 * hk), M.s(face < 0 ? -1 : 1, 1 - 0.25 * dieA)), w: bw, h: bh, pivot: [bw / 2, bh], u });
   }
 
   // ---------------- render ----------------
