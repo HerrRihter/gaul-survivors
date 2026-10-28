@@ -22,44 +22,7 @@ void main(){ vec2 p = v_uv * 2.0 - 1.0; float d = length(p); float an = atan(p.y
 float hole(vec2 p, vec3 h){ if (h.z <= 0.0) return 0.0; vec2 d = p - h.xy; d.y /= 0.62; return 1.0 - smoothstep(h.z * 0.55, h.z, length(d)); }
 void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p, u_h1)), max(hole(p, u_h2), hole(p, u_h3))), max(hole(p, u_h4), hole(p, u_h5)));
   o = vec4(0.0, 0.0, 0.0, u_amt * (1.0 - l)); }`;
-  // the floor: dark panels, a thin 100 px grid, a bright 500 px grid with a halo, circuit traces with pads, pulses running along
-  // the major lines; the neon colour comes from the zone (soft 150 px blend at zone edges), world-anchored (u_cam)
-  const CYBER = `uniform vec2 u_cam; uniform vec4 u_z0, u_z1, u_z2, u_z3, u_z4; uniform vec3 u_c0, u_c1, u_c2, u_c3, u_c4, u_pc; uniform vec4 u_pat; uniform float u_pat4;
-float inZ(vec2 w, vec4 z){ w.y *= 0.62; vec2 a = smoothstep(z.xy - 150.0, z.xy + 150.0, w) * (1.0 - smoothstep(z.zw - 150.0, z.zw + 150.0, w)); return a.x * a.y; }
-float gl(float v, float per, float w){ float d = abs(fract(v / per + 0.5) - 0.5) * per; return 1.0 - smoothstep(0.0, w, d); }
-void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
-  vec3 zc = u_pc; zc = mix(zc, u_c0, inZ(w, u_z0)); zc = mix(zc, u_c1, inZ(w, u_z1)); zc = mix(zc, u_c2, inZ(w, u_z2)); zc = mix(zc, u_c3, inZ(w, u_z3)); zc = mix(zc, u_c4, inZ(w, u_z4));
-  vec2 cell = floor(w / 100.0); float h = hash(cell);
-  vec3 col = vec3(0.022, 0.042, 0.05) * (0.85 + 0.3 * h) + zc * 0.014;
-  float minor = max(gl(w.x, 100.0, 1.2), gl(w.y, 100.0, 1.2)), major = max(gl(w.x, 500.0, 1.8), gl(w.y, 500.0, 1.8)), halo = max(gl(w.x, 500.0, 16.0), gl(w.y, 500.0, 16.0));
-  col += zc * (minor * 0.07 + major * 0.3 + halo * 0.05);
-  vec2 f = fract(w / 100.0); float hh = hash(cell + 7.3);
-  if (hh > 0.6) { float ox = 0.3 * (hash(cell + 1.1) - 0.5), oy = 0.3 * (hash(cell + 2.2) - 0.5), tx = abs(f.x - 0.5 - ox), ty = abs(f.y - 0.5 - oy);
-    float tr = fract(hh * 13.0) > 0.5 ? (1.0 - smoothstep(0.0, 0.016, tx)) * step(f.y, 0.5 + oy) + (1.0 - smoothstep(0.0, 0.016, ty)) * step(0.5 + ox, f.x)
-                                       : (1.0 - smoothstep(0.0, 0.016, ty)) * step(f.x, 0.5 + ox) + (1.0 - smoothstep(0.0, 0.016, tx)) * step(0.5 + oy, f.y);
-    float pad = 1.0 - smoothstep(0.025, 0.045, length(f - vec2(0.5 + ox, 0.5 + oy)));
-    col += zc * (min(tr, 1.0) * 0.15 + pad * 0.32); }
-  float px = gl(w.y, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.x + hash(vec2(floor(w.y / 500.0 + 0.5), 3.0)) * 4000.0 - u_t * 520.0) / 1700.0));
-  float py = gl(w.x, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.y + hash(vec2(floor(w.x / 500.0 + 0.5), 5.0)) * 4000.0 - u_t * 460.0) / 1500.0));
-  col += mix(zc, vec3(1.0), 0.5) * (px + py) * 0.9;
-  float k0 = inZ(w, u_z0), k1 = inZ(w, u_z1), k2 = inZ(w, u_z2), k3 = inZ(w, u_z3), k4 = inZ(w, u_z4);
-  vec2 q = fract(w / 14.0) - 0.5; float dots = 1.0 - smoothstep(0.16, 0.22, length(q));                              // perforation
-  vec2 hx = w / 46.0; hx.x *= 1.1547; hx.y += mod(floor(hx.x), 2.0) * 0.5; vec2 hf = abs(fract(hx) - 0.5);
-  float hexl = 1.0 - smoothstep(0.0, 0.05, abs(max(hf.x * 1.5 + hf.y, hf.y * 2.0) - 1.0));                            // hex mesh
-  float diag = gl(w.x + w.y, 90.0, 6.0), rail = max(gl(w.y, 500.0, 9.0), gl(w.x, 500.0, 9.0)) - major;                 // power stripes and rails
-  float fine = max(gl(w.x, 25.0, 0.8), gl(w.y, 25.0, 0.8));                                                           // NOC fine grid
-  float pv[5]; pv[0] = dots * 0.05 * (0.5 + 0.5 * step(0.55, h)); pv[1] = hexl * 0.1; pv[2] = diag * 0.05; pv[3] = max(rail, 0.0) * 0.18; pv[4] = fine * 0.05;
-  col += zc * (k0 * pv[int(u_pat.x)] + k1 * pv[int(u_pat.y)] + k2 * pv[int(u_pat.z)] + k3 * pv[int(u_pat.w)] + k4 * pv[int(u_pat4)]);
-  col += vec3(1.0, 0.84, 0.0) * k3 * diag * 0.045;                                                                   // hazard striping, the only yellow
-  vec2 tf = fract(w / 100.0);                                                                                         // raised floor panels
-  float lip = smoothstep(0.05, 0.0, tf.y), front = smoothstep(0.86, 0.9, tf.y) * (1.0 - smoothstep(0.98, 1.0, tf.y)), side = smoothstep(0.965, 0.985, tf.x) * 0.6;
-  col += zc * lip * 0.12 + vec3(0.03, 0.05, 0.06) * lip; col *= 1.0 - 0.7 * front - 0.35 * side;
-  col *= 0.86 + 0.26 * (1.0 - tf.y);                                                                                  // each panel lighter at its far edge
-  float gloss = pow(0.5 + 0.5 * sin(w0.x * 0.0021 + w0.y * 0.0034 + hash(floor(w0 / 900.0)) * 6.0), 6.0);               // broad glossy reflections
-  col += zc * gloss * 0.035;
-  float sy = v_px.y / 1080.0; col = mix(col * 0.55 + zc * 0.02, col, smoothstep(0.0, 0.55, sy));                         // depth haze toward the top
-  o = vec4(col, 1.0); }`;
-  S.programs = () => { L.init(W, H, { arc: ARC, cyber: CYBER, dark: DARK }); L.glyphs('0123456789', { size: 76, stroke: '#02090d', fill: ['#ffffff', '#bff8ff', '#00e5ff'] }); stencils(); emblems(); codeTex(); L.SUN = [W * 0.2, -400];
+  S.programs = () => { L.init(W, H, { arc: ARC, cyber: LK.FLOOR, dark: DARK }); L.glyphs('0123456789', { size: 76, stroke: '#02090d', fill: ['#ffffff', '#bff8ff', '#00e5ff'] }); stencils(); emblems(); codeTex(); L.SUN = [W * 0.2, -400];
     if (G.buildAtlas && new URLSearchParams(location.search).get('batch') !== '0') G.buildAtlas((n) => !/^(lbl_|stencil_)/.test(n)); };
   function codeTex() { const N = 12, c = 14, pad = 10, cv = document.createElement('canvas'); cv.width = cv.height = N * c + pad * 2; const g = cv.getContext('2d');
     g.fillStyle = '#061018'; g.strokeStyle = '#00e5ff'; g.lineWidth = 3; g.beginPath(); g.roundRect ? g.roundRect(2, 2, cv.width - 4, cv.height - 4, 8) : g.rect(2, 2, cv.width - 4, cv.height - 4); g.fill(); g.stroke();
@@ -409,9 +372,9 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       if (dash) for (let j = 1; j <= 4; j++) L.puff(X - ST.ddx * j * 26, Y - 40 - ST.ddy * j * 26, 22 - j * 3, [0.4, 0.75, 0.85], 0.25 * (1 - j / 5), j);
       const hand = SIM.hand(ST), hs = [sx(hand[0]), sy(hand[1])];
       const sy0 = ST.face;
-      const tool = () => { const T = TOOL.scanner, tx = G.tex('scanner'), [gx, gy] = T.grip, [px, py] = T.tip, cr = (A.scanner && A.scanner.crop) || [0, 0], scl = (A.scanner && A.scanner.scale) || 1;
+      const tool = () => { const T = TOOL, tx = G.tex(TOOL.sprite), [gx, gy] = T.grip, [px, py] = T.tip, cr = (A[TOOL.sprite] && A[TOOL.sprite].crop) || [0, 0], scl = (A[TOOL.sprite] && A[TOOL.sprite].scale) || 1;
         const vx = (px - gx) * scl, vy = (py - gy) * scl, k = Math.hypot(SIM.RIG.gun, SIM.RIG.gunUp) / Math.hypot(vx, vy), rot = Math.atan2(-SIM.RIG.gunUp, SIM.RIG.gun) - Math.atan2(vy, vx);
-        L.sprite('scanner', 0, 0, { m: M.of(M.t(hs[0], hs[1]), M.r(ST.aim), M.s(1, sy0), M.r(rot)), w: tx.w * k, h: tx.h * k, pivot: [(gx - cr[0]) * scl * k, (gy - cr[1]) * scl * k], u: { grade: [1, 0.85 + 0.4 * l, 0, 1] } });
+        L.sprite(TOOL.sprite, 0, 0, { m: M.of(M.t(hs[0], hs[1]), M.r(ST.aim), M.s(1, sy0), M.r(rot)), w: tx.w * k, h: tx.h * k, pivot: [(gx - cr[0]) * scl * k, (gy - cr[1]) * scl * k], u: { grade: [1, 0.85 + 0.4 * l, 0, 1] } });
         const tp = SIM.tip(ST); L.anchor('trace', [sx(tp[0]), sy(tp[1])], M.ap(M.of(M.t(hs[0], hs[1]), M.r(ST.aim), M.s(1, sy0), M.r(rot)), [vx * k, vy * k]), 3);
         // the trace is a ranged fan: its "blade" for the aim check is the beam from the scanner window out to the strike's range
         if (S.TRACE_IDS) { const rr = SIM.wstat('trace', ST.wp.trace || 1).range; L.joint('hero', 'grip', [sx(tp[0]), sy(tp[1])]);
@@ -582,7 +545,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       if (w && !h) h = w * sh / sw; if (h && !w) w = h * sw / sh; if (!w) { w = sw; h = sh; } return sp(n, 0, 0, Object.assign({}, o, { m: M.mul(m0, M.t(x, y)), pivot: [0, 0], w, h })); };
     try { draw(); } finally { L.sprite = sp; L.twoBone = tb; } }
   // the scanner's grip and window in its source drawing (art px, before prep's trim); re-measured when the art changes
-  const TOOL = { scanner: { grip: [75, 148], tip: [252, 76] } };                    // round 23: the slim scanner of hero_v2_sheet
+  const TOOL = LK.TOOL;                                                             // the hero's handheld tool: sprite, grip and tip (texture px)
 
   // ---------------- the training centre ----------------
   // a maze wall: the floor rectangle lifted by WALL_H is its top face; a strip whose south edge is the wall's also shows the front face

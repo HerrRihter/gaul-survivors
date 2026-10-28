@@ -93,10 +93,53 @@
   // the component minibosses are drawn 1.8× (every length of the rig scales with the body)
   for (const k of ['bugu', 'bugl', 'bugg', 'buga']) { const r = RIGS[k]; for (const f of ['body', 'hipY', 'leg', 'legW', 'hipW', 'shY', 'shW', 'arm', 'armW', 'bob']) r[f] *= 1.8; r.foot = r.foot.map((v) => v * 1.8); }
 
+  // the floor: dark panels, a thin 100 px grid, a bright 500 px grid with a halo, circuit traces with pads, pulses running along
+  // the major lines; the neon colour comes from the zone (soft 150 px blend at zone edges), world-anchored (u_cam)
+  // the floor shader (scene.js draws it full screen; uniforms: u_cam world offset, u_t time, u_z0..4 zone rectangles, u_c0..4 their
+  // colours, u_pc the plaza colour, u_pat / u_pat4 each zone's pattern index; v_px the pixel, hash() from lib.js)
+  const FLOOR = `uniform vec2 u_cam; uniform vec4 u_z0, u_z1, u_z2, u_z3, u_z4; uniform vec3 u_c0, u_c1, u_c2, u_c3, u_c4, u_pc; uniform vec4 u_pat; uniform float u_pat4;
+float inZ(vec2 w, vec4 z){ w.y *= 0.62; vec2 a = smoothstep(z.xy - 150.0, z.xy + 150.0, w) * (1.0 - smoothstep(z.zw - 150.0, z.zw + 150.0, w)); return a.x * a.y; }
+float gl(float v, float per, float w){ float d = abs(fract(v / per + 0.5) - 0.5) * per; return 1.0 - smoothstep(0.0, w, d); }
+void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
+  vec3 zc = u_pc; zc = mix(zc, u_c0, inZ(w, u_z0)); zc = mix(zc, u_c1, inZ(w, u_z1)); zc = mix(zc, u_c2, inZ(w, u_z2)); zc = mix(zc, u_c3, inZ(w, u_z3)); zc = mix(zc, u_c4, inZ(w, u_z4));
+  vec2 cell = floor(w / 100.0); float h = hash(cell);
+  vec3 col = vec3(0.022, 0.042, 0.05) * (0.85 + 0.3 * h) + zc * 0.014;
+  float minor = max(gl(w.x, 100.0, 1.2), gl(w.y, 100.0, 1.2)), major = max(gl(w.x, 500.0, 1.8), gl(w.y, 500.0, 1.8)), halo = max(gl(w.x, 500.0, 16.0), gl(w.y, 500.0, 16.0));
+  col += zc * (minor * 0.07 + major * 0.3 + halo * 0.05);
+  vec2 f = fract(w / 100.0); float hh = hash(cell + 7.3);
+  if (hh > 0.6) { float ox = 0.3 * (hash(cell + 1.1) - 0.5), oy = 0.3 * (hash(cell + 2.2) - 0.5), tx = abs(f.x - 0.5 - ox), ty = abs(f.y - 0.5 - oy);
+    float tr = fract(hh * 13.0) > 0.5 ? (1.0 - smoothstep(0.0, 0.016, tx)) * step(f.y, 0.5 + oy) + (1.0 - smoothstep(0.0, 0.016, ty)) * step(0.5 + ox, f.x)
+                                       : (1.0 - smoothstep(0.0, 0.016, ty)) * step(f.x, 0.5 + ox) + (1.0 - smoothstep(0.0, 0.016, tx)) * step(0.5 + oy, f.y);
+    float pad = 1.0 - smoothstep(0.025, 0.045, length(f - vec2(0.5 + ox, 0.5 + oy)));
+    col += zc * (min(tr, 1.0) * 0.15 + pad * 0.32); }
+  float px = gl(w.y, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.x + hash(vec2(floor(w.y / 500.0 + 0.5), 3.0)) * 4000.0 - u_t * 520.0) / 1700.0));
+  float py = gl(w.x, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.y + hash(vec2(floor(w.x / 500.0 + 0.5), 5.0)) * 4000.0 - u_t * 460.0) / 1500.0));
+  col += mix(zc, vec3(1.0), 0.5) * (px + py) * 0.9;
+  float k0 = inZ(w, u_z0), k1 = inZ(w, u_z1), k2 = inZ(w, u_z2), k3 = inZ(w, u_z3), k4 = inZ(w, u_z4);
+  vec2 q = fract(w / 14.0) - 0.5; float dots = 1.0 - smoothstep(0.16, 0.22, length(q));                              // perforation
+  vec2 hx = w / 46.0; hx.x *= 1.1547; hx.y += mod(floor(hx.x), 2.0) * 0.5; vec2 hf = abs(fract(hx) - 0.5);
+  float hexl = 1.0 - smoothstep(0.0, 0.05, abs(max(hf.x * 1.5 + hf.y, hf.y * 2.0) - 1.0));                            // hex mesh
+  float diag = gl(w.x + w.y, 90.0, 6.0), rail = max(gl(w.y, 500.0, 9.0), gl(w.x, 500.0, 9.0)) - major;                 // power stripes and rails
+  float fine = max(gl(w.x, 25.0, 0.8), gl(w.y, 25.0, 0.8));                                                           // NOC fine grid
+  float pv[5]; pv[0] = dots * 0.05 * (0.5 + 0.5 * step(0.55, h)); pv[1] = hexl * 0.1; pv[2] = diag * 0.05; pv[3] = max(rail, 0.0) * 0.18; pv[4] = fine * 0.05;
+  col += zc * (k0 * pv[int(u_pat.x)] + k1 * pv[int(u_pat.y)] + k2 * pv[int(u_pat.z)] + k3 * pv[int(u_pat.w)] + k4 * pv[int(u_pat4)]);
+  col += vec3(1.0, 0.84, 0.0) * k3 * diag * 0.045;                                                                   // hazard striping, the only yellow
+  vec2 tf = fract(w / 100.0);                                                                                         // raised floor panels
+  float lip = smoothstep(0.05, 0.0, tf.y), front = smoothstep(0.86, 0.9, tf.y) * (1.0 - smoothstep(0.98, 1.0, tf.y)), side = smoothstep(0.965, 0.985, tf.x) * 0.6;
+  col += zc * lip * 0.12 + vec3(0.03, 0.05, 0.06) * lip; col *= 1.0 - 0.7 * front - 0.35 * side;
+  col *= 0.86 + 0.26 * (1.0 - tf.y);                                                                                  // each panel lighter at its far edge
+  float gloss = pow(0.5 + 0.5 * sin(w0.x * 0.0021 + w0.y * 0.0034 + hash(floor(w0 / 900.0)) * 6.0), 6.0);               // broad glossy reflections
+  col += zc * gloss * 0.035;
+  float sy = v_px.y / 1080.0; col = mix(col * 0.55 + zc * 0.02, col, smoothstep(0.0, 0.55, sy));                         // depth haze toward the top
+  o = vec4(col, 1.0); }`;
+
+  // the hero's handheld tool (its attack comes from the tip): the sprite and, in its texture px, the grip and the tip
+  const TOOL = { sprite: 'scanner', grip: [75, 148], tip: [252, 76] };   // round 23: the slim scanner of hero_v2_sheet
+
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',
     ic_area: 'ic_magnet', ic_amount: 'ic_power', ic_dur: 'ic_haste', chest: 'code_tex', turret: 'switch' };
   const ART_FALLBACK = { petfood: 'mars', logq: 'vetis', batch: 'boss', sdesk: 'desk', repl: 'boss', rstorm: 'boss', outage: 'boss' };
 
-  root.SETTING.LOOK = { PAL: { INK, CYAN, MINT, CORAL, HAZ, ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI }, EMB_AT, emblems, PH, RIGS, IC_FB, ART_FALLBACK };
+  root.SETTING.LOOK = { PAL: { INK, CYAN, MINT, CORAL, HAZ, ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI }, EMB_AT, emblems, PH, RIGS, IC_FB, ART_FALLBACK, FLOOR, TOOL };
 })(window);
