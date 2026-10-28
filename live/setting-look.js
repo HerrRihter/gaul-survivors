@@ -96,7 +96,7 @@
   // the floor: dark panels, a thin 100 px grid, a bright 500 px grid with a halo, circuit traces with pads, pulses running along
   // the major lines; the neon colour comes from the zone (soft 150 px blend at zone edges), world-anchored (u_cam)
   // the floor shader (scene.js draws it full screen; uniforms: u_cam world offset, u_t time, u_z0..4 zone rectangles, u_c0..4 their
-  // colours, u_pc the plaza colour, u_pat / u_pat4 each zone's pattern index; v_px the pixel, hash() from lib.js)
+  // colours, u_pc the plaza colour, u_pat / u_pat4 each zone's pattern index; v_px the pixel; hash, vnoise, fbm from gl.js)
   const FLOOR = `uniform vec2 u_cam; uniform vec4 u_z0, u_z1, u_z2, u_z3, u_z4; uniform vec3 u_c0, u_c1, u_c2, u_c3, u_c4, u_pc; uniform vec4 u_pat; uniform float u_pat4;
 float inZ(vec2 w, vec4 z){ w.y *= 0.62; vec2 a = smoothstep(z.xy - 150.0, z.xy + 150.0, w) * (1.0 - smoothstep(z.zw - 150.0, z.zw + 150.0, w)); return a.x * a.y; }
 float gl(float v, float per, float w){ float d = abs(fract(v / per + 0.5) - 0.5) * per; return 1.0 - smoothstep(0.0, w, d); }
