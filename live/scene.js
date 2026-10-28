@@ -111,8 +111,29 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   // draws one biped (hero or foe). o: { k, x, y (screen ground point), face, dist, g, ux, uy, t, ph, die (age or −1), z, spin, hit, lit, id, wind, aimHand }
   // the body's own outline in its drawing, as [centre, half width] fractions of the drawing's width (measured): the shoulders go on it
   const BODY_U = { hr_ba: [0.445, 0.415], sk_ba_platinum: [0.44, 0.41], sk_ba_consult: [0.445, 0.42], sk_ba_deadline: [0.42, 0.40] };
+  // limited animation (LOOK.POSES[art] = { h, bob? }): the actor is one whole drawing per pose — <art>_idle, _step1, _step2, _wind,
+  // _strike, _hurt — chosen from its state; code adds the step bob, the breath, the squash of a blow, the flinch and the fall. Every pose
+  // is drawn at one scale (the standing pose is h view px tall), centred on its axis (the art is padded so), feet on the ground point.
+  function poseActor(o, R0, ak, P) {
+    const fade = o.die >= 0 ? 1 - clamp01((o.die - 0.35) / 0.3) : 1; if (fade <= 0) return;
+    const hk = o.hitA !== undefined && o.hitA < 0.3 ? 1 - o.hitA / 0.3 : 0, swing = o.swing !== undefined ? o.swing : 9;
+    const strike = Math.max(o.strike || 0, swing < 0.22 ? 1 - swing / 0.22 : 0), wind = o.wind || 0;
+    let pose = 'idle', bob = 0;
+    if (o.die >= 0 || hk > 0.4) pose = 'hurt';
+    else if (strike > 0) pose = 'strike';
+    else if (wind > 0.15) pose = 'wind';
+    else if (o.g > 0.25) { const ph = ((o.dist / R0.stride) % 1 + 1) % 1, q = Math.floor(ph * 4); pose = q === 0 ? 'step1' : q === 2 ? 'step2' : 'idle';
+      bob = Math.abs(Math.sin(ph * Math.PI * 2)) * (P.bob || 3) * o.g; }
+    const t = G.tex(ak + '_' + pose), k = P.h / G.tex(ak + '_idle').h, breath = 1 + 0.015 * Math.sin(o.t * 2.1 + (o.ph || 0) * 9) * (1 - Math.min(1, o.g));
+    const w = t.w * k * (1 + 0.07 * strike), h = t.h * k * (1 - 0.07 * strike) * breath;
+    const fall = o.die >= 0 ? clamp01(o.die / 0.35) : 0, tilt = -o.face * 0.55 * fall + (o.hitDir || 0) * 0.12 * hk;
+    const cx = o.x + (o.hitDir || 0) * 10 * hk, gy = o.y - (o.z || 0) - bob, u = actorU(o, o.face, fade);
+    L.sprite(ak + '_' + pose, 0, 0, { m: M.of(M.t(cx, gy), M.r(tilt), M.s(o.face < 0 ? -1 : 1, 1)), w, h, pivot: [w / 2, h], u });
+    if (o.id) { L.joint(o.id, 'ground', [o.x, o.y]); L.joint(o.id, 'top', [cx, gy - h]); }
+  }
   function biped(o) {
     const R0 = RIGS[o.k], face = o.face, tr = o.id || null, gl = o.g, ph = o.dist / R0.stride, ak = o.k === 'hero' ? heroArt(o.hero, o.skin) : artOf(o.k);
+    const PZ = POSES[ak]; if (PZ) { poseActor(o, R0, ak, PZ); return; }                       // limited animation instead of the rig
     const dieA = o.die >= 0 ? clamp01(o.die / 0.35) : 0, fade = o.die >= 0 ? 1 - clamp01((o.die - 0.35) / 0.3) : 1;
     if (fade <= 0) return;
     const D = R0.D, A = R0.stride * D / 2, lift = R0.leg * (R0.lift || 0.17), bob = gl * R0.bob * (0.5 + 0.5 * Math.cos(4 * Math.PI * (ph - D / 2)));   // lowest at mid-stance
@@ -373,7 +394,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       if (dash) for (let j = 1; j <= 4; j++) L.puff(X - ST.ddx * j * 26, Y - 40 - ST.ddy * j * 26, 22 - j * 3, [0.4, 0.75, 0.85], 0.25 * (1 - j / 5), j);
       const hand = SIM.hand(ST), hs = [sx(hand[0]), sy(hand[1])];
       const sy0 = ST.face;
-      const tool = () => { const T = TOOL, tx = G.tex(TOOL.sprite), [gx, gy] = T.grip, [px, py] = T.tip, cr = (A[TOOL.sprite] && A[TOOL.sprite].crop) || [0, 0], scl = (A[TOOL.sprite] && A[TOOL.sprite].scale) || 1;
+      const tool = () => { if (POSES[heroArt(ST.hero, ST.skin)]) return; const T = TOOL, tx = G.tex(TOOL.sprite), [gx, gy] = T.grip, [px, py] = T.tip, cr = (A[TOOL.sprite] && A[TOOL.sprite].crop) || [0, 0], scl = (A[TOOL.sprite] && A[TOOL.sprite].scale) || 1;
         const vx = (px - gx) * scl, vy = (py - gy) * scl, k = Math.hypot(SIM.RIG.gun, SIM.RIG.gunUp) / Math.hypot(vx, vy), rot = Math.atan2(-SIM.RIG.gunUp, SIM.RIG.gun) - Math.atan2(vy, vx);
         L.sprite(TOOL.sprite, 0, 0, { m: M.of(M.t(hs[0], hs[1]), M.r(ST.aim), M.s(1, sy0), M.r(rot)), w: tx.w * k, h: tx.h * k, pivot: [(gx - cr[0]) * scl * k, (gy - cr[1]) * scl * k], u: { grade: [1, 0.85 + 0.4 * l, 0, 1] } });
         const tp = SIM.tip(ST); L.anchor('trace', [sx(tp[0]), sy(tp[1])], M.ap(M.of(M.t(hs[0], hs[1]), M.r(ST.aim), M.s(1, sy0), M.r(rot)), [vx * k, vy * k]), 3);
@@ -381,7 +402,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
         if (S.TRACE_IDS) { const rr = SIM.wstat('trace', ST.wp.trace || 1).range; L.joint('hero', 'grip', [sx(tp[0]), sy(tp[1])]);
           L.joint('hero', 'tip', [sx(tp[0] + Math.cos(ST.aim) * rr), sy(tp[1] + Math.sin(ST.aim) * rr)]); if (ST.qaTarget) L.joint('hero', 'target', [sx(ST.qaTarget[0]), sy(ST.qaTarget[1])]); } };
       const o = { k: 'hero', hero: ST.hero, skin: ST.skin, x: X, y: Y, face: ST.face, dist: ST.dist, g: ST.g, ux: ST.ux, uy: ST.uy, t, ph: 0.3, die: die >= 0 ? Math.min(die, 0.34) : -1, z: 0,
-        hit: clamp01(1 - (GT - ST.hurtT) / 0.12), lit: l, aimHand: hs, after: null, rimCol: zcol(ST.x, ST.y), id: S.TRACE_IDS ? 'hero' : null };
+        hit: clamp01(1 - (GT - ST.hurtT) / 0.12), lit: l, aimHand: hs, after: null, swing: ST.sw ? GT - ST.sw.t0 : 9, rimCol: zcol(ST.x, ST.y), id: S.TRACE_IDS ? 'hero' : null };
       if (GT < ST.slowT) { L.glow(X, Y - 50, 70, [0.45, 0.75, 1], 0.45, 2); for (let j = 0; j < 3; j++) L.puff(X + (rnd(Math.floor(GT * 8), j) - 0.5) * 60, Y - 20 - j * 18, 8, [0.7, 0.85, 1], 0.4, j); }
       const draw = () => { biped(Object.assign(o, { after: ST.face > 0 ? null : tool })); if (ST.face > 0) tool(); };
       if (!blink) L.inked(draw, { r: 2.2, n: 8, col: INK });
@@ -546,7 +567,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       if (w && !h) h = w * sh / sw; if (h && !w) w = h * sw / sh; if (!w) { w = sw; h = sh; } return sp(n, 0, 0, Object.assign({}, o, { m: M.mul(m0, M.t(x, y)), pivot: [0, 0], w, h })); };
     try { draw(); } finally { L.sprite = sp; L.twoBone = tb; } }
   // the scanner's grip and window in its source drawing (art px, before prep's trim); re-measured when the art changes
-  const TOOL = LK.TOOL;                                                             // the hero's handheld tool: sprite, grip and tip (texture px)
+  const TOOL = LK.TOOL, POSES = LK.POSES || {};                                                             // the hero's handheld tool: sprite, grip and tip (texture px)
 
   // ---------------- the training centre ----------------
   // a maze wall: the floor rectangle lifted by WALL_H is its top face; a strip whose south edge is the wall's also shows the front face
