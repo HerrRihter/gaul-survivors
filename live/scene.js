@@ -82,7 +82,8 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   const { ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI } = LK.PAL;
   // a hero's sprites (hr_* sheets); Utrace's until its sheet is generated
   const HART = {}; const heroArt = (h, skin) => { const key = h + ':' + (skin || ''); if (HART[key]) return HART[key]; const H = SIM.HEROES[h] || SIM.HEROES[SETTING.RUN.hero], sk = SIM.SKINS[skin];   // a skin's own sheet, else the hero's
-    let a = sk && sk.hero === h ? sk.art : H.art; try { G.tex(a + '_body'); } catch (_) { a = H.art; try { G.tex(a + '_body'); } catch (_) { a = 'hero'; } } return (HART[key] = a); };
+    const has = (n) => { for (const p of ['_body', '_idle']) { try { G.tex(n + p); return true; } catch (_) {} } return false; };   // a rig or whole poses
+    let a = sk && sk.hero === h ? sk.art : H.art; if (!has(a)) { a = H.art; if (!has(a)) a = 'hero'; } return (HART[key] = a); };
   const heroCol = (ST) => (SIM.HEROES[ST.hero] || SIM.HEROES[SETTING.RUN.hero]).col;
   const ART_FALLBACK = LK.ART_FALLBACK, ART = {};
   const artOf = (k) => { if (ART[k]) return ART[k]; let a = k; try { G.tex(k + '_body'); } catch (_) { a = ART_FALLBACK[k] || k; } return (ART[k] = a); };
