@@ -4,8 +4,8 @@
 (function (root) {
   const SIM = root.SIM, G = root.G;
   // effect and interface colours (linear 0..1); the effect families: ICE cold, ELEC electric, PHYS physical objects, *_HI evolutions
-  const INK = [0.02, 0.06, 0.09], CYAN = [0.0, 0.9, 1.0], MINT = [0.39, 1.0, 0.85], CORAL = [1.0, 0.4, 0.35], HAZ = [1.0, 0.84, 0.0];
-  const ICE = [0.8, 0.94, 1], ELEC = [0.62, 0.5, 1], ELEC_HI = [0.82, 0.74, 1], CYAN_HI = [0.72, 1, 1], PHYS = [0.8, 0.88, 1], PHYS_HI = [0.95, 0.98, 1];
+  const INK = [0.02, 0.06, 0.09], CYAN = [1.0, 0.8, 0.32], MINT = [0.39, 1.0, 0.85], CORAL = [1.0, 0.4, 0.35], HAZ = [1.0, 0.84, 0.0];
+  const ICE = [0.8, 0.94, 1], ELEC = [0.62, 0.5, 1], ELEC_HI = [0.82, 0.74, 1], CYAN_HI = [1.0, 0.94, 0.7], PHYS = [0.8, 0.88, 1], PHYS_HI = [0.95, 0.98, 1];
 
   // client emblems and marks, ported from utreys-survivors (src/rendering/art/client-emblems.js), painted once into textures and
   // laid on the plain area of each body (never mirrored, so lettering always reads)
@@ -53,13 +53,14 @@
   }
 
   // props' drawn heights (view px), unless sizes.js measured them
-  const PH = { rack: 230, rack_b: 230, ups: 96, pdu: 96, cell: 112, cart: 116, cart_b: 116, core: 400, cage: 470, crac: 200, tray: 130, firerack: 150, switch: 112, desk: 140, tapelib: 220, patch: 230, blade: 150, dock: 70, holopillar: 150, spool: 110, manifold: 110, batbank: 110, switchstack: 220, crates: 120, mast: 170, rack_open: 230 };   // prop heights, view px
+  const PH = { hut: 330, cauldron: 150, menhir: 250, rack: 230, rack_b: 230, ups: 96, pdu: 96, cell: 112, cart: 116, cart_b: 116, core: 400, cage: 470, crac: 200, tray: 130, firerack: 150, switch: 112, desk: 140, tapelib: 220, patch: 230, blade: 150, dock: 70, holopillar: 150, spool: 110, manifold: 110, batbank: 110, switchstack: 220, crates: 120, mast: 170, rack_open: 230 };   // prop heights, view px
 
   // ---------------- rigs: per actor type, view px; legs and arms are one drawing each, cut at the joint ----------------
   // hipY = hip height at rest, leg = hip→ankle length (two equal bones), hipW = half hip width, sh* = shoulders, stride = one gait cycle
   const RIGS = {
-    hero:  { body: 70, hipY: 27, leg: 35, legW: 16, lift: 0.11, D: 0.35, hipW: 11, foot: [27, 15], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 14, stride: 92, bob: 6, flip: false },
+    hero:  { body: 70, hipY: 27, leg: 35, legW: 16, lift: 0.11, D: 0.35, hipW: 11, foot: [27, 15], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 14, stride: 92, bob: 6, flip: true },
     node:  { body: 60, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
+    legion: { body: 64, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
     panel: { body: 58, hipY: 24, leg: 29, legW: 11, hipW: 10, foot: [19, 11], shY: 44, shW: 34, arm: 21, armW: 10, stride: 48, bob: 3, flip: true },
     orb:   { body: 68, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [23, 13], shY: 46, shW: 33, arm: 23, armW: 12, stride: 52, bob: 3, flip: true },
     keg:   { body: 88, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 64, shW: 42, arm: 29, armW: 16, stride: 62, bob: 4, flip: true },
@@ -96,45 +97,27 @@
   // the floor: dark panels, a thin 100 px grid, a bright 500 px grid with a halo, circuit traces with pads, pulses running along
   // the major lines; the neon colour comes from the zone (soft 150 px blend at zone edges), world-anchored (u_cam)
   // the floor shader (scene.js draws it full screen; uniforms: u_cam world offset, u_t time, u_z0..4 zone rectangles, u_c0..4 their
-  // colours, u_pc the plaza colour, u_pat / u_pat4 each zone's pattern index; v_px the pixel, hash() from lib.js)
+  // colours, u_pc the plaza colour, u_pat / u_pat4 each zone's pattern index; v_px the pixel; hash, vnoise, fbm from gl.js)
   const FLOOR = `uniform vec2 u_cam; uniform vec4 u_z0, u_z1, u_z2, u_z3, u_z4; uniform vec3 u_c0, u_c1, u_c2, u_c3, u_c4, u_pc; uniform vec4 u_pat; uniform float u_pat4;
-float inZ(vec2 w, vec4 z){ w.y *= 0.62; vec2 a = smoothstep(z.xy - 150.0, z.xy + 150.0, w) * (1.0 - smoothstep(z.zw - 150.0, z.zw + 150.0, w)); return a.x * a.y; }
-float gl(float v, float per, float w){ float d = abs(fract(v / per + 0.5) - 0.5) * per; return 1.0 - smoothstep(0.0, w, d); }
 void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
-  vec3 zc = u_pc; zc = mix(zc, u_c0, inZ(w, u_z0)); zc = mix(zc, u_c1, inZ(w, u_z1)); zc = mix(zc, u_c2, inZ(w, u_z2)); zc = mix(zc, u_c3, inZ(w, u_z3)); zc = mix(zc, u_c4, inZ(w, u_z4));
-  vec2 cell = floor(w / 100.0); float h = hash(cell);
-  vec3 col = vec3(0.022, 0.042, 0.05) * (0.85 + 0.3 * h) + zc * 0.014;
-  float minor = max(gl(w.x, 100.0, 1.2), gl(w.y, 100.0, 1.2)), major = max(gl(w.x, 500.0, 1.8), gl(w.y, 500.0, 1.8)), halo = max(gl(w.x, 500.0, 16.0), gl(w.y, 500.0, 16.0));
-  col += zc * (minor * 0.07 + major * 0.3 + halo * 0.05);
-  vec2 f = fract(w / 100.0); float hh = hash(cell + 7.3);
-  if (hh > 0.6) { float ox = 0.3 * (hash(cell + 1.1) - 0.5), oy = 0.3 * (hash(cell + 2.2) - 0.5), tx = abs(f.x - 0.5 - ox), ty = abs(f.y - 0.5 - oy);
-    float tr = fract(hh * 13.0) > 0.5 ? (1.0 - smoothstep(0.0, 0.016, tx)) * step(f.y, 0.5 + oy) + (1.0 - smoothstep(0.0, 0.016, ty)) * step(0.5 + ox, f.x)
-                                       : (1.0 - smoothstep(0.0, 0.016, ty)) * step(f.x, 0.5 + ox) + (1.0 - smoothstep(0.0, 0.016, tx)) * step(0.5 + oy, f.y);
-    float pad = 1.0 - smoothstep(0.025, 0.045, length(f - vec2(0.5 + ox, 0.5 + oy)));
-    col += zc * (min(tr, 1.0) * 0.15 + pad * 0.32); }
-  float px = gl(w.y, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.x + hash(vec2(floor(w.y / 500.0 + 0.5), 3.0)) * 4000.0 - u_t * 520.0) / 1700.0));
-  float py = gl(w.x, 500.0, 2.5) * smoothstep(0.92, 1.0, fract((w.y + hash(vec2(floor(w.x / 500.0 + 0.5), 5.0)) * 4000.0 - u_t * 460.0) / 1500.0));
-  col += mix(zc, vec3(1.0), 0.5) * (px + py) * 0.9;
-  float k0 = inZ(w, u_z0), k1 = inZ(w, u_z1), k2 = inZ(w, u_z2), k3 = inZ(w, u_z3), k4 = inZ(w, u_z4);
-  vec2 q = fract(w / 14.0) - 0.5; float dots = 1.0 - smoothstep(0.16, 0.22, length(q));                              // perforation
-  vec2 hx = w / 46.0; hx.x *= 1.1547; hx.y += mod(floor(hx.x), 2.0) * 0.5; vec2 hf = abs(fract(hx) - 0.5);
-  float hexl = 1.0 - smoothstep(0.0, 0.05, abs(max(hf.x * 1.5 + hf.y, hf.y * 2.0) - 1.0));                            // hex mesh
-  float diag = gl(w.x + w.y, 90.0, 6.0), rail = max(gl(w.y, 500.0, 9.0), gl(w.x, 500.0, 9.0)) - major;                 // power stripes and rails
-  float fine = max(gl(w.x, 25.0, 0.8), gl(w.y, 25.0, 0.8));                                                           // NOC fine grid
-  float pv[5]; pv[0] = dots * 0.05 * (0.5 + 0.5 * step(0.55, h)); pv[1] = hexl * 0.1; pv[2] = diag * 0.05; pv[3] = max(rail, 0.0) * 0.18; pv[4] = fine * 0.05;
-  col += zc * (k0 * pv[int(u_pat.x)] + k1 * pv[int(u_pat.y)] + k2 * pv[int(u_pat.z)] + k3 * pv[int(u_pat.w)] + k4 * pv[int(u_pat4)]);
-  col += vec3(1.0, 0.84, 0.0) * k3 * diag * 0.045;                                                                   // hazard striping, the only yellow
-  vec2 tf = fract(w / 100.0);                                                                                         // raised floor panels
-  float lip = smoothstep(0.05, 0.0, tf.y), front = smoothstep(0.86, 0.9, tf.y) * (1.0 - smoothstep(0.98, 1.0, tf.y)), side = smoothstep(0.965, 0.985, tf.x) * 0.6;
-  col += zc * lip * 0.12 + vec3(0.03, 0.05, 0.06) * lip; col *= 1.0 - 0.7 * front - 0.35 * side;
-  col *= 0.86 + 0.26 * (1.0 - tf.y);                                                                                  // each panel lighter at its far edge
-  float gloss = pow(0.5 + 0.5 * sin(w0.x * 0.0021 + w0.y * 0.0034 + hash(floor(w0 / 900.0)) * 6.0), 6.0);               // broad glossy reflections
-  col += zc * gloss * 0.035;
-  float sy = v_px.y / 1080.0; col = mix(col * 0.55 + zc * 0.02, col, smoothstep(0.0, 0.55, sy));                         // depth haze toward the top
+  vec2 c = vec2(4000.0, 3000.0 / 0.62); float wob = (fbm(w / 260.0) - 0.5) * 260.0;
+  float plaza = 1.0 - smoothstep(1050.0, 1250.0, length((w - c) * vec2(1.0, 0.8)) + wob);                        // the trampled village square
+  float road = 1.0 - smoothstep(170.0, 260.0, abs(w.x - 4000.0 + sin(w.y / 900.0) * 140.0) + wob * 0.4);       // the north–south track
+  float dirt = max(plaza, road);
+  float g = fbm(w / 180.0), gd = fbm(w / 37.0);
+  vec3 grass = mix(vec3(0.42, 0.58, 0.27), vec3(0.58, 0.70, 0.33), g) * (0.92 + 0.12 * gd);
+  float tuft = smoothstep(0.72, 0.8, vnoise(w / 9.0 + vec2(0.0, w.x / 31.0))) * (1.0 - dirt);                       // grass blades
+  grass = mix(grass, vec3(0.33, 0.48, 0.22), tuft * 0.5);
+  vec3 earth = mix(vec3(0.80, 0.69, 0.60), vec3(0.72, 0.60, 0.52), fbm(w / 120.0)) * (0.95 + 0.08 * gd);
+  float pebble = smoothstep(0.86, 0.9, vnoise(w / 7.0)) * dirt;
+  earth = mix(earth, vec3(0.62, 0.55, 0.50), pebble * 0.6);
+  float edge = smoothstep(0.35, 0.5, dirt) * (1.0 - smoothstep(0.5, 0.7, dirt));                                // a soft grassy fringe
+  vec3 col = mix(grass, earth, smoothstep(0.4, 0.6, dirt)); col = mix(col, vec3(0.5, 0.6, 0.32), edge * 0.35);
+  float sy = v_px.y / 1080.0; col = mix(col * 0.9 + vec3(0.03, 0.04, 0.05), col, smoothstep(0.0, 0.5, sy));     // light haze toward the top
   o = vec4(col, 1.0); }`;
 
   // the hero's handheld tool (its attack comes from the tip): the sprite and, in its texture px, the grip and the tip
-  const TOOL = { sprite: 'scanner', grip: [75, 148], tip: [252, 76] };   // round 23: the slim scanner of hero_v2_sheet
+  const TOOL = { sprite: 'sword', grip: [270, 182], tip: [1308, 184] };         // Asterix's sword (art/gen/sword.png): the handle's middle and the point
 
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',

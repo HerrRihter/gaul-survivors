@@ -9,6 +9,7 @@
   // kind: melee (burst at range), shoot (aimed shot or a ring: shots.count > 1), mortar (marks round the hero), pulse (area around itself)
   const FOE = {
     node:    { name: 'L3', kind: 'melee', hp: 70, sp: 156, dmg: 7, r: 26, range: 64, wind: 0.6, cd: 0.8, xp: 2, mark: 'L3', col: [0.36, 1, 0.6] },
+    legion:  { name: 'Легионер', kind: 'melee', hp: 70, sp: 156, dmg: 7, r: 26, range: 64, wind: 0.6, cd: 0.8, xp: 2, col: [0.86, 0.3, 0.22] },
     panel:   { name: 'Фильтр Grafana', kind: 'melee', hp: 40, sp: 210, dmg: 5, r: 22, range: 56, wind: 0.5, cd: 0.8, xp: 1, col: [1, 0.6, 0.19] },
     multon:  { name: 'Мултон', kind: 'melee', hp: 50, sp: 192, dmg: 6, r: 24, range: 58, wind: 0.45, cd: 0.7, xp: 2, emblem: 'multon', col: [1, 0.55, 0.2] },
     orb:     { name: 'Пепси', kind: 'melee', hp: 105, sp: 164, dmg: 9, r: 28, range: 68, wind: 0.7, cd: 0.93, xp: 4, col: [0.25, 0.66, 1],
@@ -50,10 +51,10 @@
     bugu:    { name: 'Баг отчёта использования', kind: 'shoot', hp: 2000, sp: 115, dmg: 12, r: 78, range: 620, wind: 0.9, cd: 1.8, xp: 40, poise: 3, mini: true, mark: 'BUG', keep: 260,
                shots: { count: 14, speed: 380, dmg: 1 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.89, 0.53, 0.83] },
     buga:    { name: 'Баг агрегации', kind: 'pulse', hp: 2400, sp: 120, dmg: 18, r: 78, range: 280, wind: 1.0, cd: 1.8, xp: 40, poise: 3, mini: true, mark: 'BUG',
-               summon: { every: 6, count: 3, max: 7, units: ['node'] }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.96, 0.55, 0.33] },
+               summon: { every: 6, count: 3, max: 7, units: ['legion'] }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.96, 0.55, 0.33] },
     // ЦРПТ: a miniboss of the «Дата-центр» since stage 5 of docs/PLAN-FEEDBACK-27-10.md (it opened the boss queue before)
     crpt:    { name: 'ЦРПТ', kind: 'pulse', hp: 3000, sp: 100, dmg: 20, r: 90, range: 220, wind: 1.3, cd: 2.6, xp: 60, poise: 4, mini: true, mark: 'ЦРПТ',
-               shots: { count: 8, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 3, max: 9, units: ['node', 'orb', 'mars'] }, col: [1, 0.84, 0],
+               shots: { count: 8, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 3, max: 9, units: ['legion', 'orb', 'mars'] }, col: [1, 0.84, 0],
                intro: 'ЦРПТ: проверка партии, подключены клиенты' },
     batch:   { name: 'Партионный учёт', kind: 'pulse', hp: 6000, sp: 70, dmg: 20, r: 100, range: 300, wind: 1.2, cd: 2.4, xp: 80, poise: 4, boss: true,
                shots: { count: 12, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 4, max: 8, units: ['orb'] }, ward: 0.7, col: [0.3, 0.6, 1],
@@ -80,7 +81,7 @@
   };
   // the enemy list's lines (the collection's «Враги» tab): what each one does, read from its mechanics above
   const FOE_DESC = {
-    node: 'Обычный узел: идёт к герою и бьёт вблизи', panel: 'Слабый и быстрый, берёт числом', multon: 'Быстрый, бьёт вблизи короткими ударами',
+    node: 'Обычный узел: идёт к герою и бьёт вблизи', legion: 'Обычный легионер: идёт к герою и бьёт вблизи', panel: 'Слабый и быстрый, берёт числом', multon: 'Быстрый, бьёт вблизи короткими ударами',
     orb: 'Издалека разгоняется и делает рывок к герою', keg: 'Медленный тяжеловес: бронированный перед, редкий сильный удар',
     baltika: 'Медленный тяжеловес, почти не отлетает от ударов', mars: 'Стреляет издалека, попадание замедляет',
     loreal: 'Стреляет залпом из восьми снарядов', ferrero: 'Миномёт: накрывает две точки возле героя',
@@ -162,6 +163,9 @@
   });
   // the five heroes: speed is relative to K.SPEED; price in codes (Utrace is free); col = the hero's accent
   const HEROES = {
+    asterix:       { name: 'Астерикс', role: 'Универсал', roleDesc: 'Хитрый и быстрый: лучший выбор для первой битвы.', price: 0, hp: 120, speed: 1, weapon: 'trace', art: 'hr_asterix', col: [0.86, 0.2, 0.16],
+                     passive: { name: 'Галльская смекалка', desc: '+1 слот оружия: 5 видов вместе с атакой героя', slots: 1 },
+                     training: { name: 'Школа фехтования', desc: '+6% к урону подобранного оружия', factor: 0.06 } },
     utrace:        { name: 'Utrace', role: 'Универсал', roleDesc: 'Ровный во всём, лучший выбор для первой смены.', price: 0, hp: 120, speed: 1, weapon: 'trace', art: 'hero', col: [0.0, 0.62, 0.73],
                      passive: { name: 'Универсальный стек', desc: '+1 слот оружия: 5 видов вместе с атакой героя', slots: 1 },
                      training: { name: 'Оптимизация Utrace', desc: '+6% к урону подобранного оружия', factor: 0.06 } },
@@ -234,6 +238,8 @@
   // the heroes' E abilities (data/characters/abilities.js of the original): cd and dur in s, radius ×2; rank (level-up cards, max AB_MAX)
   // adds rankDur s, rankPow damage share or rankStun s
   const ABIL = {
+    asterix:       { id: 'overclock', name: 'Волшебное зелье', ic: 'ab_overclock', cd: 22, dur: 6, rankDur: 1, haste: 1.6, speed: 1.15,
+                     desc: 'Глоток зелья: на 6 с темп атак ×1,6 и скорость +15%', up: 'Зелье действует на 1 с дольше' },
     utrace:        { id: 'overclock', name: 'Оверклокинг', ic: 'ab_overclock', cd: 22, dur: 6, rankDur: 1, haste: 1.6, speed: 1.15,
                      desc: 'Разгон ядра: на 6 с темп атак ×1,6 и скорость +15%', up: 'Оверклокинг действует на 1 с дольше' },
     traceability:  { id: 'registry', name: 'Реестр', ic: 'ab_registry', cd: 20, dur: 5, rankDur: 1,
@@ -248,7 +254,7 @@
 
   // ground footprints [half width, half depth], measured from each drawing at its in-game size: the front edge sits on the ground
   // point, the depth runs back like the top face of the 3/4 drawing
-  const FOOT = { ups: [56, 26], pdu: [36, 20], cart: [32, 16], cart_b: [38, 18], core: [205, 104], cage: [157, 72], crac: [127, 58], tray: [51, 17],
+  const FOOT = { hut: [150, 74], cauldron: [62, 30], menhir: [38, 18], ups: [56, 26], pdu: [36, 20], cart: [32, 16], cart_b: [38, 18], core: [205, 104], cage: [157, 72], crac: [127, 58], tray: [51, 17],
     firerack: [35, 15], switch: [37, 18], desk: [62, 30], tapelib: [45, 21], patch: [28, 17], cell: [38, 20],
     blade: [37, 18], dock: [37, 24], holopillar: [25, 16], spool: [42, 23], manifold: [44, 22], batbank: [54, 25], switchstack: [43, 24], crates: [42, 23], mast: [44, 24], rack_open: [69, 31] };
 
@@ -285,16 +291,11 @@
     const row = (x0, y, n, f = 0) => { for (let i = 0; i < n; i++) add(i % 3 ? 'rack' : 'rack_b', x0 + i * 150, y, (i + f) % 2);
       BOXES.push({ x: x0 + (n - 1) * 75, y: y - 20, hw: n * 75 - 28, hh: 20 }); TAPES.push([[x0 - 90, y + 46], [x0 + (n - 1) * 150 + 90, y + 46]]); };
     const rowOk = (x0, y, n) => { for (let i = 0; i < n; i++) if (!ok(x0 + i * 150, y)) return false; return true; };
-    // the central plaza = the match screen: the reference's composition as a datacenter (fixed)
-    add('core', ...R(170, 262)); row(R(860, 118)[0], R(860, 118)[1], 2); add('switch', ...R(770, 118));
-    add('cage', ...R(1235, 412)); add('crac', ...R(85, 560)); add('crac', ...R(85, 690)); add('cart', ...R(250, 640)); add('tray', ...R(330, 470));
-    for (const [x, y] of [[430, 140], [612, 300], [918, 650]]) LAMPS.push(R(x, y));
-    for (const [x, y] of [[480, 68], [1230, 528], [840, 705]]) add('ups', ...R(x, y));
-    for (const [x, y] of [[210, 388], [430, 525], [1135, 478]]) add('pdu', ...R(x, y));
-    add('firerack', ...R(560, 700));
+    // the central plaza: the village centre round the hero's start — huts, the druid's cauldron, menhirs (stage 2 slice)
+    add('hut', ...R(150, 250)); add('hut', ...R(1180, 300), 1); add('hut', ...R(820, 70)); add('hut', ...R(330, 690), 1);
+    add('cauldron', ...R(930, 600));
+    for (const [x, y] of [[470, 120], [1130, 640], [60, 520]]) add('menhir', ...R(x, y));
     for (const [x, y] of [[1010, 345], [1040, 365], [1068, 338], [1090, 372]]) TANKS.push(R(x, y));
-    STENCILS.push({ x: R(480, 268)[0], y: R(480, 268)[1], rot: -0.21, s: 'ПРАВИЛО №3: НЕ СТОЙ НА МЕСТЕ', sz: 64 });
-    RINGS.push([SPAWN[0], SPAWN[1], 900], [R(170, 262)[0], R(170, 262)[1] - 40, 320]);
     // outer walls: rack rows top and bottom, cooling units on the sides
     for (let x = 140; x < WORLD.x1 - 700; x += 900) { row(x, 150, 5); row(x + 75, WORLD.y1 - 10, 5, 1); }
     for (let y = 430; y < WORLD.y1 - 160; y += 320) { add('crac', 110, y); add('crac', WORLD.x1 - 110, y, 1); }
@@ -331,12 +332,7 @@
       if (clear(x, y, 1000) && offNode(x, y) && !lane(x, y) && fits(k, x, y, 70)) add(k, x, y, lr() > 0.5 ? 1 : 0); } });
     for (const z of ZONES) STENCILS.push({ x: z.nx, y: z.ny + NODE_R * 0.62 + 90, rot: 0, s: z.name, sz: 72 });
     STENCILS.push({ x: 4000, y: 1400, rot: 0.03, s: 'ХОЛОДНЫЙ КОРИДОР', sz: 64 }, { x: 4000, y: 3950, rot: -0.03, s: 'НЕ ПЕРЕЗАГРУЖАТЬ!', sz: 60 });
-    // fibre trunks across the floor (packets stream along them in the scene), ceiling light pools
-    for (const y of [2800, 3200]) CABLES.push([[80, y], [2600, y + 40], [5400, y - 40], [WORLD.x1 - 80, y]]);
-    for (const x of [3800, 4200]) CABLES.push([[x, 220], [x + 30, 2400], [x - 30, 3700], [x, WORLD.y1 - 80]]);
-    // ceiling fixtures (light pools only) over aisles and the plaza
-    for (let gy = 0; gy < 12; gy++) for (let gx = 0; gx < 13; gx++) { const x = 380 + gx * 600 + (gy % 2) * 300, y = 380 + gy * 470;
-      if (clear(x, y, 800) && x < WORLD.x1 - 200 && y < WORLD.y1 - 150) LAMPS.push([Math.round(x), Math.round(y)]); }
+    // daylight: no light pools, no fibre trunks in the village
     // two Pepsi service desks on open floor (foes, not solids): picked from candidate spots, clear of props and nodes
     const DESKS = []; for (const [x0, y0] of shuffle([[4000, 1250], [5400, 2940], [2600, 2940], [4000, 4250], [1450, 2950], [6550, 3000]])) { if (DESKS.length >= 2) break;
       const x = Math.round(x0 + jit(80)), y = Math.round(y0 + jit(50)); if (offNode(x, y) && clear(x, y, 700) && fits('desk', x, y, 90)) DESKS.push([x, y]); }
@@ -352,13 +348,13 @@
   // closed), the roster growing over the shift ([type, weight, from minute, fade: the weight falls by this share a minute, to 35%]),
   // the swarms every 75 s (alternating), the attract demo, the training centre's hall bosses by the course's unit
   const RUN = {
-    hero: 'utrace', map: 'dc',
+    hero: 'asterix', map: 'dc',
     bosses: [[150, 'crpt'], [270, 'repl'], [420, 'rstorm']], final: 'outage',
-    roster: [['node', 1, 0, 0.08], ['panel', 0.6, 0], ['multon', 0.5, 0.3], ['mond', 0.4, 1.0], ['orb', 0.7, 1], ['mars', 0.45, 1.3], ['prog', 0.35, 2.0], ['petfood', 0.35, 2.2],
+    roster: [['legion', 1, 0, 0.08], ['panel', 0.6, 0], ['multon', 0.5, 0.3], ['mond', 0.4, 1.0], ['orb', 0.7, 1], ['mars', 0.45, 1.3], ['prog', 0.35, 2.0], ['petfood', 0.35, 2.2],
       ['keg', 0.3, 2.3], ['loreal', 0.35, 2.6], ['royal', 0.3, 3.0], ['baltika', 0.3, 3.2], ['cherk', 0.25, 3.5], ['ferrero', 0.3, 3.8], ['pg', 0.18, 4.0], ['vetis', 0.18, 4.5], ['logq', 0.2, 4.8]],
     swarms: [{ unit: 'panel', toast: 'ШТОРМ АЛЕРТОВ: фильтры Grafana со всех сторон' }, { unit: 'multon', toast: 'НАПЛЫВ КЛИЕНТОВ: Мултон спешит с заявками' }],
-    demo: { hero: 'utrace', wp: { trace: 2, homing: 2, orbit: 1 }, wcd: { trace: 0.2, homing: 0.6, orbit: 0 }, boss: 'boss',
-      kinds: ['node', 'multon', 'orb', 'panel', 'mars', 'keg', 'loreal', 'node', 'panel', 'baltika', 'orb', 'ferrero'] },
+    demo: { hero: 'asterix', wp: { trace: 2, homing: 2, orbit: 1 }, wcd: { trace: 0.2, homing: 0.6, orbit: 0 }, boss: 'boss',
+      kinds: ['legion', 'multon', 'orb', 'panel', 'mars', 'keg', 'loreal', 'legion', 'panel', 'baltika', 'orb', 'ferrero'] },
     eduBoss: { batch_accounting: 'batch', critical_incident: 'boss', default: 'boss' },
   };
   // the shop's permanent upgrades (meta.js): price 30 × the next rank

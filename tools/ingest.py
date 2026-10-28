@@ -35,6 +35,9 @@ SHEETS = {
     'sk_utrace_zen_sheet': (['sk_utrace_zen_body', '_bentleg', 'sk_utrace_zen_foot', '_bentarm'], 'reading'),
     'sk_utrace_arctic_sheet': (['sk_utrace_arctic_body', '_bentleg', 'sk_utrace_arctic_foot', '_bentarm'], 'reading'),
     'hero_v2_sheet': (['hero_body', '_bentleg', 'hero_foot', '_bentarm', 'scanner'], 'reading'),   # round 23: Utrace redrawn clean
+    # the Gaul setting (docs/PLAN-GAUL.md, stage 2 slice): every part generated alone (tools/make_prompts_gaul.py)
+    **{f'{c}_{part}only': ([f'{c}_{part}'], 'x', ['--dilate', '12'] if part == 'body' else []) for c in ['hr_asterix', 'legion'] for part in ['body', 'leg', 'foot', 'arm']},
+    'sword_gen': (['sword'], 'x'),
     'node_sheet': (['node_body', 'node_leg', 'node_foot', 'node_arm'], 'reading'),
     'panel_sheet': (['panel_body', 'panel_leg', 'panel_foot', 'panel_arm'], 'reading'),
     'orb_sheet': (['orb_body', 'orb_leg', 'orb_foot', 'orb_arm'], 'reading'),
@@ -82,7 +85,7 @@ SHEETS = {
     'icons4_sheet': (['ic_x_trace', 'ic_x_orbit', 'ic_x_homing', 'ic_x_mine', 'ic_x_ping', 'ic_x_retry', 'ic_x_cache', 'ic_x_udp', 'ic_x_chain', 'ic_x_storm',
                       'ic_x_turret', 'ic_x_cryo', 'ic_x_fork'], 'reading', ['--dilate', '10', '--min', '2500']),
 }
-SINGLES = ['core', 'cage']
+SINGLES = ['core', 'cage', 'hut', 'cauldron', 'menhir']
 env = dict(os.environ, PYTHONUTF8='1')
 os.chdir(os.path.join(os.path.dirname(__file__), '..'))
 want = sys.argv[1:] or [s for s in list(SHEETS) + SINGLES if os.path.exists(f'art/gen/{s}.png')]
