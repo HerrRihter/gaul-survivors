@@ -58,9 +58,11 @@
   // ---------------- rigs: per actor type, view px; legs and arms are one drawing each, cut at the joint ----------------
   // hipY = hip height at rest, leg = hip→ankle length (two equal bones), hipW = half hip width, sh* = shoulders, stride = one gait cycle
   const RIGS = {
-    hero:  { body: 70, hipY: 27, leg: 35, legW: 16, lift: 0.11, D: 0.35, hipW: 11, foot: [27, 15], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 14, stride: 92, bob: 6, flip: true },
+    // the Gauls and Romans by their designs (gaul-survivors): a legionary about 95 px tall, Asterix 1.35× smaller; body = head and torso
+    // (Asterix 69%, the legionary 74% of the height), short legs (about 22%), big shoes; the drawn limbs are thin, legK / armK widen them
+    hero:  { body: 55, hipY: 22, leg: 27, legW: 6, legK: 1.4, lift: 0.11, D: 0.35, hipW: 6, foot: [20, 9], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 6, armK: 1.25, stride: 60, bob: 4, flip: true },
     node:  { body: 60, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
-    legion: { body: 64, hipY: 26, leg: 31, legW: 13, hipW: 8, foot: [21, 12], shY: 50, shW: 11, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },   // narrow shoulders and hips (measured on legion_body)
+    legion: { body: 78, hipY: 23, leg: 28, legW: 6, legK: 1.25, hipW: 9, foot: [19, 10], shY: 58, shW: 13, arm: 27, armW: 6, armK: 1.5, stride: 52, bob: 3, flip: true },
     panel: { body: 58, hipY: 24, leg: 29, legW: 11, hipW: 10, foot: [19, 11], shY: 44, shW: 34, arm: 21, armW: 10, stride: 48, bob: 3, flip: true },
     orb:   { body: 68, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [23, 13], shY: 46, shW: 33, arm: 23, armW: 12, stride: 52, bob: 3, flip: true },
     keg:   { body: 88, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 64, shW: 42, arm: 29, armW: 16, stride: 62, bob: 4, flip: true },

@@ -2,6 +2,7 @@
 # sheets come back with bent limbs): the body first against the character's original design, then each limb against that body.
 #   python tools/make_prompts_gaul.py a      → art/jobs_gaul_a.json: the bodies, Asterix's sword, the plaza props
 #   python tools/make_prompts_gaul.py b      → art/jobs_gaul_b.json: legs, feet and arms (needs the phase a bodies in art/gen)
+#   python tools/make_prompts_gaul.py b foot → only the jobs whose name has 'foot' (any words: a redraw of some parts)
 # The style bible and the style reference (Image 1, a 1976 film cel) come from ref2game.json on this branch.
 import json, os, sys
 os.chdir(os.path.join(os.path.dirname(__file__), '..'))
@@ -20,14 +21,16 @@ CHARS = {
         'a black sleeveless tunic, a broad green belt with three round gold studs, and the small blue-grey gourd of magic potion hanging at the belt on his left. '
         'Proportions: a very big head (about half of the body\'s height) on a short compact torso.',
         'his red trousers: ONE leg in red cloth (#d8332a) with soft folds',
-        'ONE short brown leather boot (#7a4a22), soft and rounded, seen from the side, the toe pointing right, a turned-down cuff at the top',
+        'ONE big low cartoon shoe in soft brown leather (#7a4a22), like his in Image 3: long, low and rounded with a bulbous toe and a flat dark sole, NO cuff, '
+        'NO boot shaft, open at the top where the trouser leg comes in; about two and a half times as long as it is tall; seen from the side, the toe pointing right',
         'ONE bare arm in pink skin (#f2b5a0), slim, with a big cartoon hand closed in a fist at the bottom'),
     'legion': ('art/refs/gaul/legion_design.jpg',
         'the thin Roman legionary: a domed iron helmet with long cheek guards hanging down the sides of the face, a long sad face, drooping eyelids, '
         'a long pink nose, a thin neck; a green tunic (#3f7d3a) under grey segmented iron shoulder armour (lorica), a brown leather belt. '
         'Proportions: a big head on narrow shoulders and a thin torso. Do NOT draw his shield or spear.',
         'ONE thin bare leg in pink skin (#f0b098) with a small round knee',
-        'ONE brown leather Roman sandal (#6a3f1c) with crossed straps over the foot, seen from the side, the toe pointing right',
+        'ONE bare cartoon foot in pink skin (#f0b098) in a flat brown leather Roman sandal (#6a3f1c): a thin flat sole, two or three thin straps across the foot, '
+        'the bare toes showing at the front, NO high straps up the ankle; about two and a half times as long as it is tall; seen from the side, the toe pointing right',
         'ONE thin bare arm in pink skin (#f0b098) with a short green tunic sleeve cap at the shoulder and a big cartoon fist at the bottom'),
 }
 
@@ -80,7 +83,7 @@ SWORD = {'name': 'sword_gen', 'size': '1536x1024', 'alpha': 'auto', 'ref': [{'pa
         'Centred on the canvas.', FINISH, LAST])}
 
 if phase == 'a': jobs = [body_job(k) for k in CHARS] + [SWORD] + [prop_job(k) for k in PROPS]
-elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k)]
+elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k) if not sys.argv[2:] or any(w in j['name'] for w in sys.argv[2:])]
 else: sys.exit('phase: a | b')
 out = f'art/jobs_gaul_{phase}.json'
 json.dump(jobs, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
