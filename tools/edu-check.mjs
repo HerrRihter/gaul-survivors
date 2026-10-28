@@ -8,7 +8,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const live = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'live');
 const ctx = { console, Math, Date, JSON }; ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
-for (const f of ['course.js', 'edu.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
+for (const f of ['course.js', 'edu.js', 'setting.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
 const { SIM, EDU, COURSE } = ctx;
 const N = +(process.argv[2] || 200), bad = []; let tries = 0, maxTries = 0;
 for (let s = 0; s < N; s++) for (let room = 0; room < COURSE.rooms.length; room++) {

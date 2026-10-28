@@ -6,7 +6,7 @@
 (function () {
   const S = (window.SCENE = {}), A = window.ASSETS, L = LIB, M = L.M, W = SIM.VIEW.W, H = SIM.VIEW.H, Z = window.SIZES || {};
   S.REPEAT = [];
-  const D2R = Math.PI / 180, INK = [0.02, 0.06, 0.09], CYAN = [0.0, 0.9, 1.0], MINT = [0.39, 1.0, 0.85], CORAL = [1.0, 0.4, 0.35], HAZ = [1.0, 0.84, 0.0];
+  const D2R = Math.PI / 180, LK = SETTING.LOOK, { INK, CYAN, MINT, CORAL, HAZ } = LK.PAL;   // the setting's look: live/setting-look.js
   // trace sector: a fan of scan rays and a front racing out to the range, additive (u_a aim, u_half, u_age 0..1)
   const ARC = `uniform float u_a, u_half, u_age; uniform vec3 u_col;
 void main(){ vec2 p = v_uv * 2.0 - 1.0; float d = length(p); float an = atan(p.y, p.x) - u_a; an = atan(sin(an), cos(an));
@@ -71,50 +71,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   const ZU = {}, zoneU = () => { for (let i = 0; i < 5; i++) { const z = SIM.ZONES[i]; ZU['u_z' + i] = z ? [z.x0, z.y0, z.x1, z.y1] : [-9e4, -9e4, -9e4, -9e4]; ZU['u_c' + i] = z ? z.col : floorCol(); }
     ZU.u_pc = floorCol(); ZU.u_pat = [0, 1, 2, 3].map((i) => (SIM.ZONES[i] ? SIM.ZONES[i].pat : 0)); ZU.u_pat4 = SIM.ZONES[4] ? SIM.ZONES[4].pat : 0; }; zoneU(); let levelSeen = SIM.LEVEL_ID;
   const zcol = (x, y) => { const z = SIM.zoneAt(x, y); return z ? z.col : floorCol(); };
-  // client emblems and marks, ported from utreys-survivors (src/rendering/art/client-emblems.js), painted once into textures and
-  // laid on the plain area of each body (never mirrored, so lettering always reads)
-  const EMB_AT = { mars: [0.6, 0.5, 'mars'], loreal: [0.62, 0.62, 'loreal'], multon: [0.63, 0.56, 'multon'], baltika: [0.62, 0.62, 'baltika'], ferrero: [0.62, 0.56, 'ferrero'],
-    vetis: [0.6, 0.55, 'vetis'], keg: [0.8, 0.42, 'inbev'], bugu: [0.65, 0.5, 'bug'], buga: [0.63, 0.42, 'bug'], bugl: [0.62, 0.4, 'bug'], bugg: [0.62, 0.4, 'bug'], crpt: [0.6, 0.48, 'crpt'],
-    mond: [0.6, 0.5, 'mondelez'], prog: [0.56, 0.5, 'progress'], royal: [0.6, 0.5, 'royal_canin'], cherk: [0.66, 0.46, 'cherkizovo'], pg: [0.56, 0.46, 'procter_gamble'],
-    petfood: [0.6, 0.48, 'mars_petfood'], logq: [0.8, 0.36, 'log'] };
-  function emblems() {
-    const neon = (g, c) => { g.save(); g.shadowColor = c; g.shadowBlur = 4; g.strokeStyle = c; g.lineWidth = 2; g.stroke(); g.restore(); };
-    const word = (g, t, x, y, sz, c, wt = 'bold', fam = 'Arial, sans-serif') => { g.save(); g.font = `${wt} ${sz}px ${fam}`; g.textAlign = 'center'; g.textBaseline = 'middle'; g.shadowColor = c; g.shadowBlur = 3; g.fillStyle = c; g.fillText(t, x, y); g.restore(); };
-    const plate = 'rgba(6,16,24,0.88)';
-    const ell = (g, x, y, rx, ry, fill, st) => { g.beginPath(); g.ellipse(x, y, rx, ry, 0, 0, Math.PI * 2); g.fillStyle = plate; g.fill(); neon(g, st || fill); };
-    const poly = (g, pts, fill, st) => { g.beginPath(); pts.forEach(([x, y], i) => (i ? g.lineTo(x, y) : g.moveTo(x, y))); g.closePath(); g.fillStyle = plate; g.fill(); neon(g, st || fill); };
-    const D = {
-      mars: (g) => { poly(g, [[-26, -40], [26, -40], [26, -4], [-26, -4]], '#ff4a3d'); word(g, 'M', 0, -22, 22, '#ffeb3b', 'italic 900'); },
-      inbev: (g) => { poly(g, [[-28, -40], [28, -40], [28, -6], [-28, -6]], '#d4af37'); word(g, 'INBEV', 0, -23, 12, '#ffd700'); },
-      baltika: (g) => { ell(g, 0, -22, 25, 29, '#3a7bff', '#e5c76f'); word(g, 'Балтика', 0, -29, 11, '#ffffff', 'italic bold');
-        for (let i = 0; i < 3; i++) { g.strokeStyle = '#e5c76f'; g.lineWidth = 2; g.beginPath(); g.moveTo(-17, -18 + i * 6); g.bezierCurveTo(-6, -25 + i * 6, 6, -11 + i * 6, 17, -18 + i * 6); g.stroke(); } },
-      multon: (g) => { poly(g, [[-24, -34], [-10, -47], [18, -42], [27, -17], [14, 0], [-18, -3]], '#a9b6ad', '#ef833f'); ell(g, 12, -36, 9, 4, '#53ab55');
-        word(g, 'multon', 0, -24, 12, '#7fc4ff'); word(g, 'partners', 0, -12, 7, '#7fc4ff'); ell(g, -17, -8, 3, 3, '#f7ad31'); },
-      loreal: (g) => { poly(g, [[-29, -36], [25, -36], [29, -5], [-25, -5]], '#14131c', '#e8b9cb'); g.fillStyle = '#e8b9cb'; g.fillRect(-21, -31, 42, 1);
-        word(g, 'L’ORÉAL', 0, -21, 11, '#ffffff', 'normal'); word(g, 'PARIS', 0, -11, 6, '#e8b9cb'); },
-      ferrero: (g) => { ell(g, 0, -22, 31, 22, '#b7b29b', '#e2c27a'); word(g, 'FERRERO', 0, -22, 11, '#f0d9a8', 'bold', 'Georgia, serif');
-        g.strokeStyle = '#c4a565'; g.beginPath(); g.moveTo(-16, -13); g.lineTo(16, -13); g.stroke(); },
-      vetis: (g) => { poly(g, [[0, -49], [25, -39], [22, -10], [0, 5], [-22, -10], [-25, -39]], '#114f47', '#8edbb9'); g.strokeStyle = '#f1d882'; g.lineWidth = 2.5;
-        g.beginPath(); g.moveTo(0, -42); g.lineTo(0, -17); g.stroke(); g.beginPath(); g.moveTo(6, -39); g.bezierCurveTo(-16, -37, 15, -28, -5, -22); g.stroke(); word(g, 'ВЕТИС', 0, -8, 9, '#ffffff'); },
-      bug: (g) => { word(g, 'BUG', 0, -22, 22, '#ffd600', 'italic 900'); },
-      crpt: (g) => { word(g, 'ЦРПТ', 0, -22, 18, '#ffd600', 'bold', 'Consolas, monospace'); },
-      mondelez: (g) => { ell(g, 0, -22, 32, 23, '#4e247a', '#bda0e3'); word(g, 'mondelēz', 0, -26, 11, '#ffffff', 'italic bold'); word(g, 'international', 0, -15, 6, '#f0dffc');
-        g.strokeStyle = '#ee537b'; g.lineWidth = 3; g.beginPath(); g.arc(0, -15, 14, 0.45, Math.PI - 0.45); g.stroke(); },
-      progress: (g) => { ell(g, 0, -22, 28, 25, '#b6c6b8', '#4e8b51'); const cs = ['#ec4050', '#f2a52c', '#5baf45', '#2595c6', '#985bb7'];
-        [...'Фруто'].forEach((ch, i) => word(g, ch, -19 + i * 9.5, -28, 14, cs[i])); word(g, 'Няня', 0, -13, 16, '#db365d'); },
-      royal_canin: (g) => { ell(g, 0, -21, 29, 26, '#b9c4ba', '#ce2942'); poly(g, [[-15, -29], [-18, -40], [-8, -34], [0, -45], [8, -34], [18, -40], [15, -29]], '#cf233c');
-        word(g, 'ROYAL', 0, -20, 10, '#ff5a6e'); word(g, 'CANIN', 0, -9, 10, '#ff5a6e'); },
-      cherkizovo: (g) => { poly(g, [[-28, -39], [28, -39], [24, -9], [0, 4], [-24, -9]], '#ad153d', '#f5c2ac'); g.strokeStyle = '#ffffff'; g.lineWidth = 3;
-        g.beginPath(); g.moveTo(-8, -32); g.lineTo(-8, -24); g.lineTo(7, -24); g.moveTo(7, -32); g.lineTo(7, -15); g.stroke(); word(g, 'ЧЕРКИЗОВО', 0, -7, 7, '#ffffff'); },
-      procter_gamble: (g) => { ell(g, 0, -22, 27, 27, '#0753ba', '#83c7ff'); g.strokeStyle = '#83c7ff'; g.lineWidth = 2; g.beginPath(); g.arc(0, -22, 22, 0.7, 4.2); g.stroke();
-        word(g, 'P&G', 0, -21, 20, '#ffffff', 'italic bold', 'Georgia, serif'); },
-      mars_petfood: (g) => { ell(g, 0, -21, 25, 25, '#123ba5', '#73d9ed'); word(g, 'MARS', 0, -26, 13, '#ffffff'); ell(g, 0, -13, 6, 4, '#73d9ed');
-        for (const [x, y] of [[-7, -18], [-2, -21], [3, -21], [8, -18]]) { g.beginPath(); g.arc(x, y, 2.3, 0, 6.29); g.fillStyle = '#73d9ed'; g.fill(); } },
-      log: (g) => { word(g, '> LOG_', 0, -22, 16, '#b49cff', 'bold', 'Consolas, monospace'); },
-    };
-    for (const k in D) { const cv = document.createElement('canvas'), sc = 6; cv.width = 70 * sc; cv.height = 64 * sc; const g = cv.getContext('2d'); g.scale(sc, sc); g.translate(35, 52); D[k](g);
-      G.canvasTex('emb_' + k, cv); }
-  }
+  const { EMB_AT, emblems } = LK;                                  // the clients' emblems, painted once into textures (emb_*)
   // floor stencils: worn paint lettering painted once into textures (any script), laid on the floor rotated
   const FONT = 'Consolas, "Cascadia Mono", "Courier New", monospace', MONO = FONT;
   function stencils() {
@@ -136,54 +93,17 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   const ease = (q) => q * q * (3 - 2 * q);
   const mmss = (s) => { s = Math.max(0, Math.floor(s)); return String(Math.floor(s / 60)).padStart(2, '0') + ':' + String(s % 60).padStart(2, '0'); };
   const sizeOf = (n, h) => [L.hsz(n, h), h];
-  const PH = { rack: 230, rack_b: 230, ups: 96, pdu: 96, cell: 112, cart: 116, cart_b: 116, core: 400, cage: 470, crac: 200, tray: 130, firerack: 150, switch: 112, desk: 140, tapelib: 220, patch: 230, blade: 150, dock: 70, holopillar: 150, spool: 110, manifold: 110, batbank: 110, switchstack: 220, crates: 120, mast: 170, rack_open: 230 };   // prop heights, view px
+  const PH = LK.PH;
   for (const k in PH) if (!Z[k]) Z[k] = [0, PH[k]];
 
-  // ---------------- rigs: per actor type, view px; legs and arms are one drawing each, cut at the joint ----------------
-  // hipY = hip height at rest, leg = hip→ankle length (two equal bones), hipW = half hip width, sh* = shoulders, stride = one gait cycle
-  const RIGS = {
-    hero:  { body: 70, hipY: 27, leg: 35, legW: 16, lift: 0.11, D: 0.35, hipW: 11, foot: [27, 15], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 14, stride: 92, bob: 6, flip: false },
-    node:  { body: 60, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
-    panel: { body: 58, hipY: 24, leg: 29, legW: 11, hipW: 10, foot: [19, 11], shY: 44, shW: 34, arm: 21, armW: 10, stride: 48, bob: 3, flip: true },
-    orb:   { body: 68, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [23, 13], shY: 46, shW: 33, arm: 23, armW: 12, stride: 52, bob: 3, flip: true },
-    keg:   { body: 88, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 64, shW: 42, arm: 29, armW: 16, stride: 62, bob: 4, flip: true },
-    boss:  { body: 210, hipY: 60, leg: 66, legW: 40, hipW: 52, foot: [62, 32], shY: 168, shW: 100, arm: 70, armW: 34, stride: 150, bob: 9, flip: true },
-    bug:   { body: 150, hex: true, hipY: 18, leg: 60, legW: 18, reach: 80, stride: 120, bob: 3, flip: true },
-    mars:    { body: 64, hipY: 25, leg: 30, legW: 14, hipW: 16, foot: [24, 13], shY: 46, shW: 33, arm: 25, armW: 12, bob: 3, flip: true },
-    loreal:  { body: 62, hipY: 25, leg: 30, legW: 13, hipW: 17, foot: [24, 13], shY: 44, shW: 40, arm: 24, armW: 12, bob: 3, flip: true },
-    multon:  { body: 58, hipY: 24, leg: 29, legW: 12, hipW: 13, foot: [22, 12], shY: 42, shW: 32, arm: 22, armW: 11, bob: 3, flip: true },
-    baltika: { body: 94, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 68, shW: 40, arm: 29, armW: 16, bob: 4, flip: true },
-    ferrero: { body: 62, hipY: 25, leg: 30, legW: 14, hipW: 20, foot: [25, 13], shY: 42, shW: 48, arm: 25, armW: 12, bob: 3, flip: true },
-    vetis:   { body: 86, hipY: 28, leg: 33, legW: 16, hipW: 18, foot: [27, 14], shY: 60, shW: 38, arm: 28, armW: 14, bob: 4, flip: true },
-    bugu:    { body: 82, hipY: 27, leg: 32, legW: 15, hipW: 20, foot: [27, 14], shY: 56, shW: 42, arm: 27, armW: 14, bob: 4, flip: true },
-    bugl:    { body: 84, hipY: 27, leg: 32, legW: 15, hipW: 22, foot: [28, 14], shY: 56, shW: 46, arm: 27, armW: 14, bob: 4, flip: true },
-    bugg:    { body: 84, hipY: 27, leg: 32, legW: 15, hipW: 20, foot: [27, 14], shY: 56, shW: 44, arm: 27, armW: 14, bob: 4, flip: true },
-    buga:    { body: 82, hipY: 27, leg: 32, legW: 15, hipW: 20, foot: [27, 14], shY: 56, shW: 44, arm: 27, armW: 14, bob: 4, flip: true },
-    mond:    { body: 58, hipY: 24, leg: 29, legW: 12, hipW: 16, foot: [23, 12], shY: 40, shW: 46, arm: 23, armW: 11, bob: 4, flip: true },
-    prog:    { body: 66, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [24, 13], shY: 46, shW: 34, arm: 24, armW: 12, bob: 3, flip: true },
-    royal:   { body: 66, hipY: 25, leg: 30, legW: 13, hipW: 17, foot: [24, 13], shY: 46, shW: 40, arm: 24, armW: 12, bob: 3, flip: true },
-    cherk:   { body: 84, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 62, shW: 44, arm: 29, armW: 16, bob: 4, flip: true },
-    pg:      { body: 92, hipY: 29, leg: 34, legW: 17, hipW: 22, foot: [29, 15], shY: 58, shW: 44, arm: 29, armW: 16, bob: 4, flip: true },
-    petfood: { body: 64, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [24, 13], shY: 46, shW: 34, arm: 24, armW: 12, bob: 3, flip: true },
-    logq:    { body: 88, hipY: 28, leg: 33, legW: 16, hipW: 22, foot: [28, 14], shY: 60, shW: 46, arm: 28, armW: 14, bob: 3, flip: true },
-    batch:   { body: 230, hipY: 62, leg: 68, legW: 42, hipW: 58, foot: [64, 32], shY: 180, shW: 112, arm: 72, armW: 36, bob: 9, flip: true },
-    sdesk:   { body: 200, desk: true, hipY: 0, leg: 1, legW: 1, hipW: 60, foot: [1, 1], shY: 0, shW: 0, arm: 1, armW: 1, bob: 0, flip: false },
-    crpt:    { body: 200, hipY: 58, leg: 64, legW: 38, hipW: 50, foot: [60, 30], shY: 160, shW: 96, arm: 68, armW: 32, bob: 9, flip: true },
-    // the «Дата-центр»'s bosses (stage 5): the replica is wide and low, the retry storm tall, the outage the biggest of all
-    repl:    { body: 190, hipY: 56, leg: 60, legW: 38, hipW: 56, foot: [60, 30], shY: 150, shW: 104, arm: 64, armW: 32, bob: 8, flip: true },
-    rstorm:  { body: 220, hipY: 62, leg: 70, legW: 38, hipW: 50, foot: [60, 30], shY: 176, shW: 96, arm: 72, armW: 32, bob: 10, flip: true },
-    outage:  { body: 250, hipY: 66, leg: 72, legW: 46, hipW: 62, foot: [70, 34], shY: 196, shW: 120, arm: 78, armW: 40, bob: 8, flip: true },
-  };
-  // the component minibosses are drawn 1.8× (every length of the rig scales with the body)
-  for (const k of ['bugu', 'bugl', 'bugg', 'buga']) { const r = RIGS[k]; for (const f of ['body', 'hipY', 'leg', 'legW', 'hipW', 'shY', 'shW', 'arm', 'armW', 'bob']) r[f] *= 1.8; r.foot = r.foot.map((v) => v * 1.8); }
+  const RIGS = LK.RIGS;                                            // per actor type: hips, legs, shoulders, stride (view px)
   // bipeds run (stance 45 % of the cycle); the stride follows from the height so the feet never spread past half of it
   // the hips sit low enough that a planted foot at either end of the stance is always within reach (no IK clamp = no slide)
   for (const k in RIGS) { const r = RIGS[k]; if (r.hex || r.desk) continue; r.D = r.D || 0.45; r.hipY = Math.min(r.hipY, r.leg * 0.84); const Hh = r.hipY + r.body * 0.95;
     const Amax = Math.sqrt((0.96 * r.leg) ** 2 - r.hipY ** 2) - 0.45 * r.hipW * 0.15;
     r.stride = Math.max(20, Math.min((0.5 * Hh - 2 * r.hipW * 0.85) / r.D, 2 * Amax / r.D)); }
   const COL = {}; for (const k in SIM.FOE) COL[k] = SIM.FOE[k].col;
-  const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',
-    ic_area: 'ic_magnet', ic_amount: 'ic_power', ic_dur: 'ic_haste', chest: 'code_tex', turret: 'switch' }, ICN = {};
+  const IC_FB = LK.IC_FB, ICN = {};
   // an icon fitted into a w × h box with its own proportions, centred (icons are not square: drawn as squares they were squeezed)
   const ico = (n, x, y, o) => { const t = G.tex(n), k = Math.min(o.w / t.w, o.h / t.h), w = t.w * k, h = t.h * k; return L.sprite(n, x + (o.w - w) / 2, y + (o.h - h) / 2, Object.assign({}, o, { w, h })); };
   const icn = (n) => { if (ICN[n]) return ICN[n]; let r = n; try { G.tex(n); } catch (_) { r = n.startsWith('ic_x_') ? icn(SIM.WEAP[n.slice(5)].ic) : icn(IC_FB[n] || 'ic_power'); } return (ICN[n] = r); };
@@ -196,13 +116,13 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
     const rim = L0 === 1 ? [0.95, -0.004 * face, -0.005, 1.3] : L0 === 2 ? [2.4, -0.006 * face, -0.009, 2.6] : [0.6, -0.004 * face, -0.005, 1.2];
     const rimCol = ice ? ICE : L0 === 1 ? CYAN : L0 === 2 ? col.map((v) => Math.min(1, v * 1.25 + 0.15)) : o.rimCol || CYAN;
     return { grade: g, haze: [1, 1, 1], tint, rim, rimCol, alpha: fade }; };
-  const ICE = [0.8, 0.94, 1], ELEC = [0.62, 0.5, 1], ELEC_HI = [0.82, 0.74, 1], CYAN_HI = [0.72, 1, 1], PHYS = [0.8, 0.88, 1], PHYS_HI = [0.95, 0.98, 1];
+  const { ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI } = LK.PAL;
   // a hero's sprites (hr_* sheets); Utrace's until its sheet is generated
-  const HART = {}; const heroArt = (h, skin) => { const key = h + ':' + (skin || ''); if (HART[key]) return HART[key]; const H = SIM.HEROES[h] || SIM.HEROES.utrace, sk = SIM.SKINS[skin];   // a skin's own sheet, else the hero's
+  const HART = {}; const heroArt = (h, skin) => { const key = h + ':' + (skin || ''); if (HART[key]) return HART[key]; const H = SIM.HEROES[h] || SIM.HEROES[SETTING.RUN.hero], sk = SIM.SKINS[skin];   // a skin's own sheet, else the hero's
     let a = sk && sk.hero === h ? sk.art : H.art; try { G.tex(a + '_body'); } catch (_) { a = H.art; try { G.tex(a + '_body'); } catch (_) { a = 'hero'; } } return (HART[key] = a); };
-  const heroCol = (ST) => (SIM.HEROES[ST.hero] || SIM.HEROES.utrace).col;
-  const ART_FALLBACK = { petfood: 'mars', logq: 'vetis', batch: 'boss', sdesk: 'desk', repl: 'boss', rstorm: 'boss', outage: 'boss' }, ART = {};
-  const artOf = (k) => { if (ART[k]) return ART[k]; let a = k; try { G.tex(k === 'sdesk' ? 'sdesk_body' : k + '_body'); } catch (_) { a = ART_FALLBACK[k] || k; } return (ART[k] = a); };
+  const heroCol = (ST) => (SIM.HEROES[ST.hero] || SIM.HEROES[SETTING.RUN.hero]).col;
+  const ART_FALLBACK = LK.ART_FALLBACK, ART = {};
+  const artOf = (k) => { if (ART[k]) return ART[k]; let a = k; try { G.tex(k + '_body'); } catch (_) { a = ART_FALLBACK[k] || k; } return (ART[k] = a); };
   // two-bone IK in the picture plane; returns twoBone angles (deg). bend = +1 knee toward the facing side, −1 the other way
   function ik(hp, ap, l1, l2, face, bend) {
     const vx = ap[0] - hp[0], vy = ap[1] - hp[1], L0 = l1 + l2, d = Math.max(L0 * 0.25, Math.min(L0 * 0.999, Math.hypot(vx, vy)));
@@ -284,7 +204,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   }
   // hexapod (the import bug): six legs from under the shell, tripod gait (L1 R2 L3 | R1 L2 R3)
   function hexapod(o) {
-    const R0 = RIGS.bug, face = o.face, ph = o.dist / R0.stride, gl = o.g, A = R0.stride * 0.3, tr = o.id || null;
+    const R0 = RIGS[o.k], face = o.face, ph = o.dist / R0.stride, gl = o.g, A = R0.stride * 0.3, tr = o.id || null;
     const fade = o.die >= 0 ? 1 - clamp01((o.die - 0.35) / 0.3) : 1, dieA = o.die >= 0 ? clamp01(o.die / 0.35) : 0; if (fade <= 0) return;
     const hk = o.hitA !== undefined && o.hitA < 0.3 ? (1 - o.hitA / 0.3) ** 1.5 : 0, bh = R0.body * (1 + 0.02 * Math.sin(o.t * 3 + o.ph * 7)) * (1 - 0.22 * hk), bw = L.hsz('bug_body', R0.body) * (1 + 0.2 * hk), gy = o.y - (o.z || 0) - (o.wind ? 10 * o.wind : 0);
     const u = actorU(o, face, fade);
@@ -448,14 +368,14 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
         const o = { k: e.k, x: X, y: Y, face: e.face, dist: e.dist, g: e.fly ? 0.6 : e.g, ux: e.ux, uy: e.uy, t, ph: e.ph, die, z, hit, lit: l, wind, strike, hitA: GT - e.hitT, hitDir: e.hdx || 0, rimCol: zcol(e.x, e.y), ice: e.frzT > GT ? 1 : e.chillT > GT ? 0.45 : 0, id: S.TRACE_IDS ? 'e' + e.id : null };
         if (f.kind === 'spin' && e.spinT > GT && die < 0) { const r = f.spin.r; L.ring(X, Y - 10, r, r * 0.62, CORAL, 0.6, 0.05); G.blend('add');
           for (let j = 0; j < 6; j++) { const an = GT * 14 + j * 1.047; L.solid(X + Math.cos(an) * r * 0.55, Y - 30 + Math.sin(an) * r * 0.34, r * 0.7, 5, CORAL, an + 1.4, 0, 2.5, 0.75); } G.blend(); }
-        if (e.k === 'pg' && die < 0) { const r = f.aura.r, pu = 0.5 + 0.5 * Math.sin(GT * 2.5 + e.id); L.ring(X, Y, r, r * 0.62, [0.5, 0.75, 1], 0.18 + 0.12 * pu, 0.02); }
+        if (f.aura && die < 0) { const r = f.aura.r, pu = 0.5 + 0.5 * Math.sin(GT * 2.5 + e.id); L.ring(X, Y, r, r * 0.62, [0.5, 0.75, 1], 0.18 + 0.12 * pu, 0.02); }
         if (e.shT && GT - e.shT < 0.35 && die < 0) { const q = 1 - (GT - e.shT) / 0.35, r = (R0.hex ? 70 : R0.hipW + 30); L.ring(X, Y - R0.hipY - R0.body * 0.5, r, r * 1.05, [0.5, 0.8, 1], 0.9 * q, 0.08);
           pool(X, Y - R0.hipY - R0.body * 0.5, r, r, [0.4, 0.65, 1], 0.35 * q, 2); }
         if (f.ward && die < 0) { const kids = ST.E.filter((c) => c.dieT < 0 && c.sum === e.id); if (kids.length) { const r = R0.body * 0.75;
           L.ring(X, Y - R0.hipY - R0.body * 0.45, r, r * 0.9, [0.5, 0.8, 1], 0.55 + 0.2 * Math.sin(GT * 6), 0.04);
           for (const c of kids) { const cx = sx(c.x), cy = sy(c.y) - 40, dx = cx - X, dy = cy - (Y - R0.body * 0.5); L.solid(X, Y - R0.body * 0.5, Math.hypot(dx, dy), 2, [0.5, 0.8, 1], Math.atan2(dy, dx), 0, 1, 0.35); } } }
         if (wind > 0 && (f.kind === 'shoot' || f.kind === 'mortar' || f.kind === 'lob' || f.kind === 'beam')) L.glow(X, Y - z - R0.hipY - R0.body * 0.5, 30 + 40 * wind, CORAL, 0.9 * wind, 3);
-        const deskDraw = () => { const n = artOf('sdesk') === 'sdesk' ? 'sdesk_body' : 'desk', h = R0.body, w = L.hsz(n, h), hk = clamp01(1 - (GT - e.hitT) / 0.15), fade = die >= 0 ? 1 - clamp01(die / 0.6) : 1;
+        const deskDraw = () => { const n = artOf(e.k) === e.k ? e.k + '_body' : 'desk', h = R0.body, w = L.hsz(n, h), hk = clamp01(1 - (GT - e.hitT) / 0.15), fade = die >= 0 ? 1 - clamp01(die / 0.6) : 1;
           L.sprite(n, X - w / 2 + (e.hdx || 0) * 4 * hk, Y - h + 30 + die * 40, { w, h, u: { grade: [0.9, 0.8 + 0.4 * l, hit, 1.05], rim: [0.6, 0.004, -0.005, 1.2], rimCol: o.rimCol, alpha: fade } });
           const tk = ST.ev.find((v) => v.k === 'tickets' && v.id === undefined && Math.abs(v.x - e.x) < 1 && GT - v.t < 0.8), bl = tk ? 1 - (GT - tk.t) / 0.8 : 0.35 + 0.25 * Math.sin(GT * 5 + e.id);
           if (fade > 0) { L.glow(X, Y - h + 40, 40 + 60 * bl, CORAL, 0.9 * bl * fade, 3); const q = clamp01(1 - (e.sumT - ST.t) / f.desk.every);     // next batch timer
@@ -469,7 +389,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
         if (e.dash === 1) { const q = clamp01((GT - e.dashT) / 0.8); for (let j = 1; j < 9; j++) L.solid(X + e.dx * j * 46, Y - 30 + e.dy * j * 46 - 3, 26, 6, [1, 0.25, 0.2], Math.atan2(e.dy, e.dx), 0, 3, 0.35 + 0.5 * q * (Math.sin(GT * 30 + j) > 0 ? 1 : 0.4)); }
         if (e.truceT > GT && die < 0) { const by = Y - z - (R0.hex ? R0.body + 40 : R0.hipY + R0.body + 34); L.rrect(X - 26, by - 14, 52, 26, 12, [0.9, 1, 0.97], [0.75, 0.9, 0.86], 0.9);   // Переговоры
           for (let j = 0; j < 3; j++) L.rrect(X - 14 + j * 11, by - 4, 7, 7, 3.5, [0.05, 0.3, 0.28], [0.05, 0.3, 0.28], 0.5 + 0.5 * (Math.floor(GT * 3) % 3 === j ? 1 : 0)); }
-        if ((f.boss || f.mini || (e.k === 'keg' && e.hp < e.mhp)) && die < 0) { const bw = f.boss ? 160 : f.mini ? 150 : 46, by = Y - z - (R0.hex ? R0.body + 50 : R0.desk ? R0.body - 10 : R0.hipY + R0.body + 18);
+        if ((f.boss || f.mini || (f.hpBar && e.hp < e.mhp)) && die < 0) { const bw = f.boss ? 160 : f.mini ? 150 : 46, by = Y - z - (R0.hex ? R0.body + 50 : R0.desk ? R0.body - 10 : R0.hipY + R0.body + 18);
           L.rrect(X - bw / 2 - 2, by - 2, bw + 4, f.boss ? 14 : 9, 4, [0.08, 0.05, 0.06]); L.rrect(X - bw / 2, by, bw * clamp01(e.hp / e.mhp), f.boss ? 10 : 5, 3, [0.95, 0.25, 0.22], [0.7, 0.12, 0.12]); }
       }]); }
     // hero
@@ -480,7 +400,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       for (const ev of ST.ev) { if (ev.k !== 'shieldblock') continue; const a = GT - ev.t; if (a < 0 || a > 0.55) continue; const q = a / 0.55;
         G.blend('add'); L.glow(X, Y, 100 * (1 - q * 0.4), CYAN_HI, 0.38 * (1 - q), 2); G.blend(); L.ring(X, Y, 80 + 60 * q, (80 + 60 * q) * 1.08, CYAN_HI, 1 - q, 0.05);
         if (ev.r) L.ring(sx(ev.x), sy(ev.y), ev.r * q, ev.r * q * 0.62, CYAN, 0.9 * (1 - q), 0.04); } }
-    if (ST.ab) { const A = SIM.ABIL[ST.hero] || SIM.ABIL.utrace, X = sx(ST.x), Y = sy(ST.y), on = GT < ST.ab.until && (A.id === 'overclock' || A.id === 'registry'), c = heroCol(ST);
+    if (ST.ab) { const A = SIM.ABIL[ST.hero] || SIM.ABIL[SETTING.RUN.hero], X = sx(ST.x), Y = sy(ST.y), on = GT < ST.ab.until && (A.id === 'overclock' || A.id === 'registry'), c = heroCol(ST);
       if (on) { const pu = 0.5 + 0.5 * Math.sin(GT * 10); L.ring(X, Y - 4, 70, 70 * 0.62, c, 0.6 + 0.3 * pu, 0.05); G.blend('add'); L.glow(X, Y - 50, 90, c, 0.18 + 0.1 * pu, 2); G.blend(); }
       const ca = GT - ST.ab.t0; if (ca >= 0 && ca < 0.5) { const q = ca / 0.5, R = A.radius || 220; L.ring(X, Y - 4, R * q, R * q * 0.62, A.id === 'field' ? ELEC_HI : A.id === 'negotiate' ? MINT : c, 0.9 * (1 - q), 0.05); } }
     Yb.push([ST.y, () => { const X = sx(ST.x), Y = sy(ST.y), l = lit(ST.x, ST.y), dash = GT - ST.dashT < SIM.K.DASH_T + 0.05;
@@ -819,7 +739,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       const cdq = st.cd ? clamp01((ST.wcd[id] || 0) / (st.cd * (1 - 0.08 * ST.ps.haste))) : 0; if (cdq > 0.01) L.rrect(x, y0, S0, S0 * cdq, 12, [0, 0, 0], [0, 0, 0], 0.45);
       if (evo) label('evo' + i, 'EVO', x + S0 / 2, y0 + S0 - 10, { size: 16, al: 0.5, col: '#64ffda' });
       else for (let j = 0; j < SIM.MAX_WL; j++) L.rrect(x + 10 + j * 12.5, y0 + S0 - 13, 9, 7, 3, j < ST.wp[id] ? CYAN : [0.12, 0.2, 0.24]); });
-    if (ST.ab) { const A = SIM.ABIL[ST.hero] || SIM.ABIL.utrace, x = x0 - S0 - 34, on = GT < ST.ab.until, q = clamp01(ST.ab.cd / A.cd), hc = heroCol(ST);   // the E ability
+    if (ST.ab) { const A = SIM.ABIL[ST.hero] || SIM.ABIL[SETTING.RUN.hero], x = x0 - S0 - 34, on = GT < ST.ab.until, q = clamp01(ST.ab.cd / A.cd), hc = heroCol(ST);   // the E ability
       L.uiBox('abslot', x, y0, S0, S0, 4); frame(x, y0, S0, S0, 0.95, on ? MINT : q > 0 ? [0.13, 0.33, 0.39] : hc);
       if (on || q === 0) { G.blend('add'); L.glow(x + S0 / 2, y0 + S0 / 2, S0 * 0.75, on ? MINT : hc, on ? 0.45 + 0.15 * Math.sin(GT * 8) : 0.22 + 0.08 * Math.sin(GT * 3), 2); G.blend(); }
       ico(icn(A.ic), x + 12, y0 + 8, { w: S0 - 24, h: S0 - 24, u: { grade: [q > 0 && !on ? 0.4 : 1, q > 0 && !on ? 0.6 : 1, 0, 1] } });
@@ -870,7 +790,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       const title = ST.pick.chest ? 'КАПСУЛА ОБНОВЛЕНИЯ — выберите улучшение' : 'НОВЫЙ УРОВЕНЬ ' + ST.lvl + ' — выберите улучшение', tw = L.labelW('pickt', title, { size: 40 });
       L.uiBox('picktp', W / 2 - tw / 2 - 20, 170, tw + 40, 70, 4); label('pickt', title, W / 2, 205, { size: 40, al: 0.5, col: '#7ff6ff', a });
       ST.pick.opts.forEach((op, i) => { const [x, y, w, h] = SIM.cardRect(i), lift = -10 * Math.max(0, Math.sin(Math.min(1, (GT - ST.pick.t0) * 3 - i * 0.3) * Math.PI));
-        const isA = op.k === 'ab', isE = op.k === 'evo', isW = op.k === 'w' || isE, def = isA ? SIM.ABIL[ST.hero] || SIM.ABIL.utrace : isW ? SIM.WEAP[op.id] : SIM.PASS[op.id], lv = isA ? ST.abR || 0 : isE ? 0 : isW ? (ST.wp[op.id] || 0) : op.k === 'p' ? ST.ps[op.id] : 0;
+        const isA = op.k === 'ab', isE = op.k === 'evo', isW = op.k === 'w' || isE, def = isA ? SIM.ABIL[ST.hero] || SIM.ABIL[SETTING.RUN.hero] : isW ? SIM.WEAP[op.id] : SIM.PASS[op.id], lv = isA ? ST.abR || 0 : isE ? 0 : isW ? (ST.wp[op.id] || 0) : op.k === 'p' ? ST.ps[op.id] : 0;
         const name = op.k === 'heal' ? 'Кофе из автомата' : def.name, sub = op.k === 'heal' ? 'Восстановление' : isA ? 'Умение E · ранг ' + lv + ' → ' + (lv + 1) : isE ? 'ЭВОЛЮЦИЯ' : isW ? (lv ? 'Уровень ' + lv + ' → ' + (lv + 1) : 'Новое оружие') : 'Навык ' + lv + ' → ' + (lv + 1);
         const desc = op.k === 'heal' ? '+40 HP' : isA ? def.up + '. ' + def.desc : isE ? SIM.WSUM[op.id] : isW ? (lv && SIM.WEAP[op.id].steps[lv - 1] ? SIM.WEAP[op.id].steps[lv - 1][0] : SIM.WSUM[op.id])
           + (lv === SIM.MAX_WL - 1 && SIM.EVO[op.id] ? '. Эволюция с навыком «' + SIM.PASS[SIM.EVO[op.id][0]].name + '»' : '') : def.desc;
@@ -887,7 +807,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
       const lb0 = window.META && META.last && META.last.over === ST.over ? META.last : null, ed = ST.ed ? (lb0 && lb0.edu) || EDU.summary(ST.ed) : null;
       const win = ST.over.k === 'win', title = win ? (ST.ed ? EDU.course(ST.ed.course).victoryTag : 'ИНЦИДЕНТ ЗАКРЫТ') : 'СИСТЕМА УПАЛА', lines = ['Время смены: ' + mmss(ST.over.t), 'Уровень: ' + ST.lvl, 'Сбоев устранено: ' + ST.kills, 'Кодов маркировки: ' + ST.bars];
       const lb = lb0; let ex = [];
-      if (lb) { const cl = window.CLOUD, cr = cl && cl.enabled && cl.last.run && lb.map === 'dc' ? cl.last : null, recs = cr ? cr.improved.filter((f) => !f.includes(':')) : [];
+      if (lb) { const cl = window.CLOUD, cr = cl && cl.enabled && cl.last.run && SETTING.MAPS[lb.map] ? cl.last : null, recs = cr ? cr.improved.filter((f) => !f.includes(':')) : [];
         const cloudLine = !cr ? [] : cr.guest ? ['Войдите, чтобы попасть в таблицу'] : recs.length ? [recs.map((f) => { const mm = cl.METRICS.find((x) => x.field === f), p = cr.places[f]; return mm.short + (p ? ' — ' + (p === Infinity ? '1000+' : p) + '-е место' : ''); }).slice(0, 2).join(' · ')] : [];
         const la = lb.ach || [];                                                                    // achievements done by this shift: claimed in the menu
         const achLine = la.length === 1 ? ['Выполнено: «' + la[0].title + '» · заберите в «Достижениях»'] : la.length ? ['Выполнено достижений: ' + la.length + ' · заберите в «Достижениях»'] : [];
@@ -912,7 +832,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
 
   // ---------------- the compact level-up cards, test and results (phones, stage 7б) ----------------
   // what a level-up option shows (shared with the desktop cards' wording)
-  const pickText = (ST, op) => { const isA = op.k === 'ab', isE = op.k === 'evo', isW = op.k === 'w' || isE, def = isA ? SIM.ABIL[ST.hero] || SIM.ABIL.utrace : isW ? SIM.WEAP[op.id] : SIM.PASS[op.id], lv = isA ? ST.abR || 0 : isE ? 0 : isW ? (ST.wp[op.id] || 0) : op.k === 'p' ? ST.ps[op.id] : 0;
+  const pickText = (ST, op) => { const isA = op.k === 'ab', isE = op.k === 'evo', isW = op.k === 'w' || isE, def = isA ? SIM.ABIL[ST.hero] || SIM.ABIL[SETTING.RUN.hero] : isW ? SIM.WEAP[op.id] : SIM.PASS[op.id], lv = isA ? ST.abR || 0 : isE ? 0 : isW ? (ST.wp[op.id] || 0) : op.k === 'p' ? ST.ps[op.id] : 0;
     const name = op.k === 'heal' ? 'Кофе из автомата' : def.name, sub = op.k === 'heal' ? 'Восстановление' : isA ? 'Умение E · ранг ' + lv + ' → ' + (lv + 1) : isE ? 'ЭВОЛЮЦИЯ' : isW ? (lv ? 'Уровень ' + lv + ' → ' + (lv + 1) : 'Новое оружие') : 'Навык ' + lv + ' → ' + (lv + 1);
     const desc = op.k === 'heal' ? '+40 HP' : isA ? def.up + '. ' + def.desc : isE ? SIM.WSUM[op.id] : isW ? (lv && SIM.WEAP[op.id].steps[lv - 1] ? SIM.WEAP[op.id].steps[lv - 1][0] : SIM.WSUM[op.id])
       + (lv === SIM.MAX_WL - 1 && SIM.EVO[op.id] ? '. Эволюция с навыком «' + SIM.PASS[SIM.EVO[op.id][0]].name + '»' : '') : def.desc;
@@ -972,7 +892,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
     const lb = window.META && META.last && META.last.over === ST.over ? META.last : null, ed = ST.ed ? (lb && lb.edu) || EDU.summary(ST.ed) : null;
     const win = ST.over.k === 'win', title = win ? (ST.ed ? EDU.course(ST.ed.course).victoryTag : 'ИНЦИДЕНТ ЗАКРЫТ') : 'СИСТЕМА УПАЛА';
     const lines = [['Время', mmss(ST.over.t)], ['Уровень', ST.lvl], ['Сбоев', ST.kills], ['Кодов', ST.bars]];
-    const ex = []; if (lb) { const la = lb.ach || [], cl = window.CLOUD, cr = cl && cl.enabled && cl.last.run && lb.map === 'dc' ? cl.last : null;
+    const ex = []; if (lb) { const la = lb.ach || [], cl = window.CLOUD, cr = cl && cl.enabled && cl.last.run && SETTING.MAPS[lb.map] ? cl.last : null;
       ex.push('Коды: +' + lb.earned + ' (всего ' + lb.total + ')'); if (la.length) ex.push('Выполнено достижений: ' + la.length + ' · заберите в меню'); if (lb.rec) ex.push('НОВЫЙ РЕКОРД');
       if (lb.finds.length) ex.push('В коллекции новое: ' + lb.finds.length); if (cr && cr.guest) ex.push('Войдите, чтобы попасть в таблицу'); }
     if (ed) ex.unshift('Оценка: ' + ed.grade + (ed.answered ? ' · ' + Math.round(ed.score * 100) + '%' : '') + ' · очки ' + ed.points);
@@ -1193,7 +1113,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
         label('mmpr' + i, rec ? 'Смен ' + rec.runs + ' · побед ' + rec.wins + ' · ' + mmss(rec.time) : 'Ещё не сыграно', x + 18, y + h - 24, { size: 20, col: '#7ff6ff' }); });
       backBtn(); return; }
     if (V.scr === 'course' && C) { head('УЧЕБНЫЙ ЦЕНТР', 'Три лабиринта, затем зал с боссом курса');
-      it.forEach((o, i) => { const [x, y, w, h] = o.r, on = hot(i), c = o.course, rec = D.byCourse[o.id], bk = { batch_accounting: 'batch', critical_incident: 'boss' }[c.boss.unit];
+      it.forEach((o, i) => { const [x, y, w, h] = o.r, on = hot(i), c = o.course, rec = D.byCourse[o.id], bk = SETTING.RUN.eduBoss[c.boss.unit];
         L.uiBox('mco' + i, x, y, w, h, 6); lit(o.r, on || D.sel.course === o.id);
         wrap(c.title, 26, w - 36).slice(0, 2).forEach((ln, j) => label('mcon' + i + '_' + j, ln, x + 18, y + 32 + j * 32, { size: 26, col: on ? '#ffffff' : '#e6fdff' }));
         wrap(c.description, 20, w - 36).slice(0, 3).forEach((ln, j) => label('mcod' + i + '_' + j, ln, x + 18, y + 102 + j * 26, { size: 20, col: '#a9c9cf' }));
@@ -1212,7 +1132,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
         label('mmpr' + i, rec ? 'Смен ' + rec.runs + ' · побед ' + rec.wins + ' · лучшее время ' + mmss(rec.time) : 'Ещё не сыграно', x + 30, y + h - 34, { size: 22, col: '#7ff6ff' }); });
       backBtn(); return; }
     if (V.scr === 'course') { head('УЧЕБНЫЙ ЦЕНТР · ВЫБОР КУРСА', 'Три лабиринта по темам курса, затем зал с боссом курса');
-      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), c = o.course, rec = D.byCourse[o.id], bk = { batch_accounting: 'batch', critical_incident: 'boss' }[c.boss.unit];
+      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), c = o.course, rec = D.byCourse[o.id], bk = SETTING.RUN.eduBoss[c.boss.unit];
         L.uiBox('mco' + i, x, y, w, h, 10); lit(o.r, on || D.sel.course === o.id);
         let ns = 36; while (ns > 24 && L.labelW('mcon' + i, c.title, { size: ns, font: MONO }) > w - 60) ns--; label('mcon' + i, c.title, x + 30, y + 50, { size: ns, col: on ? '#ffffff' : '#e6fdff' });
         wrap(c.description, 22, w - 60).slice(0, 3).forEach((ln, j) => label('mcod' + i + '_' + j, ln, x + 30, y + 100 + j * 30, { size: 22, col: '#a9c9cf' }));
@@ -1223,7 +1143,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
         label('mcog' + i, on ? (KB() ? 'Enter — начать' : 'Нажмите — начать') : '', x + w - 30, y + h - 40, { size: 24, al: 1, col: '#64ffda' }); });
       backBtn(); return; }
     if (V.scr === 'client') { head('КЛЮЧЕВОЙ КЛИЕНТ БА', 'Каждое убийство выбранного клиента даёт +1 HP и к максимуму до конца смены');
-      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), k = o.client, n = artOf(k) === 'sdesk' ? 'sdesk_body' : artOf(k) + '_body', ph = 120, pw = L.hsz(n, ph);
+      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), k = o.client, n = artOf(k) + '_body', ph = 120, pw = L.hsz(n, ph);
         L.uiBox('mcl' + i, x, y, w, h, 8); lit(o.r, on || V.D.sel.client === k);
         L.sprite(n, x + w / 2 - Math.min(pw, w - 40) / 2, y + 24, { w: Math.min(pw, w - 40), h: ph * Math.min(1, (w - 40) / pw) });
         wrap(SIM.FOE[k].name, 22, w - 24).slice(0, 2).forEach((ln, j) => label('mcln' + i + '_' + j, ln, x + w / 2, y + 180 + j * 28, { size: 22, al: 0.5, col: on ? '#ffffff' : '#bfe3ea' })); });

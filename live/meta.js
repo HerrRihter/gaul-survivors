@@ -1,28 +1,14 @@
 // live/meta.js: everything between runs, modelled on utreys-survivors (docs/META-PROGRESSION.md, data/upgrades.js):
 // the wallet of marking codes, the shop of permanent upgrades (price 30 × next rank), records, the collection of what was seen,
 // and the menu screens' state and layout. The scene draws the screens from META.view(); index.html routes input here while
-// no run is going and calls META.bank(run) once when a run ends or is left. Saved in localStorage ('ns_meta_v4'); the achievements are live/ach.js.
+// no run is going and calls META.bank(run) once when a run ends or is left. Saved in localStorage (SETTING.SAVE + '_meta_v4'); the achievements are live/ach.js.
 (() => {
-  const KEY = 'ns_meta_v4', KEY_V3 = 'ns_meta_v3', KEY_V2 = 'ns_meta_v2', KEY_V1 = 'ns_meta_v1', KEY_BAK = 'ns_meta_backup';
+  const P = SETTING.SAVE, KEY = P + '_meta_v4', KEY_V3 = P + '_meta_v3', KEY_V2 = P + '_meta_v2', KEY_V1 = P + '_meta_v1', KEY_BAK = P + '_meta_backup';
   // the screens' logical size: 1920×1080, or 960×540 drawn 2× larger on phones and tablets (U = 2, stage 7б of docs/PLAN-FEEDBACK-27-10.md).
   // The page passes pointer positions in view px; they are divided by U here. CP: the compact layouts are in use.
   let U = 1, W = 1920, H = 1080, CP = false;
   const setUI = (u) => { U = u > 1 ? 2 : 1; W = 1920 / U; H = 1080 / U; CP = U > 1; };
-  const UPG = [
-    { id: 'health', name: 'Буфер памяти', desc: '+10 HP к стабильности ядра', max: 5, ic: 'ic_hp' },
-    { id: 'power', name: 'Пропускная способность', desc: '+5% ко всему урону', max: 5, ic: 'ic_power' },
-    { id: 'speed', name: 'Тактовая частота', desc: '+3% к скорости', max: 5, ic: 'ic_speed' },
-    { id: 'haste', name: 'Многопоточность', desc: '−4% к перезарядке', max: 5, ic: 'ic_haste' },
-    { id: 'range', name: 'Радиус сканирования', desc: '+4% к радиусу и дальности', max: 5, ic: 'ic_area' },
-    { id: 'magnet', name: 'Сбор пакетов', desc: '+10% к радиусу сбора', max: 5, ic: 'ic_magnet' },
-    { id: 'armor', name: 'Криптозащита', desc: '−1 входящего урона (минимум 1)', max: 3, ic: 'ic_amount' },
-    { id: 'regen', name: 'Автовосстановление', desc: '+0,15 HP в секунду', max: 5, ic: 'heal' },
-    { id: 'greed', name: 'Монетизация', desc: '+5% кодов в конце смены', max: 5, ic: 'code_tex' },
-    { id: 'luck', name: 'Удачный парсинг', desc: '+0,2 п.п. к шансу кода, +0,1 п.п. к лечилке', max: 5, ic: 'gem_c' },
-    { id: 'head', name: 'Предзагрузка', desc: 'Смена начинается с выбора улучшения', max: 2, ic: 'chest' },
-    { id: 'rerolls', name: 'Перегенерация', desc: '+1 перегенерация карточек за смену', max: 3, ic: 'ic_retry' },
-    { id: 'skips', name: 'Отложенный релиз', desc: '+1 пропуск выбора за смену', max: 3, ic: 'ic_dur' },
-  ];
+  const UPG = SETTING.SHOP, RUNDEF = SETTING.RUN;                    // the shop's permanent upgrades; the default hero and map
   // save v2 (plan stage 0): v1 plus owned heroes and skins, the chosen hero / skin / map, opened maps, records per map and per hero
   // save v3 (achievements, docs/PLAN-ACHIEVEMENTS.md): v2 plus st, the run facts summed over all counted runs (sim's S.fx), and ach,
   // the achievements done (reward paid). v2 → v3 keeps everything; st starts at zero, and the achievements that v2's totals and records
@@ -33,7 +19,7 @@
   const rec0 = () => ({ time: 0, kills: 0, lvl: 0, wins: 0, runs: 0 });
   const st0 = () => ({ bosses: 0, casts: 0, heals: 0, evos: 0, evoMax: 0, calmMax: 0, noHealWins: 0, eduWins: 0, eduTop: 0, foes: {}, codes: 0, noCastWins: 0, winMin: 0 });
   const fresh = () => ({ v: 4, st: st0(), ach: {}, done: {}, fresh: {}, codes: 0, up: {}, runs: 0, wins: 0, kills: 0, time: 0, best: { time: 0, kills: 0, lvl: 0 }, seen: { w: { trace: 1 }, e: {}, p: {} },
-    heroes: { utrace: 1 }, skins: {}, sel: { hero: 'utrace', skin: null, skins: {}, map: 'dc', course: null }, maps: { dc: 1, edu: 1 }, byMap: {}, byHero: {}, byCourse: {}, ui: { fps: false },
+    heroes: { [RUNDEF.hero]: 1 }, skins: {}, sel: { hero: RUNDEF.hero, skin: null, skins: {}, map: RUNDEF.map, course: null }, maps: { [RUNDEF.map]: 1, edu: 1 }, byMap: {}, byHero: {}, byCourse: {}, ui: { fps: false },
     cloud: { uid: '', epoch: 0, wipe: false } });   // cloud: the account this save last synced with, that account's reset count, a reset still to send
   // a loaded save, normalised against the current shape (missing fields get defaults, so older saves and future fields both load)
   const norm = (s) => { const f = fresh(); return Object.assign(f, s, { v: 4, st: Object.assign(f.st, s.st, { foes: Object.assign({}, s.st && s.st.foes) }), ach: Object.assign({}, s.ach), done: Object.assign({}, s.done), fresh: Object.assign({}, s.fresh), best: Object.assign(f.best, s.best), seen: Object.assign(f.seen, s.seen),
@@ -119,7 +105,7 @@
     D.codes += earned; D.st.codes += earned; const counted = !!S.over || (S.t || 0) >= 10;                     // as in the original: a run quit before 10 s is not counted
     if (counted) { D.runs++; D.kills += S.kills || 0; D.time += S.t || 0; if (win) D.wins++; try { localStorage.removeItem(KEY_BAK); } catch (_) {} }
     D.best.time = Math.max(D.best.time, S.t || 0); D.best.kills = Math.max(D.best.kills, S.kills || 0); D.best.lvl = Math.max(D.best.lvl, S.lvl || 0);
-    if (counted) for (const [box, k] of [[D.byMap, S.map || 'dc'], [D.byHero, S.hero || 'utrace']]) { const r = box[k] = Object.assign(rec0(), box[k]);
+    if (counted) for (const [box, k] of [[D.byMap, S.map || RUNDEF.map], [D.byHero, S.hero || RUNDEF.hero]]) { const r = box[k] = Object.assign(rec0(), box[k]);
       r.time = Math.max(r.time, S.t || 0); r.kills = Math.max(r.kills, S.kills || 0); r.lvl = Math.max(r.lvl, S.lvl || 0); r.runs++; if (win) r.wins++; }
     let edu = null;
     if (S.ed && window.EDU) { edu = EDU.summary(S.ed); edu.room = S.room; edu.rooms = COURSE.rooms.length;                // the training centre's report card
@@ -131,11 +117,11 @@
       for (const k in F.foe || {}) T.foes[k] = (T.foes[k] || 0) + F.foe[k];
       if (win && !F.heal) T.noHealWins++;
       if (win && !F.cast) T.noCastWins++;
-      if (win && (S.map || 'dc') === 'dc') T.winMin = T.winMin ? Math.min(T.winMin, S.t || 0) : S.t || 0;
+      if (win && (S.map || RUNDEF.map) === RUNDEF.map) T.winMin = T.winMin ? Math.min(T.winMin, S.t || 0) : S.t || 0;
       if (win && edu) { T.eduWins++; if (edu.answered && edu.grade === EDU.C.grading.grades[0].name) T.eduTop++; } }
     const ach = window.ACH ? ACH.check(D) : [];                                                     // done by this run, waiting to be claimed
     last = { over: S.over, earned, base, total: D.codes, rec: rec.time || rec.kills, finds, win, edu, map: S.map, ach, opened: [] };
-    if (counted && window.CLOUD) CLOUD.onRun({ map: S.map || 'dc', time: S.t || 0, kills: S.kills || 0, codes: earned, lvl: S.lvl || 0, win, hero: S.hero });
+    if (counted && window.CLOUD) CLOUD.onRun({ map: S.map || RUNDEF.map, time: S.t || 0, kills: S.kills || 0, codes: earned, lvl: S.lvl || 0, win, hero: S.hero });
     if (ach.length && window.CLOUD && CLOUD.syncAch) CLOUD.syncAch();                                 // the new achievements into the profile
     save();
   }
@@ -157,12 +143,12 @@
   }
 
   // ---------------- screens: layout shared with the scene (rects in view px) ----------------
-  let scr = 'main', sel = 0, hov = -1, hovBack = false, armedReset = 0, armedQuit = 0, tab = 'up', focus = 'utrace';   // focus: the hero whose skins the hero screen lists
+  let scr = 'main', sel = 0, hov = -1, hovBack = false, armedReset = 0, armedQuit = 0, tab = 'up', focus = RUNDEF.hero;   // focus: the hero whose skins the hero screen lists
   let ctab = 'items', acat = 'survival';                         // the collection's tab (items / foes), the achievements screen's category
   const skinsOf = (h) => Object.keys(SIM.SKINS).filter((k) => SIM.SKINS[k].hero === h), ownsSkin = (k) => !!D.skins[k];
   // the maps (plan stage 3): the minimap is drawn by the scene from a generated layout; the training centre is open from the start, as in the original
-  const MAPS = [{ id: 'dc', name: 'Дата-центр Utrace', desc: 'Пять компонентов вокруг ядра: в каждом свой баг. Победи бага или продержись 30 с в его круге, затем закрой «Отказ дата-центра».', note: 'Каждая смена — новая раскладка' },
-    { id: 'edu', name: 'Учебный центр', desc: 'Три случайных лабиринта с терминалами-тестами, затем центральный зал с боссом курса.', note: 'Терминалы под охраной багов · тест 3 вопроса, нужно 2 верных · знания дают вторую жизнь' }];
+  const MAPS = [...Object.entries(SETTING.MAPS).map(([id, m]) => ({ id, name: m.name, desc: m.desc, note: m.note })), ...(SETTING.EDU ? [
+    { id: 'edu', name: 'Учебный центр', desc: 'Три случайных лабиринта с терминалами-тестами, затем центральный зал с боссом курса.', note: 'Терминалы под охраной багов · тест 3 вопроса, нужно 2 верных · знания дают вторую жизнь' }] : [])];
   const MAIN = [['start', 'Начать смену'], ['shop', 'Магазин'], ['coll', 'Коллекция'], ['ach', 'Достижения'], ['rec', 'Рекорды'], ['lead', 'Лидеры'], ['set', 'Настройки'], ['quit', 'Выход']];
   const C = () => window.CLOUD || null;
   // a shift kept for later (the page holds the run itself): { hero, map, t, room } for the menu's «Продолжить смену», or null
@@ -219,7 +205,7 @@
     if (scr === 'lead') { const cl = C(), ms = cl ? cl.METRICS : [], hs = cl ? cl.HEROES : [], g = 8, out = []; let x = 12;
       ms.forEach((m, i) => out.push({ id: 'lm' + i, metric: i, s: m.short, r: [12 + i * 154, 92, 146, 62] }));
       out.push({ id: 'lref', refresh: 1, s: 'Обновить', r: [W - 162, 92, 150, 62] });
-      for (const [sc, s0] of [['all', 'Все карты'], ['dc', 'Дата-центр']]) { out.push({ id: 'ls' + sc, scope: sc, s: s0, r: [x, 162, 150, 62] }); x += 150 + g; }
+      for (const [sc, s0] of [['all', 'Все карты'], ...Object.entries(SETTING.MAPS).map(([id, m]) => [id, m.short])]) { out.push({ id: 'ls' + sc, scope: sc, s: s0, r: [x, 162, 150, 62] }); x += 150 + g; }
       x += 6; out.push({ id: 'lh_', heroF: '', s: 'Все', r: [x, 162, 90, 62] }); x += 90 + g;
       for (const h of hs) { out.push({ id: 'lh' + h, heroF: h, s: SIM.HEROES[h] ? SIM.HEROES[h].name : h, r: [x, 162, 66, 62] }); x += 66 + g; }
       x += 6; out.push({ id: 'lnear', near: 1, s: 'Рядом', r: [x, 162, W - 12 - x, 62] });
@@ -255,7 +241,7 @@
     if (scr === 'lead') { const cl = C(), ms = cl ? cl.METRICS : [], hs = cl ? cl.HEROES : [], g = 10, out = []; let x = 110;
       ms.forEach((m, i) => out.push({ id: 'lm' + i, metric: i, s: m.short, r: [110 + i * 242, 186, 230, 52] }));
       out.push({ id: 'lref', refresh: 1, s: 'Обновить', r: [W - 300, 186, 190, 52] });
-      for (const [sc, s0] of [['all', 'Все карты'], ['dc', 'Дата-центр']]) { out.push({ id: 'ls' + sc, scope: sc, s: s0, r: [x, 252, 190, 52] }); x += 190 + g; }
+      for (const [sc, s0] of [['all', 'Все карты'], ...Object.entries(SETTING.MAPS).map(([id, m]) => [id, m.short])]) { out.push({ id: 'ls' + sc, scope: sc, s: s0, r: [x, 252, 190, 52] }); x += 190 + g; }
       x += 14; out.push({ id: 'lh_', heroF: '', s: 'Все герои', r: [x, 252, 170, 52] }); x += 170 + g;
       for (const h of hs) { out.push({ id: 'lh' + h, heroF: h, s: SIM.HEROES[h] ? SIM.HEROES[h].name : h, r: [x, 252, 64, 52] }); x += 64 + g; }   // portraits; the name is in the subtitle
       x += 14; out.push({ id: 'lnear', near: 1, s: 'Рядом со мной', r: [x, 252, 230, 52] });
@@ -388,7 +374,7 @@
     if (armedQuit && !(it[hov] && it[hov].id === 'quit')) armedQuit = 0; track(); }
   const view = () => ({ U, LW: W, LH: H, compact: CP, get scrollArea() { return CP ? area.slice() : null; }, scr, sel, hovBack, tab, focus, skinsOf, ownsSkin, suspended: susp, items: items(), D, last, back: back(), armedReset, spent: spent(), price, lvl, locked, owns, trPrice, TR_MAX, open, cap, ctab, acat });
 
-  const runOpts = () => ({ map: D.maps[D.sel.map] ? D.sel.map : 'dc', hero: owns(D.sel.hero) ? D.sel.hero : 'utrace', client: D.sel.client, skin: D.sel.skins[owns(D.sel.hero) ? D.sel.hero : 'utrace'] || null, lock: window.ACH ? ACH.lock(D) : undefined, course: COURSE.courses[D.sel.course] ? D.sel.course : COURSE.order[0] });
+  const runOpts = () => ({ map: D.maps[D.sel.map] ? D.sel.map : RUNDEF.map, hero: owns(D.sel.hero) ? D.sel.hero : RUNDEF.hero, client: D.sel.client, skin: D.sel.skins[owns(D.sel.hero) ? D.sel.hero : RUNDEF.hero] || null, lock: window.ACH ? ACH.lock(D) : undefined, course: COURSE.courses[D.sel.course] ? D.sel.course : COURSE.order[0] });
   window.META = { UPG, MAPS, PAUSE, setSuspended: (o) => { susp = o; }, get suspended() { return susp; }, tab: (x) => { tab = x; }, ctab: (x) => { ctab = x; }, acat: (x) => { acat = x; }, unlockAll: () => { Object.keys(SIM.HEROES).forEach((h) => (D.heroes[h] = 1)); }, mods, runOpts, bank, key, click: (x, y) => click(x / U, y / U), move: (x, y) => move(x / U, y / U), drag: (x) => drag(x / U), up, wheel, view, go, setUI, get U() { return U; }, get data() { return D; }, get last() { return last; }, get achOnLoad() { return achNew; }, live, achIds, mergeAch, claim, claimAll, wipe, undoWipe, canUndo, cloudSide, cloudSet, reset: () => { D = fresh(); save(); } };
   if (window.CLOUD && CLOUD.syncAch) CLOUD.syncAch();                                              // the account may have signed in first
 })();

@@ -9,9 +9,9 @@
   const EMU = q.has('emu'), cfg = EMU ? { apiKey: 'demo-key', authDomain: 'demo-netsurvivors.firebaseapp.com', projectId: 'demo-netsurvivors', appId: 'demo' } : window.FIREBASE_CONFIG;
   const enabled = !!(cfg && cfg.apiKey && cfg.projectId && cfg.appId);
   // the maps with tables (the training centre is not ranked, as in the original), the metrics (records name the hero that set them)
-  const MAPS = ['dc'];
+  const MAPS = Object.keys(SETTING.MAPS);
   // the heroes a table can be filtered by (keep in step with knownHeroes() in firestore.rules and SIM.HEROES)
-  const HEROES = ['utrace', 'traceability', 'serialization', 'ba', 'qa'];
+  const HEROES = Object.keys(SETTING.HEROES);
   const METRICS = [
     { field: 'bestTime', title: 'Лучшее время смены', short: 'Время', fmt: 'time', hero: 'bestTimeHero' },
     { field: 'bestKills', title: 'Сбоев за смену', short: 'Сбои', fmt: 'count', hero: 'bestKillsHero' },
@@ -93,7 +93,7 @@
     const rec = { bestTime: e.time, bestKills: e.kills, bestCodes: e.codes, bestLvl: e.lvl, victoryScore: e.win ? Math.max(1, VICTORY_BASE - e.time) : 0 };
     for (const m of METRICS) if (rec[m.field] > s[m.field]) { s[m.field] = rec[m.field]; s[m.hero] = e.hero; improved.push(m.field); }
     return { scope: s, improved }; }
-  const QKEY = 'ns_stats_queue_v1', readQ = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]') || []; } catch (_) { return []; } },
+  const QKEY = SETTING.SAVE + '_stats_queue_v1', readQ = () => { try { return JSON.parse(localStorage.getItem(QKEY) || '[]') || []; } catch (_) { return []; } },
     writeQ = (a) => { try { localStorage.setItem(QKEY, JSON.stringify(a.slice(-50))); } catch (_) {} };
   const last = { run: null, improved: [], places: {}, guest: false, queued: 0 };
   let guestRun = null, sending = null, again = false, retryT = null;
@@ -121,7 +121,7 @@
   // a counted run from the page (META.bank): queued for the signed-in player; a guest's latest run goes up if they sign in from its results
   function onRun(r) { if (!enabled || !MAPS.includes(r.map)) return;
     const e = { runId: (crypto.randomUUID ? crypto.randomUUID() : String(Math.random()).slice(2)).replace(/-/g, '').slice(0, 32), map: r.map, newGame: true,
-      time: Math.floor(r.time), kills: r.kills | 0, codes: r.codes | 0, lvl: r.lvl | 0, win: !!r.win, hero: HEROES.includes(r.hero) ? r.hero : 'utrace' };
+      time: Math.floor(r.time), kills: r.kills | 0, codes: r.codes | 0, lvl: r.lvl | 0, win: !!r.win, hero: HEROES.includes(r.hero) ? r.hero : SETTING.RUN.hero };
     last.run = e; last.improved = []; last.places = {}; last.guest = state.status !== 'signedIn';
     if (state.status === 'signedIn') { writeQ(readQ().concat([{ uid: state.uid, entry: e }])); flush(); } else guestRun = e; emit(); }
   // after signing in from a results screen, its run is sent too
@@ -174,7 +174,7 @@
     return ranked(above, p0 ? p0 - above.length : null).concat(ranked(below, p0)); });
   function places(w) { for (const f of w.improved.filter((f) => !f.includes(':'))) place(f, 'all', w.all[f]).then((p) => { last.places[f] = p; emit(); }).catch(() => {}); }
   // the leaderboard screen's data: loads on demand, the menu redraws from it; the filters are remembered on this device
-  const BKEY = 'ns_board_v1', board = { metric: 0, scope: 'all', hero: '', near: false, rows: null, me: null, error: '', note: '', loading: false, key: '', at: 0, scroll: 0 };
+  const BKEY = SETTING.SAVE + '_board_v1', board = { metric: 0, scope: 'all', hero: '', near: false, rows: null, me: null, error: '', note: '', loading: false, key: '', at: 0, scroll: 0 };
   try { const b = JSON.parse(localStorage.getItem(BKEY) || '{}'); if (METRICS[b.metric]) board.metric = b.metric; if (b.scope === 'all' || MAPS.includes(b.scope)) board.scope = b.scope;
     if (HEROES.includes(b.hero)) board.hero = b.hero; board.near = !!b.near; } catch (_) {}
   function loadBoard(o = {}, fresh) { if (typeof o === 'number') o = { metric: o };                       // (an older call passed the metric alone)

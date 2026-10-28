@@ -11,7 +11,7 @@ let bad = 0; const ok = (c, s) => { console.log((c ? 'ok   ' : 'FAIL ') + s); if
 function page(store) {
   const ls = { getItem: (k) => (k in store ? store[k] : null), setItem: (k, v) => { store[k] = String(v); }, removeItem: (k) => { delete store[k]; } };
   const ctx = { console, Math, Date, JSON, localStorage: ls }; ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
-  for (const f of ['course.js', 'edu.js', 'sim.js', 'ach.js', 'meta.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
+  for (const f of ['course.js', 'edu.js', 'setting.js', 'sim.js', 'ach.js', 'meta.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
   return ctx;
 }
 const none = { px: 960, py: 540 };

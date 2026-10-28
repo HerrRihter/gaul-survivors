@@ -7,7 +7,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const live = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'live');
 const ctx = { console, Math, Date, JSON }; ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
-for (const f of ['course.js', 'edu.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
+for (const f of ['course.js', 'edu.js', 'setting.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
 const { SIM } = ctx;
 for (const [name, dy] of [['above', -380], ['below', 300], ['close above', -140]]) {
   const S = SIM.spawn(1, {}, { hero: 'utrace' }); S.E = []; S.nextSwarm = 1e9; S.spawnAcc = -1e9; S.hp = 1e6;

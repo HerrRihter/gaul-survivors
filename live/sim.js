@@ -9,7 +9,10 @@
 (function (root) {
   const DT = 1 / 120, L = 24, VIEW = { W: 1920, H: 1080 }, WORLD = { x0: 0, y0: 0, x1: 8000, y1: 6000 };
   const RUN_T = 600, MAX_FOES = 240, EV_CAP = 180;
-  const HINT = 'WASD — движение · мышь — направление автоатаки · M — звук · N — музыка · Пробел — пакетный сброс · 1–3 — улучшение · R — заново';
+  // the setting (live/setting.js): loaded before this file in the page and the tools' vm, required in Node
+  const SET = root.SETTING || require('./setting.js');
+  const { HINT, FOE, FOE_DESC, WEAP, HEROES, CLIENTS, EVO, WSUM, PASS, SKINS, ABIL, FOOT, COMPONENTS, RECTS, PLAZA, RUN } = SET, ROSTER = RUN.roster;
+  const DESK = Object.keys(FOE).find((k) => FOE[k].desk), AURA = Object.keys(FOE).find((k) => FOE[k].aura);   // the service desk, the aura unit
   const SPAWN = [4000, 3000];                                      // hero start = the reference's composition (study/MATCH.md)
   const ORIGIN = [SPAWN[0] - 960, SPAWN[1] - 592];                 // camera origin of the match screen; ref px × 1.5 + ORIGIN = world
   const R = (rx, ry) => [ORIGIN[0] + rx * 1.5, ORIGIN[1] + ry * 1.5];
@@ -18,248 +21,10 @@
   const RIG = { shY: 55, shX: 42, arm: 38, gun: 30, gunUp: 18 };   // shX: the shoulder joint's centre on the body's side outline (round 24)
   const K = { HP: 120, SPEED: 300, ACC: 2600, DEC: 3000, R: 24, DASH: 1050, DASH_T: 0.18, DASH_CD: 2.4, IFR: 0.6 };
 
-  // ---------------- data: foes (key = art prefix), weapons, passives ----------------
-  // kind: melee (burst at range), shoot (aimed shot or a ring: shots.count > 1), mortar (marks round the hero), pulse (area around itself)
-  const FOE = {
-    node:    { name: 'L3', kind: 'melee', hp: 70, sp: 156, dmg: 7, r: 26, range: 64, wind: 0.6, cd: 0.8, xp: 2, mark: 'L3', col: [0.36, 1, 0.6] },
-    panel:   { name: 'Фильтр Grafana', kind: 'melee', hp: 40, sp: 210, dmg: 5, r: 22, range: 56, wind: 0.5, cd: 0.8, xp: 1, col: [1, 0.6, 0.19] },
-    multon:  { name: 'Мултон', kind: 'melee', hp: 50, sp: 192, dmg: 6, r: 24, range: 58, wind: 0.45, cd: 0.7, xp: 2, emblem: 'multon', col: [1, 0.55, 0.2] },
-    orb:     { name: 'Пепси', kind: 'melee', hp: 105, sp: 164, dmg: 9, r: 28, range: 68, wind: 0.7, cd: 0.93, xp: 4, col: [0.25, 0.66, 1],
-               dash: { trigger: 460, wind: 0.8, speed: 900, time: 0.45, cd: 6 } },
-    keg:     { name: 'Инбев', kind: 'melee', hp: 240, sp: 80, dmg: 12, r: 38, range: 92, wind: 1.2, cd: 2.0, xp: 10, front: 0.6, poise: 0.8, emblem: 'inbev', col: [1, 0.8, 0.3] },
-    baltika: { name: 'Балтика', kind: 'melee', hp: 240, sp: 92, dmg: 13, r: 38, range: 88, wind: 1.0, cd: 1.6, xp: 10, poise: 1.5, emblem: 'baltika', col: [0.9, 0.78, 0.44] },
-    mars:    { name: 'Марс', kind: 'shoot', hp: 130, sp: 116, dmg: 10, r: 30, range: 520, wind: 0.9, cd: 2.2, xp: 6, keep: 380,
-               shots: { count: 1, speed: 430, dmg: 1 }, slow: { amount: 0.25, dur: 1.2 }, emblem: 'mars', col: [1, 0.3, 0.25] },
-    loreal:  { name: 'Лореаль', kind: 'shoot', hp: 100, sp: 140, dmg: 8, r: 28, range: 480, wind: 1.0, cd: 2.6, xp: 6, keep: 340,
-               shots: { count: 8, speed: 330, dmg: 0.8 }, emblem: 'loreal', col: [1, 0.6, 0.85] },
-    ferrero: { name: 'Ферреро', kind: 'mortar', hp: 140, sp: 108, dmg: 11, r: 30, range: 600, wind: 1.0, cd: 3.0, xp: 8, keep: 460,
-               mortar: { radius: 100, delay: 1.2, count: 2, scatter: 140 }, emblem: 'ferrero', col: [0.85, 0.7, 0.45] },
-    vetis:   { name: 'Система Ветис', kind: 'pulse', hp: 320, sp: 80, dmg: 12, r: 36, range: 170, wind: 1.2, cd: 3.0, xp: 14, poise: 1.4,
-               slow: { amount: 0.35, dur: 2 }, emblem: 'vetis', col: [0.45, 0.95, 0.75] },
-    // the rest of the original roster, each with a mechanic of its own
-    mond:    { name: 'Монделиз', kind: 'melee', hp: 110, sp: 196, dmg: 7, r: 28, range: 60, wind: 0.45, cd: 0.8, xp: 4, emblem: 'mondelez', zig: 1,
-               trail: { every: 0.14, life: 3, r: 46, slow: { amount: 0.3, dur: 0.5 } }, col: [0.62, 0.4, 0.85] },
-    prog:    { name: 'Прогресс (ФрутоНяня)', kind: 'lob', hp: 130, sp: 128, dmg: 10, r: 30, range: 560, wind: 0.9, cd: 2.4, xp: 6, keep: 380, emblem: 'progress',
-               lob: { count: 2, bounces: 2, r: 70 }, col: [0.55, 0.8, 0.45] },
-    royal:   { name: 'Роял Канин', kind: 'shoot', hp: 150, sp: 110, dmg: 9, r: 30, range: 520, wind: 0.9, cd: 2.6, xp: 6, keep: 360, emblem: 'royal_canin',
-               shots: { count: 3, speed: 420, dmg: 1, fan: 0.35, back: 0.8 }, col: [0.85, 0.2, 0.25] },
-    cherk:   { name: 'Черкизово', kind: 'spin', hp: 230, sp: 100, dmg: 9, r: 36, range: 230, wind: 0.7, cd: 4, xp: 10, poise: 1.3, emblem: 'cherkizovo',
-               spin: { time: 1.6, r: 105, tick: 0.25, speed: 1.45 }, col: [0.75, 0.15, 0.25] },
-    pg:      { name: 'Проктер энд Гэмбл', kind: 'melee', hp: 260, sp: 96, dmg: 11, r: 38, range: 88, wind: 1.0, cd: 1.8, xp: 12, poise: 1.5, emblem: 'procter_gamble',
-               aura: { r: 260, reduce: 0.5 }, col: [0.3, 0.55, 1] },
-    petfood: { name: 'Марс Петфуд', kind: 'shoot', hp: 150, sp: 120, dmg: 6, r: 30, range: 440, wind: 0.8, cd: 2.2, xp: 6, keep: 300, emblem: 'mars_petfood',
-               shots: { count: 5, speed: 460, dmg: 1, fan: 0.6 }, col: [0.35, 0.8, 0.95] },
-    logq:    { name: 'Запрос в логи', kind: 'beam', hp: 260, sp: 90, dmg: 16, r: 36, range: 640, wind: 1.3, cd: 3.2, xp: 10, front: 0.7, mark: 'LOG',
-               beam: { len: 720, w: 40, hold: 0.25 }, col: [0.6, 0.48, 1] },
-    sdesk:   { name: 'Сервисдеск Пепси', kind: 'desk', hp: 1400, sp: 0, dmg: 0, r: 64, range: 0, wind: 1, cd: 99, xp: 30, poise: 99, mini: true,
-               desk: { every: 7, base: 2, grow: 40, max: 10, unit: 'orb', reach: 1700 }, col: [0.2, 0.45, 0.85] },
-    // the five component minibosses: big (r 78, drawn ×1.8), tough and quick inside their circle, each with a lunge
-    bug:     { name: 'Баг импорта', kind: 'mortar', hp: 2200, sp: 120, dmg: 20, r: 78, range: 700, wind: 0.9, cd: 2.0, xp: 40, poise: 3, mini: true, mark: 'BUG',
-               mortar: { radius: 130, delay: 1.1, count: 5, scatter: 220 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.61, 0.59, 1] },
-    bugl:    { name: 'Баг логистики', kind: 'pulse', hp: 2400, sp: 125, dmg: 18, r: 78, range: 320, wind: 1.1, cd: 1.9, xp: 40, poise: 3, mini: true, mark: 'BUG',
-               slow: { amount: 0.5, dur: 2.5 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.93, 0.81, 0.4] },
-    bugg:    { name: 'Баг товарных отчётов', kind: 'pulse', hp: 2200, sp: 125, dmg: 18, r: 78, range: 280, wind: 1.0, cd: 1.8, xp: 40, poise: 3, mini: true, mark: 'BUG',
-               pools: { every: 3.5, count: 3, radius: 100, life: 4.5, scatter: 200, dmg: 0.6 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.47, 0.81, 0.72] },
-    bugu:    { name: 'Баг отчёта использования', kind: 'shoot', hp: 2000, sp: 115, dmg: 12, r: 78, range: 620, wind: 0.9, cd: 1.8, xp: 40, poise: 3, mini: true, mark: 'BUG', keep: 260,
-               shots: { count: 14, speed: 380, dmg: 1 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.89, 0.53, 0.83] },
-    buga:    { name: 'Баг агрегации', kind: 'pulse', hp: 2400, sp: 120, dmg: 18, r: 78, range: 280, wind: 1.0, cd: 1.8, xp: 40, poise: 3, mini: true, mark: 'BUG',
-               summon: { every: 6, count: 3, max: 7, units: ['node'] }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.96, 0.55, 0.33] },
-    // ЦРПТ: a miniboss of the «Дата-центр» since stage 5 of docs/PLAN-FEEDBACK-27-10.md (it opened the boss queue before)
-    crpt:    { name: 'ЦРПТ', kind: 'pulse', hp: 3000, sp: 100, dmg: 20, r: 90, range: 220, wind: 1.3, cd: 2.6, xp: 60, poise: 4, mini: true, mark: 'ЦРПТ',
-               shots: { count: 8, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 3, max: 9, units: ['node', 'orb', 'mars'] }, col: [1, 0.84, 0],
-               intro: 'ЦРПТ: проверка партии, подключены клиенты' },
-    batch:   { name: 'Партионный учёт', kind: 'pulse', hp: 6000, sp: 70, dmg: 20, r: 100, range: 300, wind: 1.2, cd: 2.4, xp: 80, poise: 4, boss: true,
-               shots: { count: 12, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 4, max: 8, units: ['orb'] }, ward: 0.7, col: [0.3, 0.6, 1],
-               intro: 'ПАРТИОННЫЙ УЧЁТ: щит держится, пока живы его клиенты' },
-    boss:    { name: 'Критический инцидент', kind: 'pulse', hp: 9000, sp: 76, dmg: 22, r: 104, range: 330, wind: 1.2, cd: 2.6, xp: 100, poise: 4, boss: true,
-               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['orb', 'keg', 'baltika'] }, escalate: { every: 30, max: 4 },
-               slow: { amount: 0.35, dur: 2 }, col: [1, 0.36, 0.36], intro: 'КРИТИЧЕСКИЙ ИНЦИДЕНТ: уничтожьте его, чтобы закрыть смену' },
-    // the «Дата-центр»'s own bosses (docs/PLAN-FEEDBACK-27-10.md, stage 5); the training centre keeps Партионный учёт and Критический инцидент.
-    // split: at that share of its health a copy breaks away; tether: while both live, the line between them hurts the hero who crosses it
-    repl:    { name: 'Падение репликации', kind: 'shoot', hp: 2600, sp: 105, dmg: 18, r: 90, range: 640, wind: 0.8, cd: 1.7, xp: 70, poise: 4, boss: true, keep: 320,
-               shots: { count: 5, speed: 420, dmg: 0.6, fan: 0.5 }, split: { at: 0.5 }, tether: { w: 40, tick: 0.4, dmg: 0.5 }, col: [0.85, 0.3, 0.95],
-               intro: 'ПАДЕНИЕ РЕПЛИКАЦИИ: при половине здоровья делится надвое — не стойте на линии между копиями' },
-    // queue: a row of marks through where the hero is heading (lead: seconds ahead), each going off after the one before; the boss
-    // is quicker while its marks are pending
-    rstorm:  { name: 'Шторм ретраев', kind: 'queue', hp: 6200, sp: 85, dmg: 36, r: 96, range: 780, wind: 0.8, cd: 2.4, xp: 85, poise: 4, boss: true,
-               queue: { count: 7, gap: 140, delay: 1.0, step: 0.24, r: 115, haste: 0.12, lead: 0.7 }, summon: { every: 8, count: 4, max: 10, units: ['panel', 'multon'] }, col: [1, 0.6, 0.15],
-               intro: 'ШТОРМ РЕТРАЕВ: метки взрываются по очереди, и пока очередь не пуста, он быстрее' },
-    // the final boss: the lights go out and a restored component goes down on arrival and on every escalation; every component down
-    // cuts the damage it takes (restart one by standing in its circle)
-    outage:  { name: 'Отказ дата-центра', kind: 'pulse', hp: 8500, sp: 72, dmg: 24, r: 108, range: 340, wind: 1.2, cd: 2.6, xp: 110, poise: 4, boss: true, final: true,
-               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['orb', 'keg', 'logq'] }, escalate: { every: 30, max: 4 },
-               outage: { dark: 9, ward: 0.15, minWard: 0.5 }, col: [0.9, 0.12, 0.1],
-               intro: 'ОТКАЗ ДАТА-ЦЕНТРА: гасит свет и отключает компоненты — перезапускайте их, иначе урон по нему ниже' },
-  };
-  // the enemy list's lines (the collection's «Враги» tab): what each one does, read from its mechanics above
-  const FOE_DESC = {
-    node: 'Обычный узел: идёт к герою и бьёт вблизи', panel: 'Слабый и быстрый, берёт числом', multon: 'Быстрый, бьёт вблизи короткими ударами',
-    orb: 'Издалека разгоняется и делает рывок к герою', keg: 'Медленный тяжеловес: бронированный перед, редкий сильный удар',
-    baltika: 'Медленный тяжеловес, почти не отлетает от ударов', mars: 'Стреляет издалека, попадание замедляет',
-    loreal: 'Стреляет залпом из восьми снарядов', ferrero: 'Миномёт: накрывает две точки возле героя',
-    vetis: 'Бьёт волной вокруг себя, волна замедляет', mond: 'Петляет зигзагом и оставляет липкий след, след замедляет',
-    prog: 'Бросает снаряды, которые отскакивают от пола', royal: 'Стреляет тремя снарядами веером, снаряды возвращаются',
-    cherk: 'Раскручивается и бьёт всех вокруг', pg: 'Аура: враги рядом с ним получают вдвое меньше урона',
-    petfood: 'Стреляет веером из пяти снарядов', logq: 'Наводит длинный луч и бьёт им по линии',
-    sdesk: 'Неподвижный стол поддержки: раз в 7 с вызывает Пепси', bug: 'Баг компонента: миномёт по площади и рывки',
-    bugl: 'Баг компонента: волна, сильно замедляет, рывки', bugg: 'Баг компонента: оставляет жгучие лужи, рывки',
-    bugu: 'Баг компонента: стреляет кольцом из 14 снарядов, рывки', buga: 'Баг компонента: вызывает узлы L3, рывки',
-    crpt: 'Мини-босс: стреляет кольцом и вызывает подкрепление', repl: 'Босс: делится надвое, линия между копиями обжигает',
-    rstorm: 'Босс: очередь меток взрывается по одной, пока очередь не пуста — он быстрее', outage: 'Финальный босс: гасит свет и отключает компоненты', batch: 'Босс курса: пока живы его клиенты, урон по нему меньше',
-    boss: 'Финальный босс: каждые 30 с злее, вызывает тяжеловесов, замедляет',
-  };
   const HP_SCALE = 1.15, DMG_SCALE = 1.265;
-  // weapon levels 1..6: base, then the project's five steps (data/weapons.js), distances ×2
-  const WEAP0 = {
-    trace:  { name: 'Трассировка кодов', ic: 'ic_trace', hero: 1, base: { dmg: 28, cd: 0.65, range: 175, half: Math.PI / 4, push: 290 },
-              steps: [['+25% урона', { dmg: 0.25 }], ['+20% дальности', { range: 35 }], ['Быстрее на 15%', { cd: -0.15 }], ['+25% урона, шире сектор', { dmg: 0.25, half: 0.2 }], ['+35% урона', { dmg: 0.35 }]] },
-    orbit:  { name: 'Орбитальный сканер', ic: 'ic_orbit', base: { dmg: 12, count: 2, radius: 144, spin: 3.2, rehit: 0.5 },
-              steps: [['+1 сканер', { count: 1 }], ['+25% урона', { dmg: 0.25 }], ['+20% к радиусу орбиты', { radius: 28 }], ['+1 сканер', { count: 1 }], ['+30% урона, быстрее вращение', { dmg: 0.3, spin: 0.8 }]] },
-    homing: { name: 'Криптохвост', ic: 'ic_homing', base: { dmg: 22, count: 1, cd: 1.4, speed: 660, life: 2.2 },
-              steps: [['+25% урона', { dmg: 0.25 }], ['+1 снаряд', { count: 1 }], ['Быстрее на 15%', { cd: -0.15 }], ['+1 снаряд', { count: 1 }], ['+35% урона', { dmg: 0.35 }]] },
-    mine:   { name: 'DataMatrix-мина', ic: 'ic_mine', base: { dmg: 34, count: 1, cd: 2.3, radius: 116, limit: 4, life: 12 },
-              steps: [['+20% радиуса взрыва', { radius: 24 }], ['+25% урона', { dmg: 0.25 }], ['+1 мина за раз', { count: 1 }], ['Быстрее на 15%', { cd: -0.15 }], ['+35% урона, +3 мины на поле', { dmg: 0.35, limit: 3 }]] },
-    ping:   { name: 'Пинг', ic: 'ic_ping', base: { dmg: 14, cd: 2.6, radius: 190, push: 440 },
-              steps: [['+20% радиуса', { radius: 38 }], ['+30% урона', { dmg: 0.3 }], ['Быстрее на 15%', { cd: -0.15 }], ['+20% радиуса', { radius: 38 }], ['+40% урона', { dmg: 0.4 }]] },
-    retry:  { name: 'Ретрай', ic: 'ic_retry', base: { dmg: 20, count: 1, cd: 1.9, speed: 860 },
-              steps: [['+25% урона', { dmg: 0.25 }], ['+1 бумеранг', { count: 1 }], ['+20% скорости', { speed: 172 }], ['+30% урона', { dmg: 0.3 }], ['+1 бумеранг', { count: 1 }]] },
-    cache:  { name: 'Горячий кэш', ic: 'ic_cache', base: { dmg: 9, count: 1, cd: 3.2, radius: 104, life: 3, tick: 0.5 },
-              steps: [['+20% радиуса', { radius: 20 }], ['+30% урона', { dmg: 0.3 }], ['+1 зона', { count: 1 }], ['Быстрее на 15%', { cd: -0.15 }], ['+40% урона', { dmg: 0.4 }]] },
-  };
-  const WEAP = Object.assign(WEAP0, {
-    // new (round 11): the Vampire Survivors / DRG Survivors staples in the project's terms
-    udp:    { name: 'UDP-флуд', ic: 'ic_udp', base: { dmg: 9, count: 1, cd: 0.34, speed: 1150, life: 0.75, pierce: 0, spread: 0.1 },
-              steps: [['+1 пакет', { count: 1 }], ['+25% урона', { dmg: 0.25 }], ['Быстрее на 15%', { cd: -0.15 }], ['Пробивает ещё 1 врага', { pierce: 1 }], ['+1 пакет, +30% урона', { count: 1, dmg: 0.3 }]] },
-    chain:  { name: 'Эхо-запрос', ic: 'ic_chain', base: { dmg: 18, cd: 1.6, jumps: 3, range: 260 },
-              steps: [['+1 переход', { jumps: 1 }], ['+25% урона', { dmg: 0.25 }], ['Быстрее на 15%', { cd: -0.15 }], ['+2 перехода', { jumps: 2 }], ['+35% урона', { dmg: 0.35 }]] },
-    storm:  { name: 'Сетевой шторм', ic: 'ic_storm', base: { dmg: 30, count: 2, cd: 1.9, radius: 70 },
-              steps: [['+1 разряд', { count: 1 }], ['+25% урона', { dmg: 0.25 }], ['+25% радиуса', { radius: 18 }], ['+1 разряд', { count: 1 }], ['+40% урона', { dmg: 0.4 }]] },
-    turret: { name: 'Сторожевой сервер', ic: 'ic_turret', base: { dmg: 8, count: 1, cd: 9, life: 6, rate: 0.28, range: 560 },
-              steps: [['Работает на 2 с дольше', { life: 2 }], ['+25% урона', { dmg: 0.25 }], ['Стреляет чаще', { rate: -0.06 }], ['+1 сервер', { count: 1 }], ['+35% урона', { dmg: 0.35 }]] },
-    cryo:   { name: 'Криокулер', ic: 'ic_cryo', base: { dmg: 4, cd: 2.4, burst: 1.0, tick: 0.15, range: 230, half: 0.38 },
-              steps: [['+25% урона', { dmg: 0.25 }], ['Струя дольше на 0,4 с', { burst: 0.4 }], ['+20% дальности', { range: 46 }], ['Быстрее на 15%', { cd: -0.15 }], ['+35% урона, шире струя', { dmg: 0.35, half: 0.12 }]] },
-    fork:   { name: 'Форк-бомба', ic: 'ic_fork', base: { dmg: 40, cd: 3, radius: 110, split: 4, depth: 1 },
-              steps: [['+20% радиуса', { radius: 22 }], ['+25% урона', { dmg: 0.25 }], ['+2 осколка', { split: 2 }], ['Быстрее на 15%', { cd: -0.15 }], ['+40% урона', { dmg: 0.4 }]] },
-    // the force shield: a charge absorbs a whole hit (hurtHero), recharge cd s; push: a wave on a block (radius, damage)
-    shield: { name: 'Отказоустойчивость', ic: 'ic_shield', kind: 'shield', base: { cd: 14, charges: 1, push: 0, radius: 220, dmg: 0 },
-              steps: [['Перезарядка быстрее на 15%', { cd: -0.15 }], ['Поглощение отбрасывает врагов вокруг', { push: 1 }], ['Перезарядка быстрее на 15%', { cd: -0.15 }],
-                      ['Волна поглощения наносит урон', { dmg: 40 }], ['Перезарядка быстрее на 20%, волна шире', { cd: -0.2, radius: 60 }]] },
-    // evolutions: max level + the paired passive; one level, their own icon (ic_x_<base>)
-    shield_x: { name: 'Кластер отказоустойчивости', of: 'shield', evo: 1, kind: 'shield', ic: 'ic_x_shield', base: { cd: 6, charges: 2, push: 1, radius: 320, dmg: 90 }, steps: [] },
-    trace_x:  { name: 'Полная трассировка', of: 'trace', evo: 1, ic: 'ic_x_trace', base: { dmg: 50, cd: 0.5, range: 230, half: Math.PI / 3, push: 340, back: 1, heal: 0.6 }, steps: [] },
-    orbit_x:  { name: 'Кольцо мониторинга', of: 'orbit', evo: 1, ic: 'ic_x_orbit', base: { dmg: 30, count: 6, radius: 210, spin: 4.6, rehit: 0.35 }, steps: [] },
-    homing_x: { name: 'Рой криптохвостов', of: 'homing', evo: 1, ic: 'ic_x_homing', base: { dmg: 30, count: 3, cd: 0.4, speed: 780, life: 2.4 }, steps: [] },
-    mine_x:   { name: 'Минное поле', of: 'mine', evo: 1, ic: 'ic_x_mine', base: { dmg: 62, count: 4, cd: 1.3, radius: 150, limit: 16, life: 10, ring: 150 }, steps: [] },
-    ping_x:   { name: 'Heartbeat', of: 'ping', evo: 1, ic: 'ic_x_ping', base: { dmg: 28, cd: 1.5, radius: 310, push: 520, heal: 0.35 }, steps: [] },
-    retry_x:  { name: 'Бесконечный ретрай', of: 'retry', evo: 1, ic: 'ic_x_retry', base: { dmg: 42, count: 8, cd: 1.3, speed: 1000 }, steps: [] },
-    cache_x:  { name: 'Горячий кластер', of: 'cache', evo: 1, ic: 'ic_x_cache', base: { dmg: 15, count: 1, cd: 3, radius: 180, life: 3, tick: 0.3, follow: 1 }, steps: [] },
-    udp_x:    { name: 'Широкополосный поток', of: 'udp', evo: 1, ic: 'ic_x_udp', base: { dmg: 15, count: 5, cd: 0.18, speed: 1300, life: 0.8, pierce: 99, spread: 0.16 }, steps: [] },
-    chain_x:  { name: 'Широковещательный шторм', of: 'chain', evo: 1, ic: 'ic_x_chain', base: { dmg: 30, cd: 0.9, jumps: 14, range: 320 }, steps: [] },
-    storm_x:  { name: 'DDoS', of: 'storm', evo: 1, ic: 'ic_x_storm', base: { dmg: 55, count: 8, cd: 1.0, radius: 110 }, steps: [] },
-    turret_x: { name: 'Кластер серверов', of: 'turret', evo: 1, ic: 'ic_x_turret', base: { dmg: 14, count: 3, cd: 1, life: 1e9, rate: 0.14, range: 640, perm: 1 }, steps: [] },
-    cryo_x:   { name: 'Абсолютный ноль', of: 'cryo', evo: 1, ic: 'ic_x_cryo', base: { dmg: 7, cd: 0, burst: 1e9, tick: 0.15, range: 300, half: 0.55, freeze: 1 }, steps: [] },
-    fork_x:   { name: 'Fork-бомба ∞', of: 'fork', evo: 1, ic: 'ic_x_fork', base: { dmg: 70, cd: 2, radius: 140, split: 6, depth: 2 }, steps: [] },
-    // the heroes' own attacks (hero: 1 — never offered to another hero)
-    tchain:  { name: 'Цепочка прослеживаемости', ic: 'ic_tchain', hero: 1, base: { dmg: 24, cd: 0.9, range: 290, jumps: 6, cone: 1.0 },
-               steps: [['+25% урона', { dmg: 0.25 }], ['+20% к длине перехода', { range: 58 }], ['Быстрее на 15%', { cd: -0.15 }], ['+2 цели', { jumps: 2 }], ['+35% урона', { dmg: 0.35 }]] },
-    packet:  { name: 'Серийный пакет', ic: 'ic_packet', hero: 1, base: { dmg: 23, cd: 0.75, range: 775, speed: 1000, count: 1, spread: 0.2 },
-               steps: [['+25% урона', { dmg: 0.25 }], ['+1 пакет', { count: 1 }], ['Быстрее на 15%', { cd: -0.15 }], ['+20% дальности', { range: 155 }], ['+35% урона, +1 пакет', { dmg: 0.35, count: 1 }]] },
-    req:     { name: 'Разбор требований', ic: 'ic_req', hero: 1, kind: 'trace', base: { dmg: 26, cd: 0.85, range: 212, half: Math.PI * 2 / 5, push: 230 },
-               steps: [['+25% урона', { dmg: 0.25 }], ['+20% дальности', { range: 42 }], ['Быстрее на 15%', { cd: -0.15 }], ['Шире сектор', { half: 0.2 }], ['+35% урона', { dmg: 0.35 }]] },
-    regress: { name: 'Регрессионная проверка', ic: 'ic_regress', hero: 1, base: { dmg: 19, cd: 1.05, range: 225, stun: 0.6 },
-               steps: [['+25% урона', { dmg: 0.25 }], ['+15% к зоне', { range: 34 }], ['Быстрее на 15%', { cd: -0.15 }], ['Прерывание дольше на 0,3 с', { stun: 0.3 }], ['+35% урона', { dmg: 0.35 }]] },
-    tchain_x:  { name: 'Обратная цепь', of: 'tchain', evo: 1, ic: 'ic_x_tchain', base: { dmg: 34, cd: 0.75, range: 340, jumps: 10, cone: 1.2, back: 1 }, steps: [] },
-    packet_x:  { name: 'Расщеплённый пакет', of: 'packet', evo: 1, ic: 'ic_x_packet', base: { dmg: 32, cd: 0.6, range: 900, speed: 1100, count: 2, spread: 0.2, split: 3 }, steps: [] },
-    req_x:     { name: 'Работа с ключевым клиентом', of: 'req', kind: 'trace', evo: 1, ic: 'ic_x_req', base: { dmg: 44, cd: 0.7, range: 250, half: Math.PI / 2, push: 300, client: 2, heal: 0.5 }, steps: [] },
-    regress_x: { name: 'Метка дефекта', of: 'regress', evo: 1, ic: 'ic_x_regress', base: { dmg: 28, cd: 0.9, range: 280, stun: 1.0, mark: 1 }, steps: [] },
-  });
-  // the five heroes: speed is relative to K.SPEED; price in codes (Utrace is free); col = the hero's accent
-  const HEROES = {
-    utrace:        { name: 'Utrace', role: 'Универсал', roleDesc: 'Ровный во всём, лучший выбор для первой смены.', price: 0, hp: 120, speed: 1, weapon: 'trace', art: 'hero', col: [0.0, 0.62, 0.73],
-                     passive: { name: 'Универсальный стек', desc: '+1 слот оружия: 5 видов вместе с атакой героя', slots: 1 },
-                     training: { name: 'Оптимизация Utrace', desc: '+6% к урону подобранного оружия', factor: 0.06 } },
-    traceability:  { name: 'Полная прослеживаемость', role: 'Против толпы', roleDesc: 'Чем плотнее толпа вокруг, тем сильнее каждый удар.', price: 80, hp: 110, speed: 145 / 150, weapon: 'tchain', art: 'hr_trc', col: [0.43, 0.89, 0.8],
-                     passive: { name: 'Связанные данные', desc: '+3% урона за каждого врага ближе 400 px, до +30%', crowd: 0.03, cap: 0.3 },
-                     training: { name: 'Оптимизация: Полная прослеживаемость', desc: '+10% к пределу бонуса за толпу', factor: 0.1 } },
-    serialization: { name: 'Сериализация', role: 'Дальний бой', roleDesc: 'Держит дистанцию и расстреливает врагов на подходе.', price: 100, hp: 100, speed: 160 / 150, weapon: 'packet', art: 'hr_ser', col: [0.98, 0.35, 0.27],
-                     passive: { name: 'Дальняя доставка', desc: '+20% урона по врагам дальше 375 px', far: 0.2 },
-                     training: { name: 'Оптимизация: Сериализация', desc: '+7% к урону по дальним врагам', factor: 0.07 } },
-    ba:            { name: 'БА', role: 'Танк', roleDesc: 'Крепнет по ходу смены, побеждая своего клиента.', price: 120, hp: 135, speed: 140 / 150, weapon: 'req', art: 'hr_ba', col: [0.97, 0.81, 0.44],
-                     passive: { name: 'Ключевой клиент', desc: '+1 HP (и к максимуму) за каждого побеждённого выбранного клиента', clientHp: 1 },
-                     training: { name: 'Оптимизация: БА', desc: '+0,5 HP за убийство клиента', factor: 0.5 } },
-    qa:            { name: 'QA', role: 'Контроль', roleDesc: 'Останавливает врагов и добивает отмеченные цели критами.', price: 140, hp: 115, speed: 1, weapon: 'regress', art: 'hr_qa', col: [0.47, 0.93, 0.74],
-                     passive: { name: 'Найденный дефект', desc: '10% шанс крита ×1,8; по целям скана за 2 с ещё +35%', crit: 0.1, scanCrit: 0.35 },
-                     training: { name: 'Оптимизация: QA', desc: '+4% к шансу крита', factor: 0.04 } },
-  };
-  // БА's key client: client brands only (no regulators, bugs or staff), as in the original's ba-specialization
-  const CLIENTS = ['orb', 'keg', 'baltika', 'mars', 'loreal', 'multon', 'ferrero', 'mond', 'prog', 'royal', 'cherk', 'pg', 'petfood'];
-  const heroOf = (S) => HEROES[S.hero] || HEROES.utrace;
-  // evolution recipes: weapon at max level + this passive (any level) → evolved weapon (Vampire Survivors style)
-  const EVO = { trace: ['power', 'trace_x'], orbit: ['speed', 'orbit_x'], homing: ['haste', 'homing_x'], mine: ['area', 'mine_x'], ping: ['hp', 'ping_x'],
-    retry: ['amount', 'retry_x'], cache: ['dur', 'cache_x'], udp: ['magnet', 'udp_x'], chain: ['haste', 'chain_x'], storm: ['area', 'storm_x'],
-    turret: ['dur', 'turret_x'], cryo: ['hp', 'cryo_x'], fork: ['power', 'fork_x'],
-    tchain: ['amount', 'tchain_x'], packet: ['speed', 'packet_x'], req: ['hp', 'req_x'], regress: ['area', 'regress_x'], shield: ['firewall', 'shield_x'] };
-  const WSUM = { trace: 'Сектор перед героем, отбрасывает', orbit: 'Сканеры кружат вокруг героя', homing: 'Пакеты взлетают веером и пикируют на случайных врагов', mine: 'Мина остаётся позади, на вашем следе',
-    ping: 'Волна вокруг героя отталкивает врагов', retry: 'Летит дугой вверх в сторону от курсора и падает', cache: 'Горячая зона жжёт врагов',
-    udp: 'Очередь пакетов по ходу движения', chain: 'Молния бьёт случайного врага рядом и перескакивает', storm: 'Разряды с неба по случайным врагам на экране',
-    turret: 'Ставит сервер-турель, она стреляет сама', cryo: 'Струя холода вращается вокруг героя: урон и замедление', fork: 'Граната летит в самую плотную толпу и делится',
-    trace_x: 'Бьёт вперёд и назад, лечит за каждое попадание', orbit_x: 'Шесть сканеров на широкой орбите', homing_x: 'Непрерывный рой самонаводящихся пакетов',
-    mine_x: 'Мины ложатся кольцом вокруг героя', ping_x: 'Мощная волна, лечит за каждого задетого', retry_x: 'Восемь бумерангов во все стороны',
-    cache_x: 'Горячая зона всегда вокруг героя', udp_x: 'Веер пакетов, пробивающих всех', chain_x: 'Молния перескакивает по всей толпе',
-    storm_x: 'Восемь разрядов разом', turret_x: 'Три постоянных сервера-турели рядом с героем', cryo_x: 'Холод не выключается и замораживает врагов',
-    fork_x: 'Осколки делятся ещё раз', shield: 'Щит полностью поглощает один удар, затем перезаряжается', shield_x: 'Два заряда щита, быстрая перезарядка, поглощение бьёт волной',
-    tchain: 'Цепь от ближайшей цели впереди перескакивает на соседей, до 6 целей', packet: 'Пробивающий пакет в сторону курсора',
-    req: 'Широкий сектор перед героем, сильно отбрасывает', regress: 'Квадрат проверки вокруг героя прерывает атаки обычных врагов',
-    tchain_x: 'До 10 целей, цепь возвращается и бьёт ещё раз', packet_x: 'Пакеты расщепляются на три при первом попадании',
-    req_x: 'Вдвое больнее выбранному клиенту, лечит за попадания', regress_x: 'Отмеченные цели 2 с получают на 50% больше урона' };
-  const PASS = {
-    hp:     { name: 'Резервное питание', ic: 'ic_hp', desc: '+20 к максимуму HP и лечение' },
-    speed:  { name: 'Оптоволокно', ic: 'ic_speed', desc: '+8% к скорости' },
-    magnet: { name: 'Широкий канал', ic: 'ic_magnet', desc: '+40% к радиусу сбора' },
-    power:  { name: 'Оверклокинг', ic: 'ic_power', desc: '+12% ко всему урону' },
-    haste:  { name: 'Низкая задержка', ic: 'ic_haste', desc: '−8% к перезарядке' },
-    area:   { name: 'Широкий охват', ic: 'ic_area', desc: '+10% к радиусу и дальности оружия' },
-    amount: { name: 'Репликация', ic: 'ic_amount', desc: '+1 снаряд на уровнях 2 и 4' },
-    dur:    { name: 'Keep-alive', ic: 'ic_dur', desc: '+12% к времени действия' },
-    firewall: { name: 'Брандмауэр', ic: 'ic_firewall', desc: '−7% получаемого урона' },
-    repair: { name: 'Самовосстановление', ic: 'ic_repair', desc: '+0,3 HP в секунду' },
-  };
-  // hero skins (plan stage 4, round 23): a full part sheet of the SAME character in its own style — art: its sprites' prefix (body, leg,
-  // foot, arm); the hero's rig and scanner stay, the base drawing is never replaced. Cosmetic only. col: the menus' accent colour.
-  // every hero: a recolour (40), a calm (80) and an aggressive (120) one
-  const SKINS = {
-    utrace_arctic: { hero: 'utrace', name: 'Арктика', style: 'другая расцветка', price: 40, art: 'sk_utrace_arctic', col: [0.56, 0.83, 1] },
-    utrace_zen:    { hero: 'utrace', name: 'Дзен', style: 'спокойный', price: 80, art: 'sk_utrace_zen', col: [0.62, 0.9, 0.81] },
-    utrace_storm:  { hero: 'utrace', name: 'Штурм', style: 'агрессивный', price: 120, art: 'sk_utrace_storm', col: [1, 0.29, 0.24] },
-    trc_sapphire: { hero: 'traceability', name: 'Сапфир', style: 'другая расцветка', price: 40, art: 'sk_trc_sapphire', col: [0.35, 0.55, 1] },
-    trc_still: { hero: 'traceability', name: 'Тишина', style: 'спокойный', price: 80, art: 'sk_trc_still', col: [0.66, 0.92, 0.84] },
-    trc_intercept: { hero: 'traceability', name: 'Перехват', style: 'агрессивный', price: 120, art: 'sk_trc_intercept', col: [0.56, 0.36, 1] },
-    ser_cobalt: { hero: 'serialization', name: 'Кобальт', style: 'другая расцветка', price: 40, art: 'sk_ser_cobalt', col: [0.3, 0.5, 1] },
-    ser_cloud: { hero: 'serialization', name: 'Облако', style: 'спокойный', price: 80, art: 'sk_ser_cloud', col: [0.65, 0.83, 1] },
-    ser_breach: { hero: 'serialization', name: 'Взлом', style: 'агрессивный', price: 120, art: 'sk_ser_breach', col: [0.22, 1, 0.53] },
-    ba_platinum: { hero: 'ba', name: 'Платина', style: 'другая расцветка', price: 40, art: 'sk_ba_platinum', col: [0.81, 0.84, 0.87] },
-    ba_consult: { hero: 'ba', name: 'Консультант', style: 'спокойный', price: 80, art: 'sk_ba_consult', col: [0.56, 0.85, 0.81] },
-    ba_deadline: { hero: 'ba', name: 'Дедлайн', style: 'агрессивный', price: 120, art: 'sk_ba_deadline', col: [1, 0.2, 0.33] },
-    qa_onyx: { hero: 'qa', name: 'Оникс', style: 'другая расцветка', price: 40, art: 'sk_qa_onyx', col: [0.37, 0.94, 0.75] },
-    qa_sandbox: { hero: 'qa', name: 'Песочница', style: 'спокойный', price: 80, art: 'sk_qa_sandbox', col: [0.71, 0.86, 1] },
-    qa_crash: { hero: 'qa', name: 'Краш-тест', style: 'агрессивный', price: 120, art: 'sk_qa_crash', col: [1, 0.83, 0] },
-  };
-  // the heroes' E abilities (data/characters/abilities.js of the original): cd and dur in s, radius ×2; rank (level-up cards, max AB_MAX)
-  // adds rankDur s, rankPow damage share or rankStun s
-  const ABIL = {
-    utrace:        { id: 'overclock', name: 'Оверклокинг', ic: 'ab_overclock', cd: 22, dur: 6, rankDur: 1, haste: 1.6, speed: 1.15,
-                     desc: 'Разгон ядра: на 6 с темп атак ×1,6 и скорость +15%', up: 'Оверклокинг действует на 1 с дольше' },
-    traceability:  { id: 'registry', name: 'Реестр', ic: 'ab_registry', cd: 20, dur: 5, rankDur: 1,
-                     desc: 'На 5 с цепь бьёт всю связанную группу без лимита целей', up: 'Реестр действует на 1 с дольше' },
-    serialization: { id: 'volley', name: 'Залп', ic: 'ab_volley', cd: 14, dur: 0.3, count: 12, power: 0.8, rankPow: 0.25,
-                     desc: '12 пробивающих пакетов веером во все стороны', up: '+25% к урону пакетов залпа' },
-    ba:            { id: 'negotiate', name: 'Переговоры', ic: 'ab_negotiate', cd: 24, dur: 4, rankDur: 1, radius: 480,
-                     desc: 'На 4 с обычные враги рядом не атакуют, а выбранный клиент — по всей карте', up: 'Переговоры действуют на 1 с дольше' },
-    qa:            { id: 'field', name: 'Регресс', ic: 'ab_field', cd: 18, dur: 3, radius: 280, stun: 2, rankStun: 0.5,
-                     desc: 'Зона регресса на 3 с: обычные враги в ней замирают на 2 с', up: 'Враги в зоне замирают на 0,5 с дольше' },
-  };
+  const heroOf = (S) => HEROES[S.hero] || HEROES[RUN.hero];
   const AB_MAX = 3;
-  const abOf = (S) => ABIL[S.hero] || ABIL.utrace;
+  const abOf = (S) => ABIL[S.hero] || ABIL[RUN.hero];
   const abOn = (S) => !!S.ab && S.t < S.ab.until;                                    // the ability is running
   const MAX_W = 4, MAX_P = 6, MAX_PL = 5, MAX_WL = 6;   // weapons besides the hero's own attack (+ the hero's slots: Utrace 5), 6 passive kinds
   const wstat = (id, lv) => { const w = WEAP[id], s = Object.assign({}, w.base); for (let i = 0; i < lv - 1; i++) { const d = w.steps[i][1];
@@ -278,106 +43,14 @@
   // is re-scattered, energy cells and service desks move. A layout is validated (no overlaps, start and nodes clear, everything
   // reachable) before use; a bad seed falls through to the next one. The attract demo always uses seed 0.
   const hseed = (n) => { const v = Math.sin(n * 127.1 + 311.7) * 43758.5453; return v - Math.floor(v); };
-  // ground footprints [half width, half depth], measured from each drawing at its in-game size: the front edge sits on the ground
-  // point, the depth runs back like the top face of the 3/4 drawing
-  const FOOT = { ups: [56, 26], pdu: [36, 20], cart: [32, 16], cart_b: [38, 18], core: [205, 104], cage: [157, 72], crac: [127, 58], tray: [51, 17],
-    firerack: [35, 15], switch: [37, 18], desk: [62, 30], tapelib: [45, 21], patch: [28, 17], cell: [38, 20],
-    blade: [37, 18], dock: [37, 24], holopillar: [25, 16], spool: [42, 23], manifold: [44, 22], batbank: [54, 25], switchstack: [43, 24], crates: [42, 23], mast: [44, 24], rack_open: [69, 31] };
   const HOLD_T = 30;   // seconds standing in a node circle to work around its bug
   const RESTART_T = 8;   // seconds to restart a component the outage switched off (stage 5)
   const NODE_R = 430;
-  // the five components of the original (data/enemies/nodes.js): name, bug miniboss, floor colour and pattern, structure style, set kit
-  const COMPONENTS = [
-    { id: 'production-aggreagtion', name: 'АГРЕГАЦИЯ', bug: 'buga', col: [0.0, 0.9, 1.0], pat: 1, style: 'racks', kit: ['crates', 'spool', 'rack_open', 'manifold'] },
-    { id: 'code-usage-report', name: 'ОТЧЁТ О НАНЕСЕНИИ', bug: 'bugu', col: [0.39, 1.0, 0.85], pat: 0, style: 'desks', kit: ['holopillar', 'mast', 'desk', 'crates'] },
-    { id: 'inport-operation-processor', name: 'ИМПОРТ', bug: 'bug', col: [0.45, 0.8, 1.0], pat: 2, style: 'import', kit: ['dock', 'switchstack', 'crates', 'rack_open'] },
-    { id: 'logistic-processor', name: 'ЛОГИСТИКА', bug: 'bugl', col: [0.2, 0.7, 1.0], pat: 3, style: 'logistics', kit: ['crates', 'spool', 'cart_b', 'dock', 'manifold'] },
-    { id: 'goods-reports', name: 'ТОВАРНЫЕ ОТЧЁТЫ', bug: 'bugg', col: [0.6, 0.85, 1.0], pat: 4, style: 'goods', kit: ['blade', 'patch', 'crates', 'holopillar'] },
-  ];
-  // zone rectangles round the plaza: NW, NE, SE, S, SW (the north hall between NW and NE is neutral)
-  const RECTS = [{ x0: 0, y0: 0, x1: 2900, y1: 2500 }, { x0: 5100, y0: 0, x1: 8000, y1: 2500 }, { x0: 5100, y0: 3500, x1: 8000, y1: 6000 },
-    { x0: 2900, y0: 4150, x1: 5100, y1: 6000 }, { x0: 0, y0: 3500, x1: 2900, y1: 6000 }];
-  const PLAZA = { col: [0.0, 0.9, 1.0] };
+  const ENGINE = { WORLD, SPAWN, NODE_R, R };                       // what a setting's map builder gets from the engine
   // the active level (useLevel): the sim and the scene read these names
   let FLOW = null, FLOWC = -1;                                    // the flow field cache (reset when the level changes)
   let LV = null, LEVEL_ID = 0, ZONES, PROPS, BOXES, LAMPS, TANKS, STENCILS, CABLES, TAPES, HOLOS, RINGS, DESKS, BG, WALL;
   const zoneAt = (x, y) => ZONES.find((z) => x >= z.x0 && x < z.x1 && y >= z.y0 && y < z.y1) || null;
-
-  // ---- the data centre ----
-  function buildDC(seed) {
-    let rs = seed | 0; const lr = () => { rs = (rs + 0x6D2B79F5) | 0; let t = rs; t = Math.imul(t ^ (t >>> 15), t | 1); t ^= t + Math.imul(t ^ (t >>> 7), t | 61); return ((t ^ (t >>> 14)) >>> 0) / 4294967296; };
-    const jit = (a) => (lr() - 0.5) * 2 * a;
-    const shuffle = (a) => { a = a.slice(); for (let i = a.length - 1; i > 0; i--) { const j = Math.floor(lr() * (i + 1)); [a[i], a[j]] = [a[j], a[i]]; } return a; };
-    const order = shuffle([0, 1, 2, 3, 4]);
-    const ZONES = RECTS.map((r, i) => { const c = COMPONENTS[order[i]], mx = NODE_R + 170, my = NODE_R * 0.62 + 230;
-      const nx = Math.max(r.x0 + mx, Math.min(r.x1 - mx, (r.x0 + r.x1) / 2 + jit((r.x1 - r.x0) * 0.1))), ny = Math.max(r.y0 + my, Math.min(r.y1 - my, (r.y0 + r.y1) / 2 + 50 + jit((r.y1 - r.y0) * 0.08)));
-      return Object.assign({}, c, r, { nx: Math.round(nx), ny: Math.round(ny) }); });
-    const PROPS = [], BOXES = [], LAMPS = [], TANKS = [], STENCILS = [], CABLES = [], TAPES = [], HOLOS = [], RINGS = [];
-    const add = (k, x, y, f = 0) => PROPS.push([k, Math.round(x), Math.round(y), f]);
-    const clear = (x, y, r) => Math.hypot(x - SPAWN[0], (y - SPAWN[1]) * 1.3) > r;
-    const offNode = (x, y, m = 0) => ZONES.every((z) => Math.hypot(x - z.nx, (y - z.ny) * 1.25) > NODE_R + 160 + m);
-    const lane = (x, y) => Math.abs(x - 4000) < 300 && (y < 2450 || y > 3550);            // the N–S cold corridor (north hall, Логистика) stays open
-    const ok = (x, y) => clear(x, y, 1150) && offNode(x, y) && !lane(x, y) && x > 300 && x < WORLD.x1 - 300;
-    const row = (x0, y, n, f = 0) => { for (let i = 0; i < n; i++) add(i % 3 ? 'rack' : 'rack_b', x0 + i * 150, y, (i + f) % 2);
-      BOXES.push({ x: x0 + (n - 1) * 75, y: y - 20, hw: n * 75 - 28, hh: 20 }); TAPES.push([[x0 - 90, y + 46], [x0 + (n - 1) * 150 + 90, y + 46]]); };
-    const rowOk = (x0, y, n) => { for (let i = 0; i < n; i++) if (!ok(x0 + i * 150, y)) return false; return true; };
-    // the central plaza = the match screen: the reference's composition as a datacenter (fixed)
-    add('core', ...R(170, 262)); row(R(860, 118)[0], R(860, 118)[1], 2); add('switch', ...R(770, 118));
-    add('cage', ...R(1235, 412)); add('crac', ...R(85, 560)); add('crac', ...R(85, 690)); add('cart', ...R(250, 640)); add('tray', ...R(330, 470));
-    for (const [x, y] of [[430, 140], [612, 300], [918, 650]]) LAMPS.push(R(x, y));
-    for (const [x, y] of [[480, 68], [1230, 528], [840, 705]]) add('ups', ...R(x, y));
-    for (const [x, y] of [[210, 388], [430, 525], [1135, 478]]) add('pdu', ...R(x, y));
-    add('firerack', ...R(560, 700));
-    for (const [x, y] of [[1010, 345], [1040, 365], [1068, 338], [1090, 372]]) TANKS.push(R(x, y));
-    STENCILS.push({ x: R(480, 268)[0], y: R(480, 268)[1], rot: -0.21, s: 'ПРАВИЛО №3: НЕ СТОЙ НА МЕСТЕ', sz: 64 });
-    RINGS.push([SPAWN[0], SPAWN[1], 900], [R(170, 262)[0], R(170, 262)[1] - 40, 320]);
-    // outer walls: rack rows top and bottom, cooling units on the sides
-    for (let x = 140; x < WORLD.x1 - 700; x += 900) { row(x, 150, 5); row(x + 75, WORLD.y1 - 10, 5, 1); }
-    for (let y = 430; y < WORLD.y1 - 160; y += 320) { add('crac', 110, y); add('crac', WORLD.x1 - 110, y, 1); }
-    // each zone's structure by its component's style, fitted to whichever rectangle it landed in (lengths, gaps and offsets vary)
-    const STYLE = {
-      racks: (r) => { for (let y = r.y0 + 620 + jit(40), ri = 0; y < r.y1 - 230; y += 520 + jit(30), ri++) for (let x0 = r.x0 + 420 + (ri % 2) * 110 + jit(60); ;) {
-        const n = 3 + Math.floor(lr() * 3); if (x0 + (n - 1) * 150 > r.x1 - 300) break; if (lr() > 0.15 && rowOk(x0, y, n)) row(x0, y, n, ri); x0 += n * 150 + 260 + jit(60); } },
-      desks: (r) => { for (let y = r.y0 + 600 + jit(30), ri = 0; y < r.y1 - 200; y += 520 + jit(30), ri++) for (let x = r.x0 + 350 + (ri % 2) * 250 + jit(50); x < r.x1 - 400; x += 700 + jit(40)) {
-        if (lr() < 0.12 || !ok(x, y) || !ok(x + 150, y)) continue; const m = Math.floor(lr() * 3);
-        if (m === 0) { add('tapelib', x, y); add('tapelib', x + 150, y); } else if (m === 1) { add('desk', x, y); HOLOS.push([Math.round(x), Math.round(y - 150), 0]); } else { add('holopillar', x, y); add('holopillar', x + 120, y); } } },
-      import: (r) => { for (let y = r.y0 + 350 + jit(30), ri = 0; y < r.y1 - 200; y += 520 + jit(30), ri++) for (let x0 = r.x0 + 300 + (ri % 2) * 140 + jit(50); x0 + 470 < r.x1 - 250; x0 += 820 + jit(40)) {
-        if (lr() < 0.12 || !rowOk(x0, y, 3) || !ok(x0 + 470, y)) continue; row(x0, y, 3, ri); add('switchstack', x0 + 470, y); } },
-      logistics: (r) => { for (let y = r.y0 + 250 + jit(30), ri = 0; y < r.y1 - 200; y += 520 + jit(30), ri++) for (let x = r.x0 + 250 + (ri % 2) * 200 + jit(50); x + 230 < r.x1 - 200; x += 760 + jit(40)) {
-        if (lr() < 0.12 || !ok(x, y) || !ok(x + 230, y)) continue; add(lr() < 0.5 ? 'batbank' : 'ups', x, y); add('cart', x + 230, y); } },
-      goods: (r) => { for (let y = r.y0 + 350 + jit(30), ri = 0; y < r.y1 - 200; y += 520 + jit(30), ri++) for (let x = r.x0 + 400 + (ri % 2) * 200 + jit(50); x + 140 < r.x1 - 200; x += 620 + jit(30)) {
-        if (lr() < 0.12 || !ok(x, y) || !ok(x + 140, y)) continue; if (lr() < 0.5) { add('tapelib', x, y); add('patch', x + 140, y); } else { add('blade', x, y); add('patch', x + 120, y); } } },
-    };
-    ZONES.forEach((z) => STYLE[z.style](z));
-    // the neutral north hall: two columns of rack rows either side of the cold corridor
-    for (let y = 620 + jit(40), ri = 0; y < 2300; y += 520 + jit(30), ri++) { const nl = 3 + Math.floor(lr() * 2), nr = 3 + Math.floor(lr() * 2), xl = 3680 - (nl - 1) * 150 - lr() * 120, xr = 4320 + lr() * 100;
-      if (lr() > 0.15 && rowOk(xl, y, nl)) row(xl, y, nl, ri); if (lr() > 0.15 && xr + (nr - 1) * 150 < 4800 && rowOk(xr, y, nr)) row(xr, y, nr, ri + 1); }
-    // set dressing scatter (checks every footprint, 70 px clear round each)
-    const fits = (k, x, y, m) => { const [hw, hh] = FOOT[k], cy = y - hh; if (x - hw < 250 || x + hw > WORLD.x1 - 250 || y < 420 || y > WORLD.y1 - 200) return false;
-      if (BOXES.some((b) => Math.abs(x - b.x) < hw + b.hw + m && Math.abs(cy - b.y) < hh + b.hh + m)) return false;
-      if (TANKS.some(([tx, ty]) => Math.abs(x - tx) < hw + 60 + m && Math.abs(y - ty) < hh + 40 + m)) return false;
-      return !PROPS.some(([k2, x2, y2]) => FOOT[k2] && Math.abs(x - x2) < hw + FOOT[k2][0] + m && Math.abs(cy - (y2 - FOOT[k2][1])) < hh + FOOT[k2][1] + m); };
-    // energy cells: the plaza's (first, fixed) + 8 clusters of 3 picked from 14 spots
-    const CELLS = [[3500, 4660], [4500, 4660], [3500, 5650], [4500, 5650], [2650, 3100], [5400, 3100], [4300, 900], [3700, 2100], [1500, 2900], [6500, 2900], [2100, 3250], [5900, 3250], [1450, 5650], [6550, 5650]];
-    let nc = 0; for (const [cx0, cy0] of shuffle(CELLS)) { if (nc >= 8) break; const cx = cx0 + jit(60), cy = cy0 + jit(40); const pts = [0, 1, 2].map((i) => [Math.round(cx + i * 46 - 46), Math.round(cy + (i % 2) * 24)]);
-      if (!offNode(cx, cy) || !pts.every(([x, y]) => fits('cell', x, y, 20))) continue; TANKS.push(...pts); nc++; }
-    // set dressing on 42% of the grid spots, as in the hand-made layout
-    ZONES.forEach((z) => { for (let gy = z.y0 + 300; gy < z.y1 - 150; gy += 290) for (let gx = z.x0 + 300; gx < z.x1 - 150; gx += 330) {
-      if (lr() > 0.42) continue; const k = z.kit[Math.floor(lr() * z.kit.length)], x = gx + jit(60), y = gy + jit(40);
-      if (clear(x, y, 1000) && offNode(x, y) && !lane(x, y) && fits(k, x, y, 70)) add(k, x, y, lr() > 0.5 ? 1 : 0); } });
-    for (const z of ZONES) STENCILS.push({ x: z.nx, y: z.ny + NODE_R * 0.62 + 90, rot: 0, s: z.name, sz: 72 });
-    STENCILS.push({ x: 4000, y: 1400, rot: 0.03, s: 'ХОЛОДНЫЙ КОРИДОР', sz: 64 }, { x: 4000, y: 3950, rot: -0.03, s: 'НЕ ПЕРЕЗАГРУЖАТЬ!', sz: 60 });
-    // fibre trunks across the floor (packets stream along them in the scene), ceiling light pools
-    for (const y of [2800, 3200]) CABLES.push([[80, y], [2600, y + 40], [5400, y - 40], [WORLD.x1 - 80, y]]);
-    for (const x of [3800, 4200]) CABLES.push([[x, 220], [x + 30, 2400], [x - 30, 3700], [x, WORLD.y1 - 80]]);
-    // ceiling fixtures (light pools only) over aisles and the plaza
-    for (let gy = 0; gy < 12; gy++) for (let gx = 0; gx < 13; gx++) { const x = 380 + gx * 600 + (gy % 2) * 300, y = 380 + gy * 470;
-      if (clear(x, y, 800) && x < WORLD.x1 - 200 && y < WORLD.y1 - 150) LAMPS.push([Math.round(x), Math.round(y)]); }
-    // two Pepsi service desks on open floor (foes, not solids): picked from candidate spots, clear of props and nodes
-    const DESKS = []; for (const [x0, y0] of shuffle([[4000, 1250], [5400, 2940], [2600, 2940], [4000, 4250], [1450, 2950], [6550, 3000]])) { if (DESKS.length >= 2) break;
-      const x = Math.round(x0 + jit(80)), y = Math.round(y0 + jit(50)); if (offNode(x, y) && clear(x, y, 700) && fits('desk', x, y, 90)) DESKS.push([x, y]); }
-    return { ZONES, PROPS, BOXES, LAMPS, TANKS, STENCILS, CABLES, TAPES, HOLOS, RINGS, DESKS, START: SPAWN, needDesks: 1 };
-  }
 
   // ---- the training centre (utreys-survivors' learning map): rooms in order, each filling the whole floor ----
   // Rooms 0–2 are mazes (live/edu.js, one per course topic) with three guarded terminals and a door; room 3 is the central hall with
@@ -419,7 +92,7 @@
     }
     return L;
   }
-  const MAPS = { dc: { name: 'Дата-центр Utrace', build: buildDC }, edu: { name: 'Учебный центр', build: buildEdu, rooms: () => root.COURSE.rooms.length } };
+  const MAPS = Object.assign({}, SET.MAPS, { edu: { name: 'Учебный центр', build: buildEdu, rooms: () => root.COURSE.rooms.length } });
 
   // solids, buckets and the walk grid of a built layout
   const inBox = (b, x, y, r) => b.dia ? Math.abs(x - b.x) / (b.hw + r) + Math.abs(y - b.y) / (b.hh + r * 0.6) < 1 : Math.abs(x - b.x) < b.hw + r && Math.abs(y - b.y) < b.hh + r * 0.6;
@@ -456,7 +129,7 @@
   // build a usable layout for (map, seed, room): a seed whose layout fails validation falls through to the next one (deterministic)
   const LCACHE = new Map();
   function buildLevel(map, seed, room = 0) { const key = map + ':' + seed + ':' + room; if (LCACHE.has(key)) return LCACHE.get(key); let L = null;
-    let k = 0; for (; k < 24; k++) { L = finishLevel(MAPS[map].build(seed + k * 7919, room)); if (!validate(L).length) break; }
+    let k = 0; for (; k < 24; k++) { L = finishLevel(MAPS[map].build(seed + k * 7919, room, ENGINE)); if (!validate(L).length) break; }
     Object.assign(L, { map, seed, room, tries: k + 1 }); LCACHE.set(key, L); if (LCACHE.size > 8) LCACHE.delete(LCACHE.keys().next().value); return L; }
   function useLevel(L) { LV = L; ({ ZONES, PROPS, BOXES, LAMPS, TANKS, STENCILS, CABLES, TAPES, HOLOS, RINGS, DESKS, BG, WALL } = L); FLOW = null; FLOWC = -1; LEVEL_ID++; }
   const ensureLevel = (map, seed, room = 0) => { if (!LV || LV.map !== map || LV.seed !== seed || LV.room !== room) useLevel(buildLevel(map, seed, room)); };
@@ -522,7 +195,7 @@
       lvl: 1, xp: 0, xpNext: 5, pend: 0, pick: null, kills: 0, bars: 0, nid: 1,
       wp: { trace: 1 }, wcd: { trace: 0.4 }, ps: { hp: 0, speed: 0, magnet: 0, power: 0, haste: 0, area: 0, amount: 0, dur: 0, firewall: 0, repair: 0 }, TU: [], SQ: [], chestQ: 0,
       sw: null, dec: [], E: [], P: [], EB: [], MK: [], MN: [], ZN: [], PU: [], Gm: [], tk: TANKS.map(() => ({ hp: 30, boom: -9, back: -9 })),
-      spawnAcc: 0, nextSwarm: 75, nodes: ZONES.map(() => ({ st: 0, hold: 0, bug: 0, t: -9, down: 0 })), px: VIEW.W / 2 + 200, py: VIEW.H / 2, bossQ: [[150, 'crpt'], [270, 'repl'], [420, 'rstorm'], [RUN_T, 'outage']], darkT: 0, darkDur: 0, TR: [], LB: [], BM: [], boss: null, toast: null, ev: [],
+      spawnAcc: 0, nextSwarm: 75, nodes: ZONES.map(() => ({ st: 0, hold: 0, bug: 0, t: -9, down: 0 })), px: VIEW.W / 2 + 200, py: VIEW.H / 2, bossQ: [...RUN.bosses.map((b) => b.slice()), [RUN_T, RUN.final]], darkT: 0, darkDur: 0, TR: [], LB: [], BM: [], boss: null, toast: null, ev: [],
       cam: [SPAWN[0] - VIEW.W / 2, SPAWN[1] - 40 - VIEW.H / 2], camV: [0, 0], fx: fx0() };
   }
   const mkFoe = (S, k, x, y) => { const f = FOE[k], hm = HP_SCALE * (f.boss || f.mini ? 1 + 0.1 * S.t / 60 : 0.55 + 0.17 * S.t / 60) * (S.str || 1);   // S.str: a training room's strength
@@ -531,15 +204,15 @@
       lvl: 0, node: 0, poolT: S.t + 3, sumT: S.t + (f.summon ? f.summon.every : 0), escT: S.t + (f.escalate ? f.escalate.every : 0), shotN: 0, sum: 0, ax: 0, ay: 0 };
     S.E.push(e); return e; };
   function create() {                                              // attract: the reference's moment, restaged around the hero
-    ensureLevel('dc', 0); const S = base(0, 20261024); S.map = 'dc'; S.lseed = 0; S.hero = 'utrace'; S.base = 'trace'; S.demo = true; S.hp = 84; S.wp = { trace: 2, homing: 2, orbit: 1 }; S.wcd = { trace: 0.2, homing: 0.6, orbit: 0 }; S.lvl = 7; S.xp = 30; S.xpNext = 34;
+    const DM = RUN.demo; ensureLevel(RUN.map, 0); const S = base(0, 20261024); S.map = RUN.map; S.lseed = 0; S.hero = DM.hero; S.base = HEROES[DM.hero].weapon; S.demo = true; S.hp = 84; S.wp = Object.assign({}, DM.wp); S.wcd = Object.assign({}, DM.wcd); S.lvl = 7; S.xp = 30; S.xpNext = 34;
     S.clock0 = 192;                                                // the HUD clock starts at 03:12 like the reference
     const ring = [[300, 160], [395, 330], [470, 165], [520, 430], [560, 120], [610, 470], [660, 95], [700, 520], [740, 250], [780, 170], [790, 410], [820, 330],
       [860, 470], [880, 220], [920, 380], [960, 450], [1000, 220], [1010, 420], [1050, 480], [1090, 600], [1180, 640], [1230, 610], [330, 600], [420, 640], [560, 590],
       [610, 640], [680, 600], [700, 470], [780, 640], [860, 560], [960, 640], [1200, 500], [350, 470], [450, 360], [520, 290], [600, 300], [720, 330], [810, 520],
       [880, 640], [500, 520], [1040, 140], [1150, 200], [1230, 120], [270, 300], [380, 250], [460, 470], [600, 540], [940, 300], [700, 140], [580, 220]];
-    const kinds = ['node', 'multon', 'orb', 'panel', 'mars', 'keg', 'loreal', 'node', 'panel', 'baltika', 'orb', 'ferrero'];
+    const kinds = DM.kinds;
     ring.forEach(([rx, ry], i) => { const [x, y] = R(rx, ry); if (blocked(x, y, 26)) return; const e = mkFoe(S, kinds[i % kinds.length], x, y); e.nextAtk = 2 + i * 0.05; });
-    const b = mkFoe(S, 'boss', ...R(1040, 590)); b.face = -1; b.nextAtk = 6; b.sumT = 9; S.boss = b.id; S.bossQ = [];
+    const b = mkFoe(S, DM.boss, ...R(1040, 590)); b.face = -1; b.nextAtk = 6; b.sumT = 9; S.boss = b.id; S.bossQ = [];
     for (let i = 0; i < 7; i++) { const [x, y] = R(300 + 130 * i + 40 * hseed(i), 260 + 260 * hseed(i + 4)); S.Gm.push({ x, y, v: 1, k: i % 3 ? 0 : 1, m: 0, vx: 0, vy: 0, b: 0 }); }
     for (let i = 0; i < 6; i++) { const [x, y] = R(380 + 150 * i, 420 + 160 * hseed(i + 9)); S.Gm.push({ x, y, v: 0, k: 3, m: 0, vx: 0, vy: 0, b: 1 }); }
     S.nextSwarm = 999; placeBugs(S); placeDesks(S);
@@ -547,12 +220,12 @@
   }
   const placeBugs = (S) => ZONES.forEach((z, i) => { const b = mkFoe(S, z.bug, z.nx, z.ny); b.node = i + 1; b.nextAtk = 1; S.nodes[i].bug = b.id; });
   // P&G shields: the live P&G list is rebuilt once per step (hurtFoe runs hundreds of times a step in a crowd)
-  const pgNear = (S, e) => { if (S.pgAt !== S.steps) { S.pgAt = S.steps; S.pgL = S.E.filter((o) => o.k === 'pg' && o.dieT < 0); }
+  const pgNear = (S, e) => { if (S.pgAt !== S.steps) { S.pgAt = S.steps; S.pgL = S.E.filter((o) => FOE[o.k].aura && o.dieT < 0); }
     for (const o of S.pgL) if (Math.hypot(o.x - e.x, o.y - e.y) < FOE.pg.aura.r) return true; return false; };
-  const placeDesks = (S) => DESKS.forEach(([x, y]) => { const d = mkFoe(S, 'sdesk', x, y); d.face = -1; d.sumT = 8; });
-  const spawn = (worldT, mods, opt) => { const seed = 1000 + Math.floor(worldT * 977) % 100000, map = (opt && opt.map) || 'dc'; ensureLevel(map, seed);
+  const placeDesks = (S) => DESKS.forEach(([x, y]) => { const d = mkFoe(S, DESK, x, y); d.face = -1; d.sumT = 8; });
+  const spawn = (worldT, mods, opt) => { const seed = 1000 + Math.floor(worldT * 977) % 100000, map = (opt && opt.map) || RUN.map; ensureLevel(map, seed);
     const S = base(worldT, seed); S.map = map; S.lseed = seed; S.mods = Object.assign({}, mods || {});
-    S.hero = HEROES[opt && opt.hero] ? opt.hero : 'utrace'; S.base = heroOf(S).weapon; S.wp = { [S.base]: 1 }; S.wcd = { [S.base]: 0.4 };
+    S.hero = HEROES[opt && opt.hero] ? opt.hero : RUN.hero; S.base = heroOf(S).weapon; S.wp = { [S.base]: 1 }; S.wcd = { [S.base]: 0.4 };
     S.skin = SKINS[opt && opt.skin] && SKINS[opt.skin].hero === S.hero ? opt.skin : null;                            // cosmetic
     // the weapons and skills not yet opened by achievements (META, live/ach.js): never offered on a level-up; a run without it offers all
     S.lock = { w: ((opt && opt.lock && opt.lock.w) || []).filter((k) => WEAP[k]), p: ((opt && opt.lock && opt.lock.p) || []).filter((k) => PASS[k]) };
@@ -564,7 +237,6 @@
   const runOpt = (S) => ({ map: S.map, hero: S.hero, client: S.client, course: S.ed && S.ed.course, skin: S.skin, lock: S.lock });
 
   // ---------------- the training centre: rooms, terminals, tests ----------------
-  const EDU_BOSS = { batch_accounting: 'batch', critical_incident: 'boss' };   // the courses' hall bosses → the slice's units
   const BUGS = COMPONENTS.map((c) => c.bug);
   // the hero enters room S.room: the level switches, the previous room's actors and effects are gone, terminals get their guards
   function enterRoom(S) {
@@ -576,7 +248,7 @@
     S.nodes = LV.TERMS.map(() => ({ st: 0, hold: 0, bug: 0, t: -9, retry: 0 }));
     LV.TERMS.forEach((tm, i) => { const b = mkFoe(S, BUGS[Math.floor(rnd(S) * BUGS.length)], tm.guard.x, tm.guard.y); b.home = { nx: tm.guard.x, ny: tm.guard.y, R: 420 }; b.term = i + 1; b.nextAtk = S.t + 1.5; S.nodes[i].bug = b.id; });
     const C = root.EDU.course(S.ed.course);
-    if (LV.BOSS) { const b = mkFoe(S, EDU_BOSS[C.boss.unit] || 'boss', LV.BOSS[0], LV.BOSS[1]); b.hp *= ER.boss.hp; b.mhp *= ER.boss.hp; b.sumK = ER.boss.summons; b.nextAtk = S.t + 3; b.face = -1;
+    if (LV.BOSS) { const b = mkFoe(S, RUN.eduBoss[C.boss.unit] || RUN.eduBoss.default, LV.BOSS[0], LV.BOSS[1]); b.hp *= ER.boss.hp; b.mhp *= ER.boss.hp; b.sumK = ER.boss.summons; b.nextAtk = S.t + 3; b.face = -1;
       S.boss = S.goal = b.id; S.toast = { s: C.boss.message, t: S.t }; push(S, { k: 'bossin', t: S.t, x: S.x, y: S.y }); }
     else S.toast = { s: (C.rooms[S.room] || '').toUpperCase() + ': найди три терминала', t: S.t, good: 1 };
     push(S, { k: 'room', t: S.t, x: S.x, y: S.y, room: S.room });
@@ -640,7 +312,7 @@
     else if (r < cr + 0.015 + 0.001 * lk || f.mini || S.t - (S.healT || 0) > 45) { S.healT = S.t; S.Gm.push({ x: e.x - 20, y: e.y, v: 0, k: 4, m: 0, vx: 0, vy: 0, b: 2 }); }
     if (e.node) capture(S, e.node - 1, 'kill'); if (e.term) termFree(S, e.term - 1, 'kill');
     if (tw) { tw.twin = 0; tw.lvl = (tw.lvl || 0) + 1; if (S.boss === e.id) S.boss = tw.id; S.toast = { s: 'РЕПЛИКА ПОТЕРЯНА: вторая копия ускорилась', t: S.t }; push(S, { k: 'esc', t: S.t, x: tw.x, y: tw.y }); }
-    else if (f.boss) { if (S.boss === e.id) S.boss = null; if (e.k !== 'boss' && !f.final && !S.demo) dropChest(S, e.x, e.y); S.toast = { s: f.name.toUpperCase() + ' ЗАКРЫТ: разбор PIR в отчёт', t: S.t }; push(S, { k: 'bossdown', t: S.t, x: e.x, y: e.y }); }
+    else if (f.boss) { if (S.boss === e.id) S.boss = null; if (!f.noChest && !f.final && !S.demo) dropChest(S, e.x, e.y); S.toast = { s: f.name.toUpperCase() + ' ЗАКРЫТ: разбор PIR в отчёт', t: S.t }; push(S, { k: 'bossdown', t: S.t, x: e.x, y: e.y }); }
     else if (S.boss === e.id) S.boss = null;                                                   // a miniboss from the boss queue (ЦРПТ)
     if ((S.ed ? S.goal === e.id : f.final) && !S.demo) { S.over = { k: 'win', t: S.t }; push(S, { k: 'win', t: S.t, x: S.x, y: S.y }); }   // the only victory
   }
@@ -663,9 +335,9 @@
     if (f.front && Math.sign(S.x - e.x) === e.face) dmg *= f.front;   // armoured front
     if (f.ward && S.E.some((o) => o.dieT < 0 && o.sum === e.id)) dmg *= 1 - f.ward;                                   // batch reserve: warded by its clients
     if (f.outage) dmg *= Math.max(f.outage.minWard, 1 - f.outage.ward * S.nodes.filter((n) => n.down).length);          // the outage: every component down
-    else if (!f.boss && e.k !== 'pg' && pgNear(S, e)) { dmg *= 1 - FOE.pg.aura.reduce; e.shT = S.t; }
+    else if (!f.boss && !f.aura && pgNear(S, e)) { dmg *= 1 - FOE[AURA].aura.reduce; e.shT = S.t; }
     // the hero's passive and training (shop rank tr_<hero>), and QA's defect mark
-    const H = heroOf(S), P = H.passive, tr = md(S, 'tr_' + (S.hero || 'utrace')); let crit = 0;
+    const H = heroOf(S), P = H.passive, tr = md(S, 'tr_' + (S.hero || RUN.hero)); let crit = 0;
     if (P.slots && tr && src !== 'trace') dmg *= 1 + H.training.factor * tr;                                          // Utrace: picked-up weapons hit harder
     if (P.crowd) dmg *= 1 + Math.min(P.cap + H.training.factor * tr, P.crowd * crowdN(S));                            // Связанные данные
     if (P.far && Math.hypot(e.x - S.x, e.y - S.y) > 375) dmg *= 1 + P.far + H.training.factor * tr;                  // Дальняя доставка
@@ -761,21 +433,17 @@
       if (ok) last = mkFoe(S, k, x, y); }
     return last;
   }
-  // the roster grows over the shift: [type, weight, from minute]
-  const ROSTER = [['node', 1, 0], ['panel', 0.6, 0], ['multon', 0.5, 0.3], ['mond', 0.4, 1.0], ['orb', 0.7, 1], ['mars', 0.45, 1.3], ['prog', 0.35, 2.0], ['petfood', 0.35, 2.2],
-    ['keg', 0.3, 2.3], ['loreal', 0.35, 2.6], ['royal', 0.3, 3.0], ['baltika', 0.3, 3.2], ['cherk', 0.25, 3.5], ['ferrero', 0.3, 3.8], ['pg', 0.18, 4.0], ['vetis', 0.18, 4.5], ['logq', 0.2, 4.8]];
-  const MINIS = ['bug', 'bugu', 'buga'];
   function waves(S) {
     const t = S.t, m = t / 60; let live = 0; for (const e of S.E) if (e.dieT < 0 && !FOE[e.k].boss) live++;
     if (S.ed) { if (t < S.waveT) return; audits(S); }
     const ER = S.ed && root.COURSE.rules, surge = S.ed && t < S.ed.surgeUntil, cap = S.ed ? 70 * S.wv.cap * (surge ? ER.surge.cap : 1) : MAX_FOES;   // a training room: its wave size and limit, × the surge after a failed test
     const rate = Math.min(8, 0.6 + 0.85 * m) * (S.ed ? S.wv.batch * (surge ? ER.surge.batch : 1) : 1);
     S.spawnAcc += rate * DT;
-    const W = ROSTER.filter((r) => m >= r[2]).map((r) => [r[0], r[1] * (r[0] === 'node' ? Math.max(0.35, 1 - m * 0.08) : 1)]);
+    const W = ROSTER.filter((r) => m >= r[2]).map((r) => [r[0], r[1] * (r[3] ? Math.max(0.35, 1 - m * r[3]) : 1)]);
     while (S.spawnAcc >= 1) { S.spawnAcc -= 1; if (live >= cap) continue; const tot = W.reduce((a, b) => a + b[1], 0); let r = rnd(S) * tot, j = 0; while (j < W.length - 1 && r > W[j][1]) { r -= W[j][1]; j++; }
       spawnRing(S, W[j][0], 1, S.ed ? 1300 : 1150, S.ed ? 2400 : 1350); live++; }
-    if (t >= S.nextSwarm) { S.nextSwarm += 75; const rush = (S.nextSwarm / 75) % 2 ? 'panel' : 'multon';
-      spawnRing(S, rush, 18 + Math.floor(m * 3), 900, 1000); S.toast = { s: rush === 'panel' ? 'ШТОРМ АЛЕРТОВ: фильтры Grafana со всех сторон' : 'НАПЛЫВ КЛИЕНТОВ: Мултон спешит с заявками', t }; }
+    if (t >= S.nextSwarm) { S.nextSwarm += 75; const rush = RUN.swarms[(S.nextSwarm / 75) % 2 ? 0 : 1];
+      spawnRing(S, rush.unit, 18 + Math.floor(m * 3), 900, 1000); S.toast = { s: rush.toast, t }; }
     while (S.bossQ.length && t >= S.bossQ[0][0]) { const [, k] = S.bossQ.shift(); const b = spawnRing(S, k, 1, 1000, 1100); if (b) S.boss = b.id;
       S.toast = { s: FOE[k].intro || FOE[k].name.toUpperCase(), t }; push(S, { k: 'bossin', t, x: S.x, y: S.y }); }
   }
@@ -1166,12 +834,12 @@
   }
   const demoCheck = (S) => S.kills >= 20 && S.lvl >= 8 && S.tk[0].boom >= 0;
   // every spawn ring position a foe could land on can reach the hero's start on the flow field
-  const selfCheck = (map = 'dc', seed = 0) => validate(buildLevel(map, seed));
+  const selfCheck = (map = RUN.map, seed = 0) => validate(buildLevel(map, seed));
   root.SIM = { DT, L, K, VIEW, WORLD, HINT, RUN_T, RESTART_T, RIG, FOE, FOE_DESC, WEAP, WSUM, PASS, EVO, HEROES, SKINS, ABIL, AB_MAX, CLIENTS, MAX_W, MAX_P, MAX_WL, MAX_PL, FOOT, PLAZA, zoneAt, MAPS, COMPONENTS, buildLevel, validate, ensureLevel, levelFor, lerp, TERM_R, TERM_USE, quizOpt, QUIZ_BTN, doorOpen, nearUse, EDU_MAZE,
     SPAWN, ORIGIN, NODE_R, HOLD_T, wstat, orbits, hpMax, shoulder, hand, tip, cardRect, ctlRect, create, spawn, respawn, outOfPlay, step, at, scriptInput, demoCheck, selfCheck, rollPick, mkFoe };
   // the active level's data, read live (the level changes with the run)
   for (const k of ['ZONES', 'PROPS', 'BOXES', 'LAMPS', 'TANKS', 'STENCILS', 'CABLES', 'TAPES', 'HOLOS', 'RINGS', 'DESKS']) Object.defineProperty(root.SIM, k, { get: () => LV[k], enumerable: true });
   Object.defineProperty(root.SIM, 'SOLIDS', { get: () => LV.BOXES }); Object.defineProperty(root.SIM, 'LEVEL_ID', { get: () => LEVEL_ID }); Object.defineProperty(root.SIM, 'LEVEL', { get: () => LV });
-  ensureLevel('dc', 0);
+  ensureLevel(RUN.map, 0);
   if (typeof module !== 'undefined') module.exports = root.SIM;
 })(typeof window !== 'undefined' ? window : globalThis);

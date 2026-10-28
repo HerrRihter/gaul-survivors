@@ -6,8 +6,8 @@
 // the next track or repeats the current one; without repeat the list plays in a circle.
 (() => {
   const ROOT = 'audio/', pref = { v: 2, enabled: true, music: 0.6, effects: 0.65, musicOn: true, track: '', repeat: false };                  // music was 0.3: too quiet under the effects
-  try { const sv = JSON.parse(localStorage.getItem('ns_audio') || '{}'); if (!sv.v && sv.music === 0.3) delete sv.music; Object.assign(pref, sv, { v: 2 }); } catch (_) {}
-  const save = () => { try { localStorage.setItem('ns_audio', JSON.stringify(pref)); } catch (_) {} };
+  try { const sv = JSON.parse(localStorage.getItem(SETTING.SAVE + '_audio') || '{}'); if (!sv.v && sv.music === 0.3) delete sv.music; Object.assign(pref, sv, { v: 2 }); } catch (_) {}
+  const save = () => { try { localStorage.setItem(SETTING.SAVE + '_audio', JSON.stringify(pref)); } catch (_) {} };
   const CLIPS = { hit: ['hit-1.mp3', 'hit-2.mp3'], hurt: ['hurt.mp3'], throw: ['throw.ogg'], pickup: ['pickup.ogg'], heal: ['heal.ogg'], level: ['level.ogg'],
     ui: ['ui.ogg'], boss: ['boss.ogg'], magic: ['magic.ogg'], death: ['death-1.mp3', 'death-2.mp3', 'death-3.mp3'], punch: ['punch.mp3'] };
   const VOL = { pickup: 0.35, death: 0.55 }, COOL = { death: 0.18, pickup: 0.1 }, JITTER = new Set(['hit', 'throw', 'punch']);

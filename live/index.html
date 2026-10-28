@@ -51,7 +51,7 @@ const STATIC = !!window.__STATIC__, V = (STATIC && window.__BUILD__) || Date.now
 const load = (src) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = src + '?v=' + V; s.onload = res; s.onerror = () => rej(new Error('failed ' + src)); document.head.appendChild(s); });
 (async () => {
   // sizes.js: window.SIZES (display size per sprite in view px, engine.md §7); audio.js: sound from the event bus (stub until used)
-  for (const f of ['assets.js', 'sizes.js', 'gl.js', 'lib.js', 'firebase-config.js', 'cloud.js', 'course.js', 'edu.js', 'sim.js', 'ach.js', 'meta.js', 'scene.js', 'audio.js']) await load(f);
+  for (const f of ['assets.js', 'sizes.js', 'gl.js', 'lib.js', 'setting.js', 'firebase-config.js', 'cloud.js', 'course.js', 'edu.js', 'sim.js', 'setting-look.js', 'ach.js', 'meta.js', 'scene.js', 'audio.js']) await load(f);
   const q = new URLSearchParams(location.search), render = q.has('render');
   const VW = (SIM.VIEW || {}).W || 1920, VH = (SIM.VIEW || {}).H || 1080;             // view size and aspect come from the sim
   document.documentElement.style.setProperty('--ar', VW / VH); // the keys under the loading game; a phone or tablet has none to press
@@ -69,7 +69,7 @@ const load = (src) => new Promise((res, rej) => { const s = document.createEleme
   const SPEEDS = [0.1, 0.25, 0.5, 1];
   let play = null, acc = 0, simT = 0, speed = 1, paused = false, stepOnce = false, fps = 60;
   // a kept shift (the pause menu's «Выйти в меню», or the page closed mid-shift): resumed from the main menu, ended by a new start
-  const SKEY = 'ns_suspended_v1'; let kept = null;
+  const SKEY = SETTING.SAVE + '_suspended_v1'; let kept = null;
   const keepInfo = (S) => (S ? { hero: S.hero, map: S.map, t: S.t, room: S.room || 0 } : null);
   const keep = (S) => { kept = S; if (window.META) META.setSuspended(keepInfo(S)); try { if (S) localStorage.setItem(SKEY, JSON.stringify(S)); else localStorage.removeItem(SKEY); } catch (e) {} };
   try { const ks = JSON.parse(localStorage.getItem(SKEY) || 'null'); if (ks && !ks.over && !ks.demo) keep(Object.assign(SIM.create(), ks)); } catch (e) {}
@@ -235,7 +235,7 @@ const load = (src) => new Promise((res, rej) => { const s = document.createEleme
   };
   loop();
   if (STATIC) { dev.style.display = 'none'; return; }
-  const WATCH = ['index.html', 'scene.js', 'sim.js', 'edu.js', 'course.js', 'cloud.js', 'firebase-config.js', 'ach.js', 'meta.js', 'lib.js', 'gl.js', 'assets.js', 'sizes.js', 'audio.js'], stamp = {};
+  const WATCH = ['index.html', 'scene.js', 'setting.js', 'setting-look.js', 'sim.js', 'edu.js', 'course.js', 'cloud.js', 'firebase-config.js', 'ach.js', 'meta.js', 'lib.js', 'gl.js', 'assets.js', 'sizes.js', 'audio.js'], stamp = {};
   const poll = async () => {
     for (const f of WATCH) {
       try { const r = await fetch(f + '?poll=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); const m = r.headers.get('last-modified') + r.headers.get('content-length');
@@ -245,7 +245,7 @@ const load = (src) => new Promise((res, rej) => { const s = document.createEleme
   };
   poll();
 })().catch((e) => { console.error(e); document.body.insertAdjacentHTML('beforeend', '<pre style="color:#f88;position:absolute;top:0;left:0;background:#000c;padding:12px;font:13px monospace;white-space:pre-wrap">' + e.stack + '</pre>');
-  const f = ['scene.js', 'sim.js', 'lib.js', 'gl.js', 'assets.js', 'index.html'], st = {};               // keep polling: fixing the error reloads by itself
+  const f = ['scene.js', 'setting.js', 'sim.js', 'lib.js', 'gl.js', 'assets.js', 'index.html'], st = {};               // keep polling: fixing the error reloads by itself
   setInterval(async () => { for (const x of f) { try { const r = await fetch(x + '?p=' + Date.now(), { method: 'HEAD', cache: 'no-store' }); const m = r.headers.get('last-modified');
     if (st[x] && st[x] !== m) location.reload(); st[x] = m; } catch (e) {} } }, 800); });
 </script></body></html>

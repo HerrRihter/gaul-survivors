@@ -6,7 +6,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const live = path.join(path.dirname(fileURLToPath(import.meta.url)), '..', 'live');
 const ctx = { console, Math, Date, JSON }; ctx.window = ctx; ctx.globalThis = ctx; vm.createContext(ctx);
-for (const f of ['course.js', 'edu.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
+for (const f of ['course.js', 'edu.js', 'setting.js', 'sim.js']) vm.runInContext(fs.readFileSync(path.join(live, f), 'utf8'), ctx, { filename: f });
 const { SIM } = ctx, none = { px: 1200, py: 500 };
 for (const h of Object.keys(SIM.HEROES)) {
   const S = SIM.spawn(3, {}, { hero: h }); S.hp = 1e6; S.nextSwarm = 1e9;

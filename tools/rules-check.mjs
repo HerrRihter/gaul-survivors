@@ -51,7 +51,7 @@ await no('a list without a limit', getDocs(query(collection(anon, 'stats'), wher
 await no('reading the login claims signed out', getDoc(doc(anon, 'logins', 'алена')));
 // progress/{uid}: the achievements (stage 6), and the rules' id list is the game's
 { const vm = await import('node:vm'), c = { console, Math, Date, JSON }; c.window = c; c.globalThis = c; vm.createContext(c);
-  for (const f of ['course.js', 'edu.js', 'sim.js', 'ach.js']) vm.runInContext(fs.readFileSync(path.join(root, 'live', f), 'utf8'), c);
+  for (const f of ['course.js', 'edu.js', 'setting.js', 'sim.js', 'ach.js']) vm.runInContext(fs.readFileSync(path.join(root, 'live', f), 'utf8'), c);
   const rules = fs.readFileSync(path.join(root, 'firestore.rules'), 'utf8'), known = rules.match(/function knownAch\(\) \{\s*return \[([^\]]*)\]/)[1].match(/'([^']+)'/g).map((s) => s.slice(1, -1));
   const game = c.ACH.LIST.map((x) => x.id), same = known.length === game.length && game.every((id) => known.includes(id));
   if (same) pass++; else { failN++; console.log('FAIL the rules\' knownAch differs from live/ach.js', game.filter((id) => !known.includes(id)), known.filter((id) => !game.includes(id))); } }
