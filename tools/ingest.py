@@ -101,6 +101,17 @@ for s in want:
         done += [n for n in names if not n.startswith('_')]
     elif s in SINGLES:
         done.append(s)
+# bodies whose torso is off the picture's centre (hair, wings or a helmet stick out on one side): padded with transparency so the
+# torso's middle, measured at this share of the height from the bottom, is the picture's centre, where the rig puts the hips
+# (ref2game.json lists them in prep's notrim, so the padding stays)
+CENTRE = {'hr_asterix_body': 0.34, 'legion_body': 0.34}
+for n in done:
+    if n not in CENTRE: continue
+    from PIL import Image
+    im = Image.open(f'art/gen/{n}.png').convert('RGBA'); w, h = im.size; row = im.getchannel('A').crop((0, int(h * (1 - CENTRE[n])), w, int(h * (1 - CENTRE[n])) + 1))
+    xs = [x for x in range(w) if row.getpixel((x, 0)) > 60]; mid = (xs[0] + xs[-1]) / 2 if xs else w / 2
+    half = int(max(mid, w - mid) + 0.5); out = Image.new('RGBA', (half * 2, h)); out.paste(im, (half - int(mid + 0.5), 0)); out.save(f'art/gen/{n}.png')
+    print(f'{n}: torso centre {mid:.0f} of {w} px, padded to {half * 2}')
 for n in done:
     m = f'art/logs/{n}.placeholder'
     if os.path.exists(m): os.remove(m)

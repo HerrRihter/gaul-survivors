@@ -359,7 +359,7 @@
   };
   // the hero rig shared by the sim and the scene: shoulder height and half-width (shX: the shoulder joint's centre on the body's side
   // outline, round 24), arm length, and the tool's tip from the hand (gun forward, gunUp up): the trace strike starts there
-  const RIG = { shY: 55, shX: 42, arm: 38, gun: 30, gunUp: 18 };
+  const RIG = { shY: 55, shX: 10, arm: 38, gun: 30, gunUp: 18 };   // Asterix: a torso about 20 px wide at the shoulders (measured)
 
   // the shop's permanent upgrades (meta.js): price 30 × the next rank
   const SHOP = [

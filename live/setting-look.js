@@ -60,7 +60,7 @@
   const RIGS = {
     hero:  { body: 70, hipY: 27, leg: 35, legW: 16, lift: 0.11, D: 0.35, hipW: 11, foot: [27, 15], shY: SIM.RIG.shY, shW: SIM.RIG.shX, arm: SIM.RIG.arm, armW: 14, stride: 92, bob: 6, flip: true },
     node:  { body: 60, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
-    legion: { body: 64, hipY: 26, leg: 31, legW: 13, hipW: 14, foot: [21, 12], shY: 50, shW: 30, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },
+    legion: { body: 64, hipY: 26, leg: 31, legW: 13, hipW: 8, foot: [21, 12], shY: 50, shW: 11, arm: 24, armW: 11, stride: 52, bob: 3, flip: true },   // narrow shoulders and hips (measured on legion_body)
     panel: { body: 58, hipY: 24, leg: 29, legW: 11, hipW: 10, foot: [19, 11], shY: 44, shW: 34, arm: 21, armW: 10, stride: 48, bob: 3, flip: true },
     orb:   { body: 68, hipY: 25, leg: 30, legW: 13, hipW: 16, foot: [23, 13], shY: 46, shW: 33, arm: 23, armW: 12, stride: 52, bob: 3, flip: true },
     keg:   { body: 88, hipY: 29, leg: 34, legW: 18, hipW: 22, foot: [29, 15], shY: 64, shW: 42, arm: 29, armW: 16, stride: 62, bob: 4, flip: true },
