@@ -18,7 +18,7 @@
   const R = (rx, ry) => [ORIGIN[0] + rx * 1.5, ORIGIN[1] + ry * 1.5];
 
   // ---------------- hero rig numbers shared with the scene (one origin function for the scanner tip) ----------------
-  const RIG = { shY: 55, shX: 42, arm: 38, gun: 30, gunUp: 18 };   // shX: the shoulder joint's centre on the body's side outline (round 24)
+  const RIG = SET.RIG;                                             // the hero's rig numbers (setting.js), shared with the scene
   const K = { HP: 120, SPEED: 300, ACC: 2600, DEC: 3000, R: 24, DASH: 1050, DASH_T: 0.18, DASH_CD: 2.4, IFR: 0.6 };
 
   const HP_SCALE = 1.15, DMG_SCALE = 1.265;

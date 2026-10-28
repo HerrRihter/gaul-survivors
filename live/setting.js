@@ -357,6 +357,10 @@
       kinds: ['legion', 'multon', 'orb', 'panel', 'mars', 'keg', 'loreal', 'legion', 'panel', 'baltika', 'orb', 'ferrero'] },
     eduBoss: { batch_accounting: 'batch', critical_incident: 'boss', default: 'boss' },
   };
+  // the hero rig shared by the sim and the scene: shoulder height and half-width (shX: the shoulder joint's centre on the body's side
+  // outline, round 24), arm length, and the tool's tip from the hand (gun forward, gunUp up): the trace strike starts there
+  const RIG = { shY: 55, shX: 42, arm: 38, gun: 30, gunUp: 18 };
+
   // the shop's permanent upgrades (meta.js): price 30 × the next rank
   const SHOP = [
     { id: 'health', name: 'Буфер памяти', desc: '+10 HP к стабильности ядра', max: 5, ic: 'ic_hp' },
@@ -376,6 +380,6 @@
   // localStorage keys start with this (games on one site keep their saves apart)
   const SAVE = 'ns';
 
-  Object.assign(SET, { SAVE, SHOP, EDU, HINT, FOE, FOE_DESC, WEAP, HEROES, CLIENTS, EVO, WSUM, PASS, SKINS, ABIL, FOOT, COMPONENTS, RECTS, PLAZA, MAPS, RUN });
+  Object.assign(SET, { RIG, SAVE, SHOP, EDU, HINT, FOE, FOE_DESC, WEAP, HEROES, CLIENTS, EVO, WSUM, PASS, SKINS, ABIL, FOOT, COMPONENTS, RECTS, PLAZA, MAPS, RUN });
   if (typeof module !== 'undefined') module.exports = SET;
 })(typeof window !== 'undefined' ? window : globalThis);
