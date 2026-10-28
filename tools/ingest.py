@@ -38,6 +38,8 @@ SHEETS = {
     # the Gaul setting (docs/PLAN-GAUL.md, stage 2 slice): every part generated alone (tools/make_prompts_gaul.py)
     **{f'{c}_{part}only': ([f'{c}_{part}'], 'x', ['--dilate', '12'] if part == 'body' else []) for c in ['hr_asterix', 'legion'] for part in ['body', 'leg', 'foot', 'arm']},
     'sword_gen': (['sword'], 'x'),
+    # 28.10: the rig was dropped for the Gauls; one sheet of six whole-body poses per character (make_prompts_gaul.py poses)
+    **{f'{c}_poses_sheet': ([f'{c}_{p}' for p in ['idle', 'step1', 'step2', 'wind', 'strike', 'hurt']], 'reading') for c in ['hr_asterix', 'legion']},
     'node_sheet': (['node_body', 'node_leg', 'node_foot', 'node_arm'], 'reading'),
     'panel_sheet': (['panel_body', 'panel_leg', 'panel_foot', 'panel_arm'], 'reading'),
     'orb_sheet': (['orb_body', 'orb_leg', 'orb_foot', 'orb_arm'], 'reading'),
@@ -104,12 +106,18 @@ for s in want:
 # bodies whose torso is off the picture's centre (hair, wings or a helmet stick out on one side): padded with transparency so the
 # torso's middle, measured at this share of the height from the bottom, is the picture's centre, where the rig puts the hips
 # (ref2game.json lists them in prep's notrim, so the padding stays)
-CENTRE = {'hr_asterix_body': 0.34, 'legion_body': 0.34}
+# 'legs': the poses are centred on the mass of their lower half (legs and hips), so a sword or a spear held out does not move the axis
+CENTRE = {'hr_asterix_body': 0.34, 'legion_body': 0.34, **{f'{c}_{p}': 'legs' for c in ['hr_asterix', 'legion'] for p in ['idle', 'step1', 'step2', 'wind', 'strike', 'hurt']}}
 for n in done:
     if n not in CENTRE: continue
     from PIL import Image
-    im = Image.open(f'art/gen/{n}.png').convert('RGBA'); w, h = im.size; row = im.getchannel('A').crop((0, int(h * (1 - CENTRE[n])), w, int(h * (1 - CENTRE[n])) + 1))
-    xs = [x for x in range(w) if row.getpixel((x, 0)) > 60]; mid = (xs[0] + xs[-1]) / 2 if xs else w / 2
+    im = Image.open(f'art/gen/{n}.png').convert('RGBA'); w, h = im.size
+    if CENTRE[n] == 'legs':
+        a = im.getchannel('A').crop((0, h // 2, w, h)); hist = [sum(1 for y in range(a.height) if a.getpixel((x, y)) > 60) for x in range(w)]
+        mid = sum(x * c for x, c in enumerate(hist)) / max(1, sum(hist))
+    else:
+      row = im.getchannel('A').crop((0, int(h * (1 - CENTRE[n])), w, int(h * (1 - CENTRE[n])) + 1))
+      xs = [x for x in range(w) if row.getpixel((x, 0)) > 60]; mid = (xs[0] + xs[-1]) / 2 if xs else w / 2
     half = int(max(mid, w - mid) + 0.5); out = Image.new('RGBA', (half * 2, h)); out.paste(im, (half - int(mid + 0.5), 0)); out.save(f'art/gen/{n}.png')
     print(f'{n}: torso centre {mid:.0f} of {w} px, padded to {half * 2}')
 for n in done:

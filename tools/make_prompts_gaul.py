@@ -3,6 +3,8 @@
 #   python tools/make_prompts_gaul.py a      → art/jobs_gaul_a.json: the bodies, Asterix's sword, the plaza props
 #   python tools/make_prompts_gaul.py b      → art/jobs_gaul_b.json: legs, feet and arms (needs the phase a bodies in art/gen)
 #   python tools/make_prompts_gaul.py b foot → only the jobs whose name has 'foot' (any words: a redraw of some parts)
+#   python tools/make_prompts_gaul.py poses  → art/jobs_gaul_poses.json: one sheet of six whole-body poses per character (the rig was
+#                                            dropped 28.10: limited animation, poses switched by the scene)
 # The style bible and the style reference (Image 1, a 1976 film cel) come from ref2game.json on this branch.
 import json, os, sys
 os.chdir(os.path.join(os.path.dirname(__file__), '..'))
@@ -82,9 +84,42 @@ SWORD = {'name': 'sword_gen', 'size': '1536x1024', 'alpha': 'auto', 'ref': [{'pa
         'a short broad straight steel blade with a rounded point on the right, the blade about three times as long as the grip; slim — about six times as long as it is tall.',
         'Centred on the canvas.', FINISH, LAST])}
 
+POSES = {
+    'hr_asterix': ('his short sword in his right hand',
+        ['STANDING at rest, relaxed, the sword held low in his right hand',
+         'WALKING, mid-stride: the LEFT leg forward, the right leg back, arms swinging',
+         'WALKING, mid-stride: the RIGHT leg forward, the left leg back, arms swinging the other way',
+         'WIND-UP before a blow: the sword raised high behind his head, the body turned back, knees bent',
+         'STRIKE: the sword swung forward in a wide horizontal slash, the sword arm stretched out in front, the body leaning into it, the front leg lunging',
+         'HURT: recoiling backwards from a hit, eyes squeezed shut, arms flung up, leaning back']),
+    'legion': ('a long spear in his right hand and the big blue rectangular shield with the yellow thunderbolt emblem on his left arm',
+        ['STANDING at rest, the spear upright beside him, the shield in front',
+         'WALKING, mid-stride: the LEFT leg forward, the right leg back',
+         'WALKING, mid-stride: the RIGHT leg forward, the left leg back',
+         'WIND-UP before a thrust: the spear drawn back at shoulder height, pointing forward, the body leaning back',
+         'THRUST: the spear thrust straight forward, the arm fully stretched, the body leaning into it, the front leg lunging',
+         'HURT: recoiling backwards from a hit, the helmet knocked askew, eyes squeezed shut, arms flung up, the spear tilted']),
+}
+
+def poses_job(k):
+    ref, desc, *_ = CHARS[k]; held, poses = POSES[k]
+    body = f'art/gen/{k}_bodyonly.png'
+    refs = [{'path': ref, 'label': 'the original design of this character'}] + ([{'path': body, 'label': "this character's approved drawing in this game's style"}] if os.path.exists(body) else [])
+    p = '\n'.join([
+        'Use case: a POSE SHEET for limited 2D animation (whole-body poses switched one after another, like a 1970s animated film) in a top-down 3/4 survivors-like game set in a Gaulish village of 50 BC.',
+        'Image 2 is the ORIGINAL DESIGN of this character' + (" and Image 3 his approved drawing in this game's style" if len(refs) > 1 else '') + ': match his face, headgear, hair, clothes, colours and proportions exactly in every pose.',
+        'Subject: ' + desc + ' He holds ' + held + '.',
+        'Draw the SAME character SIX times on one canvas, two rows of three, the WHOLE body in every pose (head to feet), seen from the side in a 3/4 view, ALWAYS FACING RIGHT:',
+        *[f'{i + 1}) {t};' for i, t in enumerate(poses)],
+        'Every pose at EXACTLY the same size and scale, the feet of each row standing on one shared invisible ground line; very wide empty gaps between the poses, nothing touching or overlapping, nothing cut by the canvas edge.',
+        FINISH,
+        'Constraints: no text, no letters, no numbers, no ground, no shadows under the feet, no glow, no motion lines, no speed streaks, transparent background.'])
+    return {'name': k + '_poses_sheet', 'prompt': p, 'size': '1536x1024', 'alpha': 'auto', 'ref': refs}
+
 if phase == 'a': jobs = [body_job(k) for k in CHARS] + [SWORD] + [prop_job(k) for k in PROPS]
+elif phase == 'poses': jobs = [poses_job(k) for k in POSES]
 elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k) if not sys.argv[2:] or any(w in j['name'] for w in sys.argv[2:])]
-else: sys.exit('phase: a | b')
+else: sys.exit('phase: a | b | poses')
 out = f'art/jobs_gaul_{phase}.json'
 json.dump(jobs, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(out, len(jobs), 'jobs:', ' '.join(j['name'] for j in jobs))
