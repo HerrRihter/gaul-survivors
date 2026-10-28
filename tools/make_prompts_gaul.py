@@ -116,10 +116,59 @@ def poses_job(k):
         'Constraints: no text, no letters, no numbers, no ground, no shadows under the feet, no glow, no motion lines, no speed streaks, transparent background.'])
     return {'name': k + '_poses_sheet', 'prompt': p, 'size': '1536x1024', 'alpha': 'auto', 'ref': refs}
 
+# frame animation (28.10, the owner: six poses move too coarsely): a 3×3 sheet per action; cell 1 is the character standing exactly as
+# his approved idle pose (a calibration frame: tools/frames.py scales the sheet by it and drops it), cells 2–9 the frames in reading order
+FRAMES = {
+    'hr_asterix': {
+        'walk': ('a smooth WALK CYCLE of eight evenly spaced frames (one full stride, both legs), the arms swinging against the legs, '
+                 'the sword in his right hand pointing down and back',
+                 ['CONTACT: the left heel touching down in front, the right leg straight behind',
+                  'DOWN: the weight on the left leg, its knee bent, the body at its lowest',
+                  'PASSING: the right leg passing under the body, the body rising',
+                  'UP: on the toes of the left foot, the body at its highest, the right leg swinging forward',
+                  'CONTACT: the right heel touching down in front, the left leg straight behind',
+                  'DOWN: the weight on the right leg, its knee bent, the body at its lowest',
+                  'PASSING: the left leg passing under the body, the body rising',
+                  'UP: on the toes of the right foot, the body at its highest, the left leg swinging forward']),
+        'attack': ('a sword ATTACK of six frames, then two HURT frames',
+                 ['ANTICIPATION: crouching a little, the sword drawn back low behind him',
+                  'WIND-UP: the sword raised high behind his head, the body twisted back',
+                  'STRIKE: the sword slashing forward in a wide horizontal arc, the arm fully extended, lunging on the front leg',
+                  'FOLLOW-THROUGH: the sword swept on past the front and down, the body twisted forward',
+                  'RECOVER: pulling the sword back, rising from the lunge',
+                  'READY: back in a ready stance, the sword held forward',
+                  'HURT: recoiling backwards from a hit, eyes squeezed shut, arms flung up',
+                  'HURT, recovering: stumbling back onto both feet, wincing']),
+    },
+}
+
+def frames_jobs(k):
+    ref, desc, *_ = CHARS[k]; idle = f'art/gen/{k}_idle.png'
+    if not os.path.exists(idle): sys.exit(f'{idle} is missing: the approved idle pose (phase poses) is the reference')
+    jobs = []
+    for action, (what, frames) in FRAMES[k].items():
+        p = '\n'.join([
+            'Use case: a FRAME-BY-FRAME ANIMATION SHEET (a 1970s hand-drawn animated film) for a top-down 3/4 survivors-like game set in a Gaulish village of 50 BC.',
+            "Image 2 is the ORIGINAL DESIGN of this character and Image 3 his APPROVED pose in this game's style: every frame must be this exact character — the same face, "
+            'headgear, hair, clothes, colours, line and proportions, at the same size as Image 3.',
+            'Subject: ' + desc,
+            'Draw the SAME character NINE times on one canvas in a 3×3 grid (read left to right, top to bottom), the WHOLE body in every frame, '
+            'seen from the side in a 3/4 view, ALWAYS FACING RIGHT, every figure at EXACTLY the same scale, each centred in its cell:',
+            '1) CALIBRATION: standing at rest exactly like Image 3;',
+            *[f'{i + 2}) {t};' for i, t in enumerate(frames)],
+            f'Frames 2–9 are {what}: consecutive drawings of one continuous motion, each only a small step from the one before, so they play smoothly in a loop.',
+            'Very wide empty gaps between the figures, nothing touching or overlapping, nothing cut by the canvas edge.',
+            FINISH,
+            'Constraints: no text, no numbers, no frame borders, no grid lines, no ground, no shadows, no glow, no motion lines, no speed streaks, transparent background.'])
+        jobs.append({'name': f'{k}_{action}_sheet', 'prompt': p, 'size': '1536x1536', 'alpha': 'auto',
+                     'ref': [{'path': ref, 'label': 'the original design of this character'}, {'path': idle, 'label': 'his approved pose in this game (the size and look to keep)'}]})
+    return jobs
+
 if phase == 'a': jobs = [body_job(k) for k in CHARS] + [SWORD] + [prop_job(k) for k in PROPS]
 elif phase == 'poses': jobs = [poses_job(k) for k in POSES]
+elif phase == 'frames': jobs = [j for k in FRAMES for j in frames_jobs(k)]
 elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k) if not sys.argv[2:] or any(w in j['name'] for w in sys.argv[2:])]
-else: sys.exit('phase: a | b | poses')
+else: sys.exit('phase: a | b | poses | frames')
 out = f'art/jobs_gaul_{phase}.json'
 json.dump(jobs, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(out, len(jobs), 'jobs:', ' '.join(j['name'] for j in jobs))

@@ -124,7 +124,7 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   // actors drawn by whole poses instead of the rig, by art prefix: { h: the standing pose's height (view px), bob } (scene.js poseActor)
   // the Gauls (28.10, the rig dropped): Asterix about 74 px to the top of his helmet (80 with the wings), the legionary about 95 (104
   // with the spear above his helmet); the poses are cut from one sheet each (tools/make_prompts_gaul.py poses)
-  const POSES = { hr_asterix: { h: 80, bob: 3 }, legion: { h: 104, bob: 2.5 } };
+  const POSES = { hr_asterix: { h: 80, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } }, legion: { h: 104, bob: 2.5 } };   // Asterix: frame animation (tools/frames.py)
 
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',
