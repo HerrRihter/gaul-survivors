@@ -111,15 +111,25 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   // draws one biped (hero or foe). o: { k, x, y (screen ground point), face, dist, g, ux, uy, t, ph, die (age or −1), z, spin, hit, lit, id, wind, aimHand }
   // the body's own outline in its drawing, as [centre, half width] fractions of the drawing's width (measured): the shoulders go on it
   const BODY_U = { hr_ba: [0.445, 0.415], sk_ba_platinum: [0.44, 0.41], sk_ba_consult: [0.445, 0.42], sk_ba_deadline: [0.42, 0.40] };
-  // limited animation (LOOK.POSES[art] = { h, bob? }): the actor is one whole drawing per pose — <art>_idle, _step1, _step2, _wind,
-  // _strike, _hurt — chosen from its state; code adds the step bob, the breath, the squash of a blow, the flinch and the fall. Every pose
-  // is drawn at one scale (the standing pose is h view px tall), centred on its axis (the art is padded so), feet on the ground point.
+  // whole drawings instead of the rig (LOOK.POSES[art] = { h, bob?, stride?, frames? }), chosen from the actor's state; code adds the
+  // breath, the squash of a blow, the flinch and the fall. Every drawing is at one scale (the standing <art>_idle is h view px tall),
+  // centred on its axis (the art is padded so), feet on the ground point.
+  //  - poses (no frames): <art>_idle, _step1, _step2, _wind, _strike, _hurt, with a step bob in code;
+  //  - frame animation (frames: { walk, attack, hurt } counts): <art>_walk0.., _attack0.., _hurt0..; the walk frame follows the distance
+  //    walked (stride: view px per full cycle of both legs), the attack runs anticipation, wind-up, the blow on the hit, follow-through
   function poseActor(o, R0, ak, P) {
     const fade = o.die >= 0 ? 1 - clamp01((o.die - 0.35) / 0.3) : 1; if (fade <= 0) return;
     const hk = o.hitA !== undefined && o.hitA < 0.3 ? 1 - o.hitA / 0.3 : 0, swing = o.swing !== undefined ? o.swing : 9;
     const strike = Math.max(o.strike || 0, swing < 0.22 ? 1 - swing / 0.22 : 0), wind = o.wind || 0;
     let pose = 'idle', bob = 0;
-    if (o.die >= 0 || hk > 0.4) pose = 'hurt';
+    const F = P.frames;
+    if (F) {
+      if ((o.die >= 0 || hk > 0.4) && F.hurt) pose = 'hurt' + (o.die >= 0 || o.hitA < 0.15 ? 0 : Math.min(F.hurt - 1, 1));
+      else if (swing < 0.06 + 0.07 * (F.attack - 2) && F.attack) pose = 'attack' + (swing < 0.06 ? 1 : Math.min(F.attack - 1, 2 + Math.floor((swing - 0.06) / 0.07)));
+      else if (strike > 0 && F.attack) pose = 'attack' + Math.min(F.attack - 1, 2 + Math.floor((1 - strike) * (F.attack - 2)));
+      else if (wind > 0.15 && F.attack) pose = 'attack' + (wind < 0.6 ? 0 : 1);
+      else if (o.g > 0.25 && F.walk) pose = 'walk' + Math.floor((((o.dist / (P.stride || R0.stride)) % 1 + 1) % 1) * F.walk);
+    } else if (o.die >= 0 || hk > 0.4) pose = 'hurt';
     else if (strike > 0) pose = 'strike';
     else if (wind > 0.15) pose = 'wind';
     else if (o.g > 0.25) { const ph = ((o.dist / R0.stride) % 1 + 1) % 1, q = Math.floor(ph * 4); pose = q === 0 ? 'step1' : q === 2 ? 'step2' : 'idle';
