@@ -121,10 +121,13 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   // the hero's handheld tool (its attack comes from the tip): the sprite and, in its texture px, the grip and the tip
   const TOOL = { sprite: 'sword', grip: [270, 182], tip: [1308, 184] };         // Asterix's sword (art/gen/sword.png): the handle's middle and the point
 
+  // actors drawn by whole poses instead of the rig, by art prefix: { h: the standing pose's height (view px), bob } (scene.js poseActor)
+  const POSES = {};
+
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',
     ic_area: 'ic_magnet', ic_amount: 'ic_power', ic_dur: 'ic_haste', chest: 'code_tex', turret: 'switch' };
   const ART_FALLBACK = { petfood: 'mars', logq: 'vetis', batch: 'boss', sdesk: 'desk', repl: 'boss', rstorm: 'boss', outage: 'boss' };
 
-  root.SETTING.LOOK = { PAL: { INK, CYAN, MINT, CORAL, HAZ, ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI }, EMB_AT, emblems, PH, RIGS, IC_FB, ART_FALLBACK, FLOOR, TOOL };
+  root.SETTING.LOOK = { PAL: { INK, CYAN, MINT, CORAL, HAZ, ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI }, EMB_AT, emblems, PH, RIGS, IC_FB, ART_FALLBACK, FLOOR, TOOL, POSES };
 })(window);
