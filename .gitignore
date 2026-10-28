@@ -17,3 +17,8 @@ node_modules/
 __pycache__/
 .idea/
 .vscode/
+# the generator's working files (gen.py): provider output, per-image logs, replaced images, job lists
+art/raw/
+art/logs/
+art/old/
+art/jobs_*.json
