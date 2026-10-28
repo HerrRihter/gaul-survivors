@@ -562,6 +562,7 @@
       if (kind === 'fork' && ready) { const tg = densest(S, g, S.x, S.y, 760, 160); if (tg) { S.wcd[id] = cd;
         S.P.push({ k: 'fork', x: S.x, y: S.y, ox: S.x, oy: S.y, tx: tg.x, ty: tg.y, t0: t, T: 0.8, life: 9, dmg: st.dmg * M.dmg, r: st.radius, split: st.split, depth: st.depth, evo: WEAP[id].evo ? 1 : 0 });
         push(S, { k: 'toss', t, x: S.x, y: S.y - 50 }); } }
+      if (ready && S.wcd[id] > 0 && id === S.base) S.baseT = t;                                   // the hero's own weapon fired (its attack animation)
       if (ready && S.wcd[id] > 0 && kind !== 'trace') S.wcd[id] *= 0.9 + 0.2 * rnd(S);
     }
     for (let i = S.SQ.length - 1; i >= 0; i--) { const q = S.SQ[i]; const e = S.E.find((o) => o.id === q.id && o.dieT < 0); if (e) { q.x = e.x; q.y = e.y; }   // the warning follows its target

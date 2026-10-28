@@ -412,7 +412,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
         if (S.TRACE_IDS) { const rr = SIM.wstat('trace', ST.wp.trace || 1).range; L.joint('hero', 'grip', [sx(tp[0]), sy(tp[1])]);
           L.joint('hero', 'tip', [sx(tp[0] + Math.cos(ST.aim) * rr), sy(tp[1] + Math.sin(ST.aim) * rr)]); if (ST.qaTarget) L.joint('hero', 'target', [sx(ST.qaTarget[0]), sy(ST.qaTarget[1])]); } };
       const o = { k: 'hero', hero: ST.hero, skin: ST.skin, x: X, y: Y, face: ST.face, dist: ST.dist, g: ST.g, ux: ST.ux, uy: ST.uy, t, ph: 0.3, die: die >= 0 ? Math.min(die, 0.34) : -1, z: 0,
-        hit: clamp01(1 - (GT - ST.hurtT) / 0.12), lit: l, aimHand: hs, after: null, swing: ST.sw ? GT - ST.sw.t0 : 9, rimCol: zcol(ST.x, ST.y), id: S.TRACE_IDS ? 'hero' : null };
+        hit: clamp01(1 - (GT - ST.hurtT) / 0.12), lit: l, aimHand: hs, after: null, swing: ST.baseT !== undefined ? GT - ST.baseT : 9, rimCol: zcol(ST.x, ST.y), id: S.TRACE_IDS ? 'hero' : null };
       if (GT < ST.slowT) { L.glow(X, Y - 50, 70, [0.45, 0.75, 1], 0.45, 2); for (let j = 0; j < 3; j++) L.puff(X + (rnd(Math.floor(GT * 8), j) - 0.5) * 60, Y - 20 - j * 18, 8, [0.7, 0.85, 1], 0.4, j); }
       const draw = () => { biped(Object.assign(o, { after: ST.face > 0 ? null : tool })); if (ST.face > 0) tool(); };
       if (!blink) L.inked(draw, { r: 2.2, n: 8, col: INK });
