@@ -4,6 +4,6 @@
   "style_ref": ["art/refs/gaul/style_1976.jpg"],
   "view": [1920, 1080],
   "prep": { "src": "art/gen", "dst": "live/assets", "manifest": "live/assets.js",
-            "notrim": ["bg_*", "*_tex", "hr_asterix_body", "legion_body", "*_idle", "*_step1", "*_step2", "*_wind", "*_strike", "*_hurt", "*_walk?", "*_attack?", "*_hurt?"], "skip": ["*_sheet", "*_raw", "*_gen", "*only", "*fix"], "max": 2048,
+            "notrim": ["bg_*", "*_tex", "hr_asterix_body", "legion_body", "*_idle", "*_step1", "*_step2", "*_wind", "*_strike", "*_hurt", "*_walk?", "*_attack?", "*_hurt?"], "skip": ["*_sheet", "*_raw", "*_gen", "*only", "*fix", "*_model"], "max": 2048,
             "walk": { "ground": 0.6, "ledge*": 0.45 } }
 }

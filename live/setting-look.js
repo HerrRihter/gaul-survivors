@@ -119,12 +119,17 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
   o = vec4(col, 1.0); }`;
 
   // the hero's handheld tool (its attack comes from the tip): the sprite and, in its texture px, the grip and the tip
-  const TOOL = { sprite: 'sword', grip: [270, 182], tip: [1308, 184] };         // Asterix's sword (art/gen/sword.png): the handle's middle and the point
+  const TOOL = { sprite: 'scanner', grip: [75, 148], tip: [252, 76] };   // the Gauls' weapons are in their frames; the scanner stays for the rig heroes left from NetSurvivors
 
   // actors drawn by whole poses instead of the rig, by art prefix: { h: the standing pose's height (view px), bob } (scene.js poseActor)
-  // the Gauls (28.10, the rig dropped): Asterix about 74 px to the top of his helmet (80 with the wings), the legionary about 95 (104
-  // with the spear above his helmet); the poses are cut from one sheet each (tools/make_prompts_gaul.py poses)
-  const POSES = { hr_asterix: { h: 80, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } }, legion: { h: 104, bob: 2.5 } };   // Asterix: frame animation (tools/frames.py)
+  // the Gauls (the rig dropped 28.10): frame animation cut by tools/frames.py (every standing <art>_idle is a 256 px texture); h = its
+  // height on screen with what it holds (Asterix 74 px to his helmet, 80 with the wings; the legionary 95, 104 with the spear)
+  const POSES = {
+    hr_asterix: { h: 80, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } }, hr_obelix: { h: 100, stride: 140, frames: { walk: 8, attack: 6, hurt: 2 } },
+    hr_cacofonix: { h: 98, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } }, hr_antisanitarix: { h: 90, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } },
+    hr_automatix: { h: 100, stride: 140, frames: { walk: 8, attack: 6, hurt: 2 } }, hr_panoramix: { h: 106, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } },
+    legion: { h: 104, stride: 120, frames: { walk: 8, attack: 6, hurt: 2 } },
+  };
 
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',

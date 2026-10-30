@@ -3,6 +3,8 @@
 #   python tools/make_prompts_gaul.py a      → art/jobs_gaul_a.json: the bodies, Asterix's sword, the plaza props
 #   python tools/make_prompts_gaul.py b      → art/jobs_gaul_b.json: legs, feet and arms (needs the phase a bodies in art/gen)
 #   python tools/make_prompts_gaul.py b foot → only the jobs whose name has 'foot' (any words: a redraw of some parts)
+#   python tools/make_prompts_gaul.py model [art...]  → the heroes' model poses (one standing figure each; tools/frames.py <art> model idle --single)
+#   python tools/make_prompts_gaul.py frames [art...] → 3×3 walk and attack sheets for every character with an approved <art>_idle
 #   python tools/make_prompts_gaul.py poses  → art/jobs_gaul_poses.json: one sheet of six whole-body poses per character (the rig was
 #                                            dropped 28.10: limited animation, poses switched by the scene)
 # The style bible and the style reference (Image 1, a 1976 film cel) come from ref2game.json on this branch.
@@ -142,6 +144,81 @@ FRAMES = {
     },
 }
 
+# the other five heroes (stage 3): design reference (their gaul-survivors frames, enlarged), look, what they hold, the attack's six frames
+HERO_CAST = {
+    'hr_obelix': ('art/refs/gaul/obelix_design.png',
+        'Obelix the Gaul, the huge strong menhir carrier: an enormous round belly and bare pink chest and arms, long red hair in two braids tied with small blue bows, '
+        'a big bushy red moustache, a big round pink nose, a cheerful face; blue-and-white vertical striped trousers, a broad green belt with gold studs and a big round '
+        'gold buckle, brown shoes. Proportions: very wide and round, a big head, short legs.',
+        'nothing in his hands', 'his big arms swinging',
+        ['ANTICIPATION: crouching, both hands gripping a grey menhir standing on the ground in front of him',
+         'WIND-UP: the grey menhir hoisted high above his head in both hands, leaning back',
+         'THROW: both arms flung forward, the menhir just leaving his hands towards the right',
+         'FOLLOW-THROUGH: arms stretched out forward and empty, leaning into the throw',
+         'RECOVER: straightening up, arms coming back',
+         'READY: standing, fists on his hips, pleased']),
+    'hr_cacofonix': ('art/refs/gaul/cacofonix_design.png',
+        'Cacofonix the bard: a slim young Gaul with long wavy golden-blond hair, a small blond moustache, a big pink nose, a smug face; a green tunic, a red cape over '
+        'his shoulders, blue-and-white striped trousers, brown shoes; a small golden lyre in his left hand.',
+        'his small golden lyre', 'the lyre held at his chest',
+        ['ANTICIPATION: taking a deep breath, chest puffed out, the lyre raised',
+         'WIND-UP: head thrown back, eyes shut, the hand lifted over the lyre strings',
+         'SINGING: mouth wide open bellowing a terrible note, strumming the lyre hard, leaning forward',
+         'SINGING ON: still bellowing, eyes squeezed shut, the cape flying back',
+         'LAST NOTE: mouth closing, the hand off the strings',
+         'READY: standing proudly, the lyre at his chest']),
+    'hr_antisanitarix': ('art/refs/gaul/antisanitarix_design.png',
+        'Unhygienix the fishmonger: a stocky Gaul with blond hair and a big blond moustache, a big pink nose; a white shirt with rolled-up sleeves, a white apron, '
+        'blue trousers, brown shoes; a big grey-green fish held by its tail.',
+        'a big grey-green fish by its tail', 'the fish dangling from his hand',
+        ['ANTICIPATION: gripping the fish by its tail, drawing it back low',
+         'WIND-UP: the fish swung back over his shoulder',
+         'THROW: the arm whipped forward, the fish flying out of his hand towards the right',
+         'FOLLOW-THROUGH: the empty hand stretched forward, leaning into the throw',
+         'RECOVER: pulling a new fish out from behind his apron',
+         'READY: standing, the new fish held by its tail']),
+    'hr_automatix': ('art/refs/gaul/automatix_design.png',
+        'Fulliautomatix the blacksmith: a big burly Gaul with bushy red hair and a big red beard and moustache, a big nose, a fierce face; bare muscular pink arms, '
+        'a brown leather smith apron over his bare chest, dark green trousers, brown shoes; a heavy blacksmith hammer.',
+        'his heavy blacksmith hammer in his right hand', 'the hammer swinging low at his side',
+        ['ANTICIPATION: gripping the hammer in both hands, crouching',
+         'WIND-UP: the hammer raised high over his head in both hands',
+         'SMASH: the hammer brought down hard in front of him, the body bent forward',
+         'FOLLOW-THROUGH: the hammer head on the ground in front, the knees bent',
+         'RECOVER: lifting the hammer back up',
+         'READY: standing, the hammer resting on his shoulder']),
+    'hr_panoramix': ('art/refs/gaul/panoramix_design.png',
+        'Getafix the old druid: a tall thin old man with a very long white beard down to his knees, long white hair, a big nose, wise eyes; a long white robe, '
+        'a red cape, a golden sickle at his belt, brown shoes; a wooden walking staff in his left hand and a small green potion flask in his right.',
+        'his wooden staff and a small green potion flask', 'leaning a little on his staff',
+        ['ANTICIPATION: pulling the cork out of the green potion flask',
+         'WIND-UP: the flask raised high, ready to fling',
+         'FLING: the flask swung forward, green potion splashing out in an arc towards the right',
+         'FOLLOW-THROUGH: the arm stretched forward, the last green drops falling',
+         'RECOVER: corking the flask',
+         'READY: standing, leaning on his staff']),
+}
+HURT = ['HURT: recoiling backwards from a hit, eyes squeezed shut, arms flung up', 'HURT, recovering: stumbling back onto both feet, wincing']
+FRAMES['legion'] = {'walk': ('a smooth WALK CYCLE of eight evenly spaced frames (one full stride, both legs), marching, the spear upright in his right hand and the shield on his left arm', FRAMES['hr_asterix']['walk'][1]),
+    'attack': ('a spear ATTACK of six frames, then two HURT frames', ['ANTICIPATION: the spear drawn back at shoulder height, the shield forward',
+        'WIND-UP: leaning back, the spear cocked behind him, pointing forward', 'THRUST: the spear thrust straight forward, the arm fully stretched, lunging on the front leg',
+        'FOLLOW-THROUGH: the spear still forward, the body leaning past it', 'RECOVER: pulling the spear back, rising from the lunge', 'READY: standing, the spear upright, the shield in front'] + HURT)}
+for _k, (_ref, _desc, _held, _arms, _atk) in HERO_CAST.items():
+    CHARS[_k] = (_ref, _desc, '', '', '')
+    FRAMES[_k] = {'walk': (f'a smooth WALK CYCLE of eight evenly spaced frames (one full stride, both legs), {_arms}', FRAMES['hr_asterix']['walk'][1]),
+                  'attack': ('an ATTACK of six frames, then two HURT frames', _atk + HURT)}
+
+def model_jobs(k):
+    ref, desc, held, _, _ = HERO_CAST[k]
+    p = '\n'.join([
+        'Use case: the MODEL POSE of a character for a frame-by-frame animated (1970s hand-drawn film) top-down 3/4 survivors-like game set in a Gaulish village of 50 BC.',
+        'Image 2 is the ORIGINAL DESIGN of this character (small game sprites): match his face, hair, clothes, colours, what he holds and his proportions exactly; '
+        'redraw him large and clean in the style of Image 1.',
+        'Subject: ' + desc + ' He holds ' + held + '.',
+        'Draw him ONCE, the WHOLE body (head to feet), STANDING at rest, seen from the side in a 3/4 view, FACING RIGHT, centred, feet together on an invisible ground line.',
+        FINISH, LAST])
+    return [{'name': k + '_model', 'prompt': p, 'size': '1024x1024', 'alpha': 'auto', 'ref': [{'path': ref, 'label': 'the original design of this character'}]}]
+
 def frames_jobs(k):
     ref, desc, *_ = CHARS[k]; idle = f'art/gen/{k}_idle.png'
     if not os.path.exists(idle): sys.exit(f'{idle} is missing: the approved idle pose (phase poses) is the reference')
@@ -166,9 +243,10 @@ def frames_jobs(k):
 
 if phase == 'a': jobs = [body_job(k) for k in CHARS] + [SWORD] + [prop_job(k) for k in PROPS]
 elif phase == 'poses': jobs = [poses_job(k) for k in POSES]
-elif phase == 'frames': jobs = [j for k in FRAMES for j in frames_jobs(k)]
+elif phase == 'model': jobs = [j for k in HERO_CAST if not sys.argv[2:] or k in sys.argv[2:] for j in model_jobs(k)]
+elif phase == 'frames': jobs = [j for k in FRAMES if (not sys.argv[2:] or k in sys.argv[2:]) and os.path.exists(f'art/gen/{k}_idle.png') for j in frames_jobs(k)]
 elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k) if not sys.argv[2:] or any(w in j['name'] for w in sys.argv[2:])]
-else: sys.exit('phase: a | b | poses | frames')
+else: sys.exit('phase: a | b | poses | model | frames')
 out = f'art/jobs_gaul_{phase}.json'
 json.dump(jobs, open(out, 'w', encoding='utf-8'), ensure_ascii=False, indent=1)
 print(out, len(jobs), 'jobs:', ' '.join(j['name'] for j in jobs))
