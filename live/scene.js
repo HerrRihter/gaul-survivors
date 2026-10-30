@@ -81,12 +81,14 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
     return { grade: g, haze: [1, 1, 1], tint, rim, rimCol, alpha: fade }; };
   const { ICE, ELEC, ELEC_HI, CYAN_HI, PHYS, PHYS_HI } = LK.PAL;
   // a hero's sprites (hr_* sheets); Utrace's until its sheet is generated
+  const hasArt = (n) => { for (const p of ['_body', '_idle']) { try { G.tex(n + p); return true; } catch (_) {} } return false; };   // a rig or whole poses
   const HART = {}; const heroArt = (h, skin) => { const key = h + ':' + (skin || ''); if (HART[key]) return HART[key]; const H = SIM.HEROES[h] || SIM.HEROES[SETTING.RUN.hero], sk = SIM.SKINS[skin];   // a skin's own sheet, else the hero's
-    const has = (n) => { for (const p of ['_body', '_idle']) { try { G.tex(n + p); return true; } catch (_) {} } return false; };   // a rig or whole poses
-    let a = sk && sk.hero === h ? sk.art : H.art; if (!has(a)) { a = H.art; if (!has(a)) a = 'hero'; } return (HART[key] = a); };
+    let a = sk && sk.hero === h ? sk.art : H.art; if (!hasArt(a)) { a = H.art; if (!hasArt(a)) a = 'hero'; } return (HART[key] = a); };
   const heroCol = (ST) => (SIM.HEROES[ST.hero] || SIM.HEROES[SETTING.RUN.hero]).col;
   const ART_FALLBACK = LK.ART_FALLBACK, ART = {};
-  const artOf = (k) => { if (ART[k]) return ART[k]; let a = k; try { G.tex(k + '_body'); } catch (_) { a = ART_FALLBACK[k] || k; } return (ART[k] = a); };
+  const artOf = (k) => { if (ART[k]) return ART[k]; let a = k; if (!hasArt(k)) a = ART_FALLBACK[k] || k; return (ART[k] = a); };
+  // a character's picture for menus and lists: its rig body, or its standing pose when it is drawn by whole poses
+  const pic = (a) => { try { G.tex(a + '_body'); return a + '_body'; } catch (_) { return a + '_idle'; } };
   // two-bone IK in the picture plane; returns twoBone angles (deg). bend = +1 knee toward the facing side, −1 the other way
   function ik(hp, ap, l1, l2, face, bend) {
     const vx = ap[0] - hp[0], vy = ap[1] - hp[1], L0 = l1 + l2, d = Math.max(L0 * 0.25, Math.min(L0 * 0.999, Math.hypot(vx, vy)));
@@ -901,7 +903,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
   // a hero card (shop tab and hero select): portrait, name, role, attack, passive, then price / training (shop) or play (select)
   let MT = 0;                                                                                     // the menu's clock (gear animation)
   // a hero's portrait in the menus, in its skin's own drawing when it wears one
-  function portrait(h, skin, x, y, ph, own = true) { const n = heroArt(h, skin) + '_body', pw = L.hsz(n, ph);
+  function portrait(h, skin, x, y, ph, own = true) { const n = pic(heroArt(h, skin)), pw = L.hsz(n, ph);
     L.sprite(n, x - pw / 2, y, { w: pw, h: ph, u: { grade: [own ? 1 : 0.15, own ? 1 : 0.35, 0, 1] } }); }
   // content still closed by an achievement (live/ach.js) says what opens it, in this grey; it shows as a black silhouette and «???»
   // until then (docs/PLAN-FEEDBACK-27-10.md, stage 3). Content whose achievement is done pulses mint: a press claims it. Content a
@@ -915,7 +917,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
     if (w < 240) {                                                            // the compact card (stage 7б)
       const fit = (k, s0, size, min = 15) => { let ns = size; while (ns > min && L.labelW(k, s0, { size: ns, font: MONO }) > w - 16) ns--; return ns; };
       L.uiBox(id, x, y, w, hh, 6); frame(x, y, w, hh, on ? 0.95 : 0.8, on ? CYAN : IDLE); if (on) L.rrect(x, y, w, hh, 4, [0.0, 0.45, 0.55], [0.0, 0.3, 0.38], 0.2); if (rd) readyMark(id + 'rm', o.r);
-      const ph = 120, n0 = heroArt(h) + '_body', pw0 = L.hsz(n0, ph);
+      const ph = 120, n0 = pic(heroArt(h)), pw0 = L.hsz(n0, ph);
       if (shut) L.sprite(n0, x + w / 2 - pw0 / 2, y + 14, { w: pw0, h: ph, u: { grade: [0, 0.06, 0, 1] } }); else portrait(h, own ? V.D.sel.skins[h] : null, x + w / 2, y + 14, ph, own);
       if (!own && ACH.isNew(V.D, 'hero', h)) newMark(id + 'nw', x + w - 92, y + 6);
       label(id + 'n', shut ? '???' : H.name, x + w / 2, y + 160, { size: shut ? 24 : fit(id + 'n', H.name, 22), al: 0.5, col: shut ? '#5f7f88' : '#ffffff' });
@@ -928,8 +930,8 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       return; }
     L.uiBox(id, x, y, w, hh, 10); frame(x, y, w, hh, on ? 0.95 : 0.8, on ? CYAN : IDLE);
     if (on) { L.rrect(x, y, w, hh, 4, [0.0, 0.45, 0.55], [0.0, 0.3, 0.38], 0.2); } if (rd) readyMark(id + 'rm', o.r);
-    const c = H.col, n = heroArt(h) + '_body', ph = 170, pw = L.hsz(n, ph); G.blend('add'); L.glow(x + w / 2, y + 120, 120, rd ? MINT : c, own ? 0.3 : rd ? 0.18 : shut ? 0 : 0.08, 2); G.blend();
-    if (shut) { const n0 = heroArt(h) + '_body', pw0 = L.hsz(n0, ph); L.sprite(n0, x + w / 2 - pw0 / 2, y + 30, { w: pw0, h: ph, u: { grade: [0, 0.06, 0, 1] } }); }   // a silhouette
+    const c = H.col, n = pic(heroArt(h)), ph = 170, pw = L.hsz(n, ph); G.blend('add'); L.glow(x + w / 2, y + 120, 120, rd ? MINT : c, own ? 0.3 : rd ? 0.18 : shut ? 0 : 0.08, 2); G.blend();
+    if (shut) { const n0 = pic(heroArt(h)), pw0 = L.hsz(n0, ph); L.sprite(n0, x + w / 2 - pw0 / 2, y + 30, { w: pw0, h: ph, u: { grade: [0, 0.06, 0, 1] } }); }   // a silhouette
     else portrait(h, own ? V.D.sel.skins[h] : null, x + w / 2, y + 30, ph, own);
     if (!own && ACH.isNew(V.D, 'hero', h)) newMark(id + 'nw', x + w - 100, y + 14);
     let ns = 28; while (ns > 18 && L.labelW(id + 'n', H.name, { size: ns, font: MONO }) > w - 30) ns--;
@@ -1005,7 +1007,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
         if (o.skin) { const k = o.skin, Sk = SIM.SKINS[k], ownH = V.owns(Sk.hero), own = V.ownsSkin(k), worn = D.sel.skins[Sk.hero] === k, hs = !ownH && !V.open('hero', Sk.hero);   // hs: its hero is still closed
           const rd = !own && !V.open('skin', k) && ACH.ready(D, 'skin', k), shut = !own && (!V.open('skin', k) || hs);
           L.uiBox('mss' + i, x, y, w, h, 10); lit(o.r, on || worn); if (rd) readyMark('mssr' + i, o.r); G.blend('add'); L.glow(x + w / 2, y + 110, 110, rd ? MINT : Sk.col, shut ? (rd ? 0.15 : 0) : ownH ? 0.25 : 0.06, 2); G.blend();
-          if (shut) { const n0 = heroArt(Sk.hero, k) + '_body', pw0 = L.hsz(n0, 128); L.sprite(n0, x + w / 2 - pw0 / 2, y + 36, { w: pw0, h: 128, u: { grade: [0, 0.06, 0, 1] } }); }
+          if (shut) { const n0 = pic(heroArt(Sk.hero, k)), pw0 = L.hsz(n0, 128); L.sprite(n0, x + w / 2 - pw0 / 2, y + 36, { w: pw0, h: 128, u: { grade: [0, 0.06, 0, 1] } }); }
           else portrait(Sk.hero, k, x + w / 2, y + 36, 128, ownH);
           if (!own && ACH.isNew(D, 'skin', k)) newMark('mssw' + i, x + w - 96, y + 10);
           let ns = 26; while (ns > 16 && L.labelW('mssn' + i, Sk.name, { size: ns, font: MONO }) > w - 20) ns--;
@@ -1059,7 +1061,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
         if (o.ctab) { btn('mct' + i, o.r, o.s, hot(i) || V.ctab === o.ctab, 26, V.ctab === o.ctab ? '#ffffff' : null); return; }
         const seen = n(o.k) > 0, a = artOf(o.k), f = SIM.FOE[o.k]; L.uiBox('mf' + i, x, y, w, h, 4); lit(o.r, hot(i));
         if (f.boss || f.mini) L.rrect(x + 6, y + 6, 22, 6, 3, f.boss ? CORAL : [1, 0.84, 0.2]);           // a boss or a miniboss: a mark in the corner
-        ico(a + '_body', x + 12, y + 12, { w: w - 24, h: h - 24, u: { grade: [seen ? 1 : 0, seen ? 1 : 0.1, 0, 1] } });
+        ico(pic(a), x + 12, y + 12, { w: w - 24, h: h - 24, u: { grade: [seen ? 1 : 0, seen ? 1 : 0.1, 0, 1] } });
         if (!seen) label('mfq' + i, '?', x + w / 2, y + h / 2, { size: 44, al: 0.5, col: '#5f7f88' }); });
       const o = it[V.sel]; if (o && o.kind === 'f') { const seen = n(o.k) > 0, f = SIM.FOE[o.k], tag = f.boss ? 'Босс' : f.mini ? 'Мини-босс' : 'Враг';
         const dsc = seen ? SIM.FOE_DESC[o.k] || '' : 'Ещё не побеждён', tg = seen ? tag + ' · побед над ним: ' + n(o.k) : tag;
@@ -1139,7 +1141,7 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
         label('mcog' + i, on ? (KB() ? 'Enter — начать' : 'Нажмите — начать') : '', x + w - 30, y + h - 40, { size: 24, al: 1, col: '#64ffda' }); });
       backBtn(); return; }
     if (V.scr === 'client') { head('КЛЮЧЕВОЙ КЛИЕНТ БА', 'Каждое убийство выбранного клиента даёт +1 HP и к максимуму до конца смены');
-      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), k = o.client, n = artOf(k) + '_body', ph = 120, pw = L.hsz(n, ph);
+      each((o, i) => { const [x, y, w, h] = o.r, on = hot(i), k = o.client, n = pic(artOf(k)), ph = 120, pw = L.hsz(n, ph);
         L.uiBox('mcl' + i, x, y, w, h, 8); lit(o.r, on || V.D.sel.client === k);
         L.sprite(n, x + w / 2 - Math.min(pw, w - 40) / 2, y + 24, { w: Math.min(pw, w - 40), h: ph * Math.min(1, (w - 40) / pw) });
         wrap(SIM.FOE[k].name, 22, w - 24).slice(0, 2).forEach((ln, j) => label('mcln' + i + '_' + j, ln, x + w / 2, y + 180 + j * 28, { size: 22, al: 0.5, col: on ? '#ffffff' : '#bfe3ea' })); });
@@ -1160,12 +1162,12 @@ void main(){ vec2 p = v_uv * u_view; float l = max(max(max(hole(p, u_h0), hole(p
       const fitL = (id, s0, size, room) => { let ns = size; while (ns > 14 && L.labelW(id, s0, { size: ns, font: MONO }) > room) ns--; return ns; };
       each((o, i) => { const [x, y, w, h] = o.r, on = !!B && (o.metric !== undefined ? B.metric === o.metric : o.scope ? B.scope === o.scope : o.heroF !== undefined ? B.hero === o.heroF : o.near ? B.near : false);
         if (o.scrollD) { const mx = B && B.rows ? Math.max(0, B.rows.length - 12) : 0, can = o.scrollD < 0 ? (B.scroll || 0) > 0 : (B.scroll || 0) < mx; if (mx) btn('mls' + i, o.r, o.s, hot(i), 26, can ? null : '#3f5a60'); return; }
-        if (o.heroF) { L.uiBox('mlb' + i, x, y, w, h, 8); lit(o.r, hot(i) || on); ico(heroArt(o.heroF) + '_body', x + 8, y + 4, { w: w - 16, h: h - 8, u: { grade: [on || hot(i) ? 1 : 0.55, 1, 0, 1] } });   // a hero chip: the portrait
+        if (o.heroF) { L.uiBox('mlb' + i, x, y, w, h, 8); lit(o.r, hot(i) || on); ico(pic(heroArt(o.heroF)), x + 8, y + 4, { w: w - 16, h: h - 8, u: { grade: [on || hot(i) ? 1 : 0.55, 1, 0, 1] } });   // a hero chip: the portrait
           if (hot(i) && !on) label('mlbt', o.s, x + w / 2, y + h + 16, { size: 16, al: 0.5, col: '#cfe9ee' }); return; }
         btn('mld' + i, o.r, o.s, hot(i) || on, fitL('mldt' + i, o.s, 24, w - 20), on ? '#ffffff' : o.refresh ? '#7ff6ff' : null); });
       const px0 = C ? 12 : W / 2 - 620, py0 = C ? 232 : 330, pw = C ? W - 24 : 1240, VIS = C ? 5 : 12, RH = 44, R0 = C ? 96 : 100; panel('mldp', px0, py0, pw, C ? 300 : 640, 0.85);
       const row = (k, place, login, hero, value, y, me) => { if (me) L.rrect(px0 + 10, y - 22, pw - 20, 44, 6, [0.0, 0.45, 0.55], [0.0, 0.3, 0.38], 0.3);
-        label('mlp' + k, place, px0 + 80, y, { size: 26, al: 1, col: me ? '#64ffda' : '#7ff6ff' }); if (hero) ico(heroArt(hero) + '_body', px0 + 100, y - 19, { w: 38, h: 38 });
+        label('mlp' + k, place, px0 + 80, y, { size: 26, al: 1, col: me ? '#64ffda' : '#7ff6ff' }); if (hero) ico(pic(heroArt(hero)), px0 + 100, y - 19, { w: 38, h: 38 });
         label('mll' + k, login, px0 + 150, y, { size: 26, col: me ? '#ffffff' : '#e6fdff' });
         label('mlh' + k, hn(hero), px0 + (C ? 560 : 700), y, { size: fitL('mlh' + k, hn(hero), 22, C ? 200 : 300), col: '#a9c9cf' }); label('mlv' + k, value, px0 + pw - 40, y, { size: 26, al: 1, col: '#e6fdff' }); };
       const plc = (p) => (p === Infinity ? '1000+' : p ? String(p) : '—');
