@@ -1,6 +1,6 @@
 // live/setting-look.js — the setting's look (NetSurvivors' data centre), read by scene.js as SETTING.LOOK: the palette, the clients'
 // code-drawn emblems, prop heights, the rig of every actor, icon and art stand-ins. Another game on the engine replaces this file with
-// setting.js and the art (docs/PLAN-GAUL.md, stage 1). Loaded after sim.js (the hero rig shares SIM.RIG) and before scene.js.
+// setting.js and the art (as gaul-survivors does). Loaded after sim.js (the hero rig shares SIM.RIG) and before scene.js.
 (function (root) {
   const SIM = root.SIM, G = root.G;
   // effect and interface colours (linear 0..1); the effect families: ICE cold, ELEC electric, PHYS physical objects, *_HI evolutions
