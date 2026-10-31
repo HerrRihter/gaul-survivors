@@ -1,0 +1,16 @@
+{
+  "generator": {
+    "provider": "codex",
+    "model": null,
+    "size": "1536x1024",
+    "quality": "high",
+    "opaque": [
+      "bg_sky*",
+      "*_tex"
+    ]
+  },
+  "style_bible": "art/style_bible_gaul.txt",
+  "style_ref": [
+    "art/refs/gaul/style_1976.jpg"
+  ]
+}

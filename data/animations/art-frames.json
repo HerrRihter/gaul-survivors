@@ -1,0 +1,260 @@
+{
+ "anchor": "bottom-centre",
+ "unit": "world px (1:1 with the original frames)",
+ "characters": {
+  "asterix": {
+   "art": "hr_asterix",
+   "height": 63.0,
+   "scale": 0.253,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "obelix": {
+   "art": "hr_obelix",
+   "height": 89.0,
+   "scale": 0.3497,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "cacofonix": {
+   "art": "hr_cacofonix",
+   "height": 82.0,
+   "scale": 0.3228,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "antisanitarix": {
+   "art": "hr_antisanitarix",
+   "height": 78.0,
+   "scale": 0.3171,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "automatix": {
+   "art": "hr_automatix",
+   "height": 85.0,
+   "scale": 0.3366,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "panoramix": {
+   "art": "hr_panoramix",
+   "height": 86.0,
+   "scale": 0.3386,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "roman": {
+   "art": "legion",
+   "height": 79.0,
+   "scale": 0.3166,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "spear": {
+   "art": "spear",
+   "height": 83.5,
+   "scale": 0.3374,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "pilum": {
+   "art": "pilum",
+   "height": 83.5,
+   "scale": 0.3327,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "veteran": {
+   "art": "veteran",
+   "height": 79.5,
+   "scale": 0.313,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "auxiliary": {
+   "art": "aux",
+   "height": 86.0,
+   "scale": 0.3583,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "turtle": {
+   "art": "turtle",
+   "height": 105.0,
+   "scale": 0.4094,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "ram": {
+   "art": "ram",
+   "height": 120.5,
+   "scale": 0.4707,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "boar": {
+   "art": "boar",
+   "height": 52.0,
+   "scale": 0.2059,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "stoneSquad": {
+   "art": "stonesq",
+   "height": 115.5,
+   "scale": 0.4512,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "netter": {
+   "art": "netter",
+   "height": 68.5,
+   "scale": 0.2702,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "wine": {
+   "art": "wine",
+   "height": 86.0,
+   "scale": 0.3379,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "cavalry": {
+   "art": "cavalry",
+   "height": 103.0,
+   "scale": 0.4162,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "tower": {
+   "art": "tower",
+   "height": 158.0,
+   "scale": 0.6233,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "caius": {
+   "art": "caius",
+   "height": 94.0,
+   "scale": 0.3694,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "merchant": {
+   "art": "merchant",
+   "height": 105.0,
+   "scale": 0.4126,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2,
+   "note": "provisional: the original frame includes his stall, the new one does not yet (stage D draws it)"
+  },
+  "malosinus": {
+   "art": "malosinus",
+   "height": 126.0,
+   "scale": 0.4941,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  },
+  "boss": {
+   "art": "centurion",
+   "height": 94.0,
+   "scale": 0.3715,
+   "frames": {
+    "walk": 8,
+    "attack": 6,
+    "hurt": 2
+   },
+   "impact": 2
+  }
+ }
+}

@@ -5,3 +5,10 @@ data/animations/character-frames.js
 data/animations/character-bounds.js
 data/animations/menhir-layout.js
 data/animations/villager-layout.js
+
+# the art pipeline (ref2game): raw generator output, logs, replaced finals, job lists
+art/raw/
+art/logs/
+art/old/
+art/jobs_*.json
+art/audit/
