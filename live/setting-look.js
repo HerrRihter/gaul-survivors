@@ -93,6 +93,9 @@
     rstorm:  { body: 220, hipY: 62, leg: 70, legW: 38, hipW: 50, foot: [60, 30], shY: 176, shW: 96, arm: 72, armW: 32, bob: 10, flip: true },
     outage:  { body: 250, hipY: 66, leg: 72, legW: 46, hipW: 62, foot: [70, 34], shY: 196, shW: 120, arm: 78, armW: 40, bob: 8, flip: true },
   };
+  // the gaul-survivors enemies keep the rig of the NetSurvivors foe whose mechanic they took (its shadow and health bar)
+  for (const [k, f] of [['aux', 'panel'], ['spear', 'multon'], ['boar', 'orb'], ['turtle', 'keg'], ['veteran', 'baltika'], ['pilum', 'mars'], ['tower', 'loreal'], ['stonesq', 'ferrero'],
+    ['netter', 'vetis'], ['wine', 'mond'], ['merchant', 'prog'], ['ram', 'cherk'], ['caius', 'crpt'], ['cavalry', 'repl'], ['malosinus', 'batch'], ['centurion', 'outage']]) RIGS[k] = { ...RIGS[f] };
   // the component minibosses are drawn 1.8× (every length of the rig scales with the body)
   for (const k of ['bugu', 'bugl', 'bugg', 'buga']) { const r = RIGS[k]; for (const f of ['body', 'hipY', 'leg', 'legW', 'hipW', 'shY', 'shW', 'arm', 'armW', 'bob']) r[f] *= 1.8; r.foot = r.foot.map((v) => v * 1.8); }
 
@@ -130,6 +133,13 @@ void main(){ vec2 w0 = v_px + u_cam, w = vec2(w0.x, w0.y / 0.62);
     hr_automatix: { h: 100, stride: 140, frames: { walk: 8, attack: 6, hurt: 2 } }, hr_panoramix: { h: 106, stride: 150, frames: { walk: 8, attack: 6, hurt: 2 } },
     legion: { h: 104, stride: 120, frames: { walk: 8, attack: 6, hurt: 2 } },
   };
+  // the enemies (gaul-survivors units): h by their sprites against the legionary's (×1.33); the commanders larger, as there (×1.4)
+  for (const [k, h, stride] of [['aux', 112, 120], ['spear', 110, 120], ['boar', 72, 120], ['turtle', 140, 140], ['veteran', 108, 120], ['pilum', 110, 120],
+    ['tower', 170, 160], ['stonesq', 150, 140], ['netter', 96, 110], ['wine', 112, 120], ['merchant', 108, 120], ['ram', 160, 160],
+    ['caius', 170, 160], ['cavalry', 200, 220], ['malosinus', 190, 180], ['centurion', 210, 190]]) {
+    POSES[k] = { h, stride, frames: { walk: 8, attack: 6, hurt: 2 } };
+    const r = RIGS[k], q = h / (r.hipY + r.body);                     // the borrowed rig scaled to the drawing (the health bar sits over its head)
+    for (const f of ['body', 'hipY', 'leg', 'legW', 'hipW', 'shY', 'shW', 'arm', 'armW']) r[f] *= q; r.foot = r.foot.map((v) => v * q); }
 
   // icons and art missing from the sheets are drawn with these
   const IC_FB = { ic_shield: 'ic_amount', ic_firewall: 'ic_hp', ic_repair: 'heal', ic_udp: 'ic_homing', ic_chain: 'ic_ping', ic_storm: 'ic_power', ic_turret: 'ic_cache', ic_cryo: 'ic_haste', ic_fork: 'ic_mine',

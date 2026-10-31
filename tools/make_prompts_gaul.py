@@ -3,7 +3,7 @@
 #   python tools/make_prompts_gaul.py a      → art/jobs_gaul_a.json: the bodies, Asterix's sword, the plaza props
 #   python tools/make_prompts_gaul.py b      → art/jobs_gaul_b.json: legs, feet and arms (needs the phase a bodies in art/gen)
 #   python tools/make_prompts_gaul.py b foot → only the jobs whose name has 'foot' (any words: a redraw of some parts)
-#   python tools/make_prompts_gaul.py model [art...]  → the heroes' model poses (one standing figure each; tools/frames.py <art> model idle --single)
+#   python tools/make_prompts_gaul.py model [art...]  → the heroes' and enemies' model poses (one standing figure each; tools/frames.py <art> model idle --single)
 #   python tools/make_prompts_gaul.py frames [art...] → 3×3 walk and attack sheets for every character with an approved <art>_idle
 #   python tools/make_prompts_gaul.py poses  → art/jobs_gaul_poses.json: one sheet of six whole-body poses per character (the rig was
 #                                            dropped 28.10: limited animation, poses switched by the scene)
@@ -208,16 +208,139 @@ for _k, (_ref, _desc, _held, _arms, _atk) in HERO_CAST.items():
     FRAMES[_k] = {'walk': (f'a smooth WALK CYCLE of eight evenly spaced frames (one full stride, both legs), {_arms}', FRAMES['hr_asterix']['walk'][1]),
                   'attack': ('an ATTACK of six frames, then two HURT frames', _atk + HURT)}
 
+# the enemies (stage 3, the owner 31.10: only gaul-survivors units, each on the mechanic of the NetSurvivors foe it replaces):
+# art: (design reference, look, what it holds, its standing model pose, the walk, the walk's eight frames or None for a man's
+# stride, the attack's six frames under its mechanic, the two hurt frames or None for a man's)
+def _ref(k): return f'art/refs/gaul/{k}_design.png'
+MAN = 'STANDING at rest, the WHOLE body (head to feet), feet together'
+GROUP_HURT = ['HURT: the whole group recoiling backwards from a hit, eyes squeezed shut, ducking', 'HURT, recovering: steadying themselves, wincing']
+GALLOP = lambda who: [f'{who} gathered, all four legs under the body', f'{who} pushing off with the hind legs', f'{who} stretched out flying, the forelegs reaching forward',
+                      f'{who} landing on the forelegs', f'{who} gathered again, legs under the body', f'{who} pushing off again with the hind legs',
+                      f'{who} stretched out, the hind legs kicking back', f'{who} landing, the forelegs taking the weight']
+ENEMY_CAST = {
+    'aux': (_ref('aux'), 'an auxiliary Roman soldier: a round iron helmet, a red face with a big ginger moustache and a big pink nose, grey segmented iron shoulder armour '
+        'over a green tunic, a brown belt, brown sandals; a round blue shield with a yellow sunburst emblem on his left arm.',
+        'a long spear in his right hand and the round blue shield on his left arm', MAN, 'marching, the spear upright', None,
+        ['ANTICIPATION: crouching, the spear drawn back at the hip', 'WIND-UP: leaning back, the spear cocked',
+         'LUNGE: a long lunge forward, the spear thrust straight out', 'FOLLOW-THROUGH: stretched out on the front leg, the spear forward',
+         'RECOVER: pulling the spear back, rising', 'READY: standing, the spear upright'], None),
+    'spear': (_ref('spear'), 'a thin young Roman spearman: a round iron helmet, a long sad face, a long pink nose, grey segmented iron shoulder armour over a green tunic, '
+        'a brown belt, brown sandals; a rectangular blue shield with a yellow thunderbolt emblem on his left arm.',
+        'a long spear in his right hand and the blue rectangular shield on his left arm', MAN, 'marching briskly, the spear upright', None,
+        ['ANTICIPATION: the spear levelled at the hip, pointing forward', 'JAB: a quick short jab forward', 'RECOIL: the spear pulled back',
+         'JAB: a second quick jab, lunging further', 'RECOVER: pulling the spear back', 'READY: standing, the spear upright'], None),
+    'boar': (_ref('boar'), 'a big angry wild boar: shaggy dark-brown bristly fur, a ridge of bristles along the back, small fierce red-brown eyes under a frowning brow, '
+        'a pink snout, two big curved white tusks, short dark legs with small black hooves, a thin tail with a tuft.',
+        'nothing (it is an animal)', 'STANDING on all four legs, the WHOLE animal', 'a trotting run on all four legs', GALLOP('the boar'),
+        ['ANTICIPATION: the head lowered, scraping the ground with a front hoof, snorting', 'WIND-UP: crouched back on the hind legs, the tusks aimed forward',
+         'CHARGE: launching forward, the body stretched out, the tusks first', 'CHARGE ON: stretched out flying forward, the forelegs reaching',
+         'IMPACT: tossing the head up, the tusks hooking upward', 'RECOVER: standing on four legs, snorting'],
+        ['HURT: the boar recoiling backwards on its haunches, squealing, eyes squeezed shut', 'HURT, recovering: shaking its head, back on four legs']),
+    'turtle': (_ref('turtle'), 'a Roman TESTUDO: FOUR legionaries (round iron helmets, long pink noses, green tunics, brown sandals) marching close together in a block, '
+        'their big rectangular blue shields with yellow thunderbolt emblems locked into a wall in front and a roof over their heads.',
+        'the locked blue shields', 'STANDING at rest as one block, all four legionaries\' feet on one ground line', 'the whole block marching in step, the legs alternating',
+        None,
+        ['ANTICIPATION: the block braced, the shields locked tight', 'WIND-UP: short swords drawn back behind the front shields',
+         'STAB: the short swords thrust out forward between the front shields', 'FOLLOW-THROUGH: the swords out, the block leaning forward',
+         'RECOVER: the swords pulled back behind the shields', 'READY: the block standing, the shields locked'], GROUP_HURT),
+    'veteran': (_ref('veteran'), 'a stocky battle-hardened Roman veteran: a round iron helmet with a short red crest, a grim scowling face, a big pink nose, grey segmented '
+        'iron armour over a green tunic, a dark red cape, brown sandals; a big rectangular blue shield with a yellow thunderbolt emblem on his left arm.',
+        'a short Roman sword (gladius) in his right hand and the blue shield on his left arm', MAN, 'a heavy steady march, the sword low, the cape swinging', None,
+        ['ANTICIPATION: the shield raised forward, the sword drawn back', 'WIND-UP: the sword raised high over his shoulder',
+         'SLASH: the sword swung down and forward in a heavy cut, stepping in', 'FOLLOW-THROUGH: the sword swept low past the front',
+         'RECOVER: pulling the sword back behind the shield', 'READY: standing, the shield forward'], None),
+    'pilum': (_ref('pilum'), 'a thin Roman javelin thrower: a round iron helmet, a long pink nose, grey segmented iron shoulder armour over a green tunic, a quiver of '
+        'javelins on his back, brown sandals; a small round blue shield with a yellow emblem on his left arm.',
+        'a javelin (pilum) in his right hand and the small round shield on his left arm', MAN, 'marching, the javelin upright', None,
+        ['ANTICIPATION: the javelin raised level with the ear, aiming', 'WIND-UP: leaning back, the throwing arm drawn far behind',
+         'THROW: the arm whipped forward, the javelin leaving the hand towards the right', 'FOLLOW-THROUGH: the empty hand stretched forward',
+         'RECOVER: drawing a new javelin from the quiver on his back', 'READY: standing, the new javelin upright'], None),
+    'tower': (_ref('tower'), 'a Roman SIEGE TOWER: a tall square wooden tower of brown planks with cross braces and a ladder on its side, four big wooden wheels with '
+        'iron rims at the bottom, and on the open platform on top two Roman archers (round iron helmets, long noses, green tunics) with bows.',
+        'the archers\' bows', 'STANDING still, the WHOLE tower with its wheels on the ground line', 'rolling forward, the wheels turning a little more in each frame, '
+        'the tower rocking gently, the archers swaying on top',
+        ['rolling, the wheels turned a little', 'rolling, the tower tilting slightly forward', 'rolling, the archers bobbing', 'rolling, the tower upright',
+         'rolling, the wheels turned further', 'rolling, the tower tilting slightly back', 'rolling, the archers bobbing the other way', 'rolling, the tower upright again'],
+        ['ANTICIPATION: the archers nocking arrows', 'DRAW: both archers drawing their bows, aiming outwards in different directions',
+         'VOLLEY: arrows loosed from both bows', 'FOLLOW-THROUGH: the bows lowered, the archers reaching for new arrows',
+         'RELOAD: nocking new arrows', 'READY: the archers standing on the platform, bows held'],
+        ['HURT: the whole tower rocking back from a hit, the archers ducking, eyes squeezed shut', 'HURT, recovering: the tower settling back on its wheels']),
+    'stonesq': (_ref('stonesq'), 'a SQUAD of three Roman legionaries (round iron helmets, long pink noses, grey shoulder armour over green tunics, brown sandals) marching '
+        'side by side and carrying one huge grey boulder above their heads on their raised arms.',
+        'the huge grey boulder above their heads', 'STANDING at rest, the boulder held above their heads, all their feet on one ground line',
+        'marching in step under the boulder, the legs alternating', None,
+        ['ANTICIPATION: the squad bending their knees, the boulder lowered to their shoulders', 'WIND-UP: heaving, the boulder pushed up high',
+         'THROW: arms flung forward and up, the boulder leaving their hands in a high arc towards the right', 'FOLLOW-THROUGH: arms stretched up and empty, watching it fly',
+         'RECOVER: a new boulder lifted from the ground between them', 'READY: the new boulder held above their heads'], GROUP_HURT),
+    'netter': (_ref('netter'), 'a sneaky Roman ambusher: a round iron helmet, a sly face, a long pink nose, grey segmented iron shoulder armour over a green tunic, '
+        'a long dark-green hooded cloak, brown sandals; a coiled rope net hanging from his hands.',
+        'a coiled rope net', MAN + ', crouching a little', 'creeping forward sneakily, bent low, the net in both hands', None,
+        ['ANTICIPATION: crouching, the net gathered in both hands', 'WIND-UP: whirling the net round over his head',
+         'CAST: the net flung out wide around him, spreading open', 'FOLLOW-THROUGH: the net spread wide on the ground in front, him leaning forward',
+         'RECOVER: hauling the net back in', 'READY: crouching, the coiled net in his hands'], None),
+    'wine': (_ref('wine'), 'a round-faced Roman legionary wine-bearer: a round iron helmet, a red tipsy face, a big pink nose, grey segmented iron armour over a green tunic '
+        'with purple wine stains, brown sandals; a small wine barrel strapped on his back.',
+        'a red clay wine jug in his right hand', MAN, 'a jaunty weaving walk, the wine jug swinging', None,
+        ['ANTICIPATION: raising the jug, a sly grin', 'WIND-UP: the jug drawn back over his shoulder',
+         'SPLASH: the jug swung forward, purple wine splashing out towards the right', 'FOLLOW-THROUGH: the jug tipped forward, the last purple drops falling',
+         'RECOVER: refilling the jug from the barrel on his back', 'READY: standing, the jug at his hip'], None),
+    'merchant': (_ref('merchant'), 'a plump bald market merchant: a round bald head with a dark fringe of hair, bushy eyebrows, a big pink nose, a bored frown; a white tunic '
+        'with a red border, brown sandals. Do NOT draw his market stall.',
+        'a wicker basket of red apples, round loaves and a small clay amphora on his left arm', MAN, 'waddling along, the basket on his arm', None,
+        ['ANTICIPATION: picking a red apple out of the basket', 'WIND-UP: the apple drawn back over his shoulder',
+         'LOB: tossing the apple up in a high arc towards the right', 'FOLLOW-THROUGH: the empty hand up, watching it fly',
+         'RECOVER: reaching into the basket for a loaf', 'READY: standing, the basket on his arm'], None),
+    'ram': (_ref('ram'), 'a Roman BATTERING RAM: a heavy wooden frame on four big iron-rimmed wooden wheels, a long log hanging from chains under the frame with a grey '
+        'iron ram\'s head at its front end; three Roman legionaries (round iron helmets, long noses, green tunics, sandals) pushing it from behind and the sides.',
+        'the battering ram', 'STANDING still, the WHOLE machine and its crew, the wheels and feet on one ground line',
+        'pushed forward, the crew leaning in and stepping in step, the wheels turning', None,
+        ['ANTICIPATION: the crew hauling the hanging log back on its chains', 'WIND-UP: the log pulled far back, the crew straining',
+         'SMASH: the log swung forward hard, the iron ram\'s head bashing out in front', 'FOLLOW-THROUGH: the log at its furthest forward, the crew lurching',
+         'RECOVER: the log swinging back', 'READY: the log hanging still, the crew braced'], GROUP_HURT),
+    'caius': (_ref('caius'), 'Caius Bonus, the pompous Roman centurion of the nearest camp: a big gold helmet with a tall red crest, a fat red face, a big nose, a black '
+        'moustache, a gold cuirass over a green tunic, a red cape, brown sandals; short and stout.',
+        'nothing, his fists clenched', MAN, 'a pompous strut, chest out, the cape swinging', None,
+        ['ANTICIPATION: drawing a deep breath, chest puffed out', 'WIND-UP: the right arm raised high, the fist clenched',
+         'COMMAND: bellowing an order, mouth wide open, the arm flung forward pointing', 'COMMAND ON: still bellowing, both arms spread wide',
+         'RECOVER: lowering the arms, huffing', 'READY: standing, fists on the hips'], None),
+    'cavalry': (_ref('cavalry'), 'a Roman CAVALRYMAN on horseback: a chestnut-brown horse with a dark mane and tail and a red saddle cloth; the rider in a round iron '
+        'helmet, a long pink nose, grey shoulder armour over a green tunic, a round blue shield with a yellow sunburst emblem.',
+        'a long lance in the rider\'s right hand and the round shield on his left arm', 'STANDING still, the WHOLE horse on four legs with the rider sitting upright',
+        'a galloping horse, the rider bobbing in the saddle, the lance levelled', GALLOP('the horse'),
+        ['ANTICIPATION: the horse rearing slightly, the rider drawing a javelin back', 'WIND-UP: the rider\'s arm far back, aiming',
+         'THROW: the rider flinging a javelin forward towards the right', 'FOLLOW-THROUGH: the rider\'s arm stretched forward, the horse lunging',
+         'RECOVER: the rider drawing another javelin', 'READY: the horse standing, the rider upright, the lance levelled'],
+        ['HURT: the horse rearing back from a hit, the rider clutching the reins, eyes squeezed shut', 'HURT, recovering: the horse back on four legs, shaking its head']),
+    'malosinus': (_ref('malosinus'), 'Malosinus the Roman treasurer: a tall thin bald man with a long hooked nose and a sour sneer, a light green tunic with a gold-trimmed '
+        'collar under a dark green toga draped over one shoulder, red trousers, white sandals.',
+        'a big brown leather money bag stamped with a gold coin in his left hand', MAN, 'a stiff haughty walk, the money bag swinging', None,
+        ['ANTICIPATION: hefting the money bag in both hands', 'WIND-UP: swinging the bag round behind him',
+         'SWING: the bag swung round in a wide circle, gold coins spilling out around him', 'SWING ON: the bag carried on round, coins flying',
+         'RECOVER: catching the bag back to his chest', 'READY: standing, the bag clutched to his side'], None),
+    'centurion': (_ref('centurion'), 'Centurion Maximus, the commander of the Roman camps: a big gold helmet with a tall transverse red crest, a fierce red face, a big nose, '
+        'a black moustache, a gold muscled cuirass over a green tunic, a long red cape, brown sandals; broad and imposing.',
+        'a short Roman sword (gladius) in his right hand', MAN, 'a heavy commanding march, the sword low, the cape billowing', None,
+        ['ANTICIPATION: the sword drawn back, a furious shout', 'WIND-UP: the sword raised high over his head',
+         'SLASH: the sword swung down and forward in a mighty cut, stepping in', 'FOLLOW-THROUGH: the sword swept low past the front, the cape flying',
+         'RECOVER: pulling the sword back up', 'READY: standing, the sword pointed forward'], None),
+}
+for _k, (_ref_, _desc, _held, _stand, _walk, _wf, _atk, _hurt) in ENEMY_CAST.items():
+    CHARS[_k] = (_ref_, _desc, '', '', '')
+    FRAMES[_k] = {'walk': (f'a smooth WALK CYCLE of eight evenly spaced frames (one full cycle), {_walk}', _wf or FRAMES['hr_asterix']['walk'][1]),
+                  'attack': ('an ATTACK of six frames, then two HURT frames', _atk + (_hurt or HURT))}
+
 def model_jobs(k):
-    ref, desc, held, _, _ = HERO_CAST[k]
+    if k in ENEMY_CAST: ref, desc, held, stand, *_ = ENEMY_CAST[k]
+    else: (ref, desc, held, _, _), stand = HERO_CAST[k], MAN
     p = '\n'.join([
         'Use case: the MODEL POSE of a character for a frame-by-frame animated (1970s hand-drawn film) top-down 3/4 survivors-like game set in a Gaulish village of 50 BC.',
-        'Image 2 is the ORIGINAL DESIGN of this character (small game sprites): match his face, hair, clothes, colours, what he holds and his proportions exactly; '
-        'redraw him large and clean in the style of Image 1.',
-        'Subject: ' + desc + ' He holds ' + held + '.',
-        'Draw him ONCE, the WHOLE body (head to feet), STANDING at rest, seen from the side in a 3/4 view, FACING RIGHT, centred, feet together on an invisible ground line.',
+        'Image 2 is the ORIGINAL DESIGN of this character (small game sprites): match the face, hair, clothes, colours, what is held and the proportions exactly; '
+        'redraw it large and clean in the style of Image 1.',
+        'Subject: ' + desc + ' Holding ' + held + '.',
+        f'Draw it ONCE, {stand}, seen from the side in a 3/4 view, FACING RIGHT, centred, on an invisible ground line.',
         FINISH, LAST])
-    return [{'name': k + '_model', 'prompt': p, 'size': '1024x1024', 'alpha': 'auto', 'ref': [{'path': ref, 'label': 'the original design of this character'}]}]
+    wide = k in ('turtle', 'ram', 'cavalry', 'merchant', 'stonesq', 'boar')
+    return [{'name': k + '_model', 'prompt': p, 'size': '1536x1024' if wide else '1024x1024', 'alpha': 'auto', 'ref': [{'path': ref, 'label': 'the original design of this character'}]}]
 
 def frames_jobs(k):
     ref, desc, *_ = CHARS[k]; idle = f'art/gen/{k}_idle.png'
@@ -243,7 +366,7 @@ def frames_jobs(k):
 
 if phase == 'a': jobs = [body_job(k) for k in CHARS] + [SWORD] + [prop_job(k) for k in PROPS]
 elif phase == 'poses': jobs = [poses_job(k) for k in POSES]
-elif phase == 'model': jobs = [j for k in HERO_CAST if not sys.argv[2:] or k in sys.argv[2:] for j in model_jobs(k)]
+elif phase == 'model': jobs = [j for k in {**HERO_CAST, **ENEMY_CAST} if not sys.argv[2:] or k in sys.argv[2:] for j in model_jobs(k)]
 elif phase == 'frames': jobs = [j for k in FRAMES if (not sys.argv[2:] or k in sys.argv[2:]) and os.path.exists(f'art/gen/{k}_idle.png') for j in frames_jobs(k)]
 elif phase == 'b': jobs = [j for k in CHARS for j in limb_jobs(k) if not sys.argv[2:] or any(w in j['name'] for w in sys.argv[2:])]
 else: sys.exit('phase: a | b | poses | model | frames')

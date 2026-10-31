@@ -10,28 +10,29 @@
   const FOE = {
     node:    { name: 'L3', kind: 'melee', hp: 70, sp: 156, dmg: 7, r: 26, range: 64, wind: 0.6, cd: 0.8, xp: 2, mark: 'L3', col: [0.36, 1, 0.6] },
     legion:  { name: 'Легионер', kind: 'melee', hp: 70, sp: 156, dmg: 7, r: 26, range: 64, wind: 0.6, cd: 0.8, xp: 2, col: [0.86, 0.3, 0.22] },
-    panel:   { name: 'Фильтр Grafana', kind: 'melee', hp: 40, sp: 210, dmg: 5, r: 22, range: 56, wind: 0.5, cd: 0.8, xp: 1, col: [1, 0.6, 0.19] },
-    multon:  { name: 'Мултон', kind: 'melee', hp: 50, sp: 192, dmg: 6, r: 24, range: 58, wind: 0.45, cd: 0.7, xp: 2, emblem: 'multon', col: [1, 0.55, 0.2] },
-    orb:     { name: 'Пепси', kind: 'melee', hp: 105, sp: 164, dmg: 9, r: 28, range: 68, wind: 0.7, cd: 0.93, xp: 4, col: [0.25, 0.66, 1],
+    aux:     { name: 'Ауксиларий', kind: 'melee', hp: 40, sp: 210, dmg: 5, r: 22, range: 56, wind: 0.5, cd: 0.8, xp: 1, col: [1, 0.6, 0.19] },
+    spear:   { name: 'Копейщик', kind: 'melee', hp: 50, sp: 192, dmg: 6, r: 24, range: 58, wind: 0.45, cd: 0.7, xp: 2, col: [1, 0.55, 0.2] },
+    boar:    { name: 'Кабан', kind: 'melee', hp: 105, sp: 164, dmg: 9, r: 28, range: 68, wind: 0.7, cd: 0.93, xp: 4, col: [0.25, 0.66, 1],
                dash: { trigger: 460, wind: 0.8, speed: 900, time: 0.45, cd: 6 } },
-    keg:     { name: 'Инбев', hpBar: true, kind: 'melee', hp: 240, sp: 80, dmg: 12, r: 38, range: 92, wind: 1.2, cd: 2.0, xp: 10, front: 0.6, poise: 0.8, emblem: 'inbev', col: [1, 0.8, 0.3] },
-    baltika: { name: 'Балтика', kind: 'melee', hp: 240, sp: 92, dmg: 13, r: 38, range: 88, wind: 1.0, cd: 1.6, xp: 10, poise: 1.5, emblem: 'baltika', col: [0.9, 0.78, 0.44] },
-    mars:    { name: 'Марс', kind: 'shoot', hp: 130, sp: 116, dmg: 10, r: 30, range: 520, wind: 0.9, cd: 2.2, xp: 6, keep: 380,
-               shots: { count: 1, speed: 430, dmg: 1 }, slow: { amount: 0.25, dur: 1.2 }, emblem: 'mars', col: [1, 0.3, 0.25] },
-    loreal:  { name: 'Лореаль', kind: 'shoot', hp: 100, sp: 140, dmg: 8, r: 28, range: 480, wind: 1.0, cd: 2.6, xp: 6, keep: 340,
-               shots: { count: 8, speed: 330, dmg: 0.8 }, emblem: 'loreal', col: [1, 0.6, 0.85] },
-    ferrero: { name: 'Ферреро', kind: 'mortar', hp: 140, sp: 108, dmg: 11, r: 30, range: 600, wind: 1.0, cd: 3.0, xp: 8, keep: 460,
-               mortar: { radius: 100, delay: 1.2, count: 2, scatter: 140 }, emblem: 'ferrero', col: [0.85, 0.7, 0.45] },
-    vetis:   { name: 'Система Ветис', kind: 'pulse', hp: 320, sp: 80, dmg: 12, r: 36, range: 170, wind: 1.2, cd: 3.0, xp: 14, poise: 1.4,
-               slow: { amount: 0.35, dur: 2 }, emblem: 'vetis', col: [0.45, 0.95, 0.75] },
-    // the rest of the original roster, each with a mechanic of its own
-    mond:    { name: 'Монделиз', kind: 'melee', hp: 110, sp: 196, dmg: 7, r: 28, range: 60, wind: 0.45, cd: 0.8, xp: 4, emblem: 'mondelez', zig: 1,
+    turtle:  { name: 'Черепаха', hpBar: true, kind: 'melee', hp: 240, sp: 80, dmg: 12, r: 38, range: 92, wind: 1.2, cd: 2.0, xp: 10, front: 0.6, poise: 0.8, col: [1, 0.8, 0.3] },
+    veteran: { name: 'Ветеран', kind: 'melee', hp: 240, sp: 92, dmg: 13, r: 38, range: 88, wind: 1.0, cd: 1.6, xp: 10, poise: 1.5, col: [0.9, 0.78, 0.44] },
+    pilum:   { name: 'Метатель пилума', kind: 'shoot', hp: 130, sp: 116, dmg: 10, r: 30, range: 520, wind: 0.9, cd: 2.2, xp: 6, keep: 380,
+               shots: { count: 1, speed: 430, dmg: 1 }, slow: { amount: 0.25, dur: 1.2 }, col: [1, 0.3, 0.25] },
+    tower:   { name: 'Осадная башня', kind: 'shoot', hp: 100, sp: 140, dmg: 8, r: 28, range: 480, wind: 1.0, cd: 2.6, xp: 6, keep: 340,
+               shots: { count: 8, speed: 330, dmg: 0.8 }, col: [1, 0.6, 0.85] },
+    stonesq: { name: 'Отряд с камнем', kind: 'mortar', hp: 140, sp: 108, dmg: 11, r: 30, range: 600, wind: 1.0, cd: 3.0, xp: 8, keep: 460,
+               mortar: { radius: 100, delay: 1.2, count: 2, scatter: 140 }, col: [0.85, 0.7, 0.45] },
+    netter:  { name: 'Засадник с сетью', kind: 'pulse', hp: 320, sp: 80, dmg: 12, r: 36, range: 170, wind: 1.2, cd: 3.0, xp: 14, poise: 1.4,
+               slow: { amount: 0.35, dur: 2 }, col: [0.45, 0.95, 0.75] },
+    // the rest of the original roster, each with a mechanic of its own (Роял Канин, P&G, Марс Петфуд, Запрос в логи, the service desk and the
+    // component bugs have no gaul-survivors unit yet: the old look for now, the owner 31.10)
+    wine:    { name: 'Легионер-виночерпий', kind: 'melee', hp: 110, sp: 196, dmg: 7, r: 28, range: 60, wind: 0.45, cd: 0.8, xp: 4, zig: 1,
                trail: { every: 0.14, life: 3, r: 46, slow: { amount: 0.3, dur: 0.5 } }, col: [0.62, 0.4, 0.85] },
-    prog:    { name: 'Прогресс (ФрутоНяня)', kind: 'lob', hp: 130, sp: 128, dmg: 10, r: 30, range: 560, wind: 0.9, cd: 2.4, xp: 6, keep: 380, emblem: 'progress',
+    merchant: { name: 'Торговец', kind: 'lob', hp: 130, sp: 128, dmg: 10, r: 30, range: 560, wind: 0.9, cd: 2.4, xp: 6, keep: 380,
                lob: { count: 2, bounces: 2, r: 70 }, col: [0.55, 0.8, 0.45] },
     royal:   { name: 'Роял Канин', kind: 'shoot', hp: 150, sp: 110, dmg: 9, r: 30, range: 520, wind: 0.9, cd: 2.6, xp: 6, keep: 360, emblem: 'royal_canin',
                shots: { count: 3, speed: 420, dmg: 1, fan: 0.35, back: 0.8 }, col: [0.85, 0.2, 0.25] },
-    cherk:   { name: 'Черкизово', kind: 'spin', hp: 230, sp: 100, dmg: 9, r: 36, range: 230, wind: 0.7, cd: 4, xp: 10, poise: 1.3, emblem: 'cherkizovo',
+    ram:     { name: 'Таран', kind: 'spin', hp: 230, sp: 100, dmg: 9, r: 36, range: 230, wind: 0.7, cd: 4, xp: 10, poise: 1.3,
                spin: { time: 1.6, r: 105, tick: 0.25, speed: 1.45 }, col: [0.75, 0.15, 0.25] },
     pg:      { name: 'Проктер энд Гэмбл', kind: 'melee', hp: 260, sp: 96, dmg: 11, r: 38, range: 88, wind: 1.0, cd: 1.8, xp: 12, poise: 1.5, emblem: 'procter_gamble',
                aura: { r: 260, reduce: 0.5 }, col: [0.3, 0.55, 1] },
@@ -40,7 +41,7 @@
     logq:    { name: 'Запрос в логи', kind: 'beam', hp: 260, sp: 90, dmg: 16, r: 36, range: 640, wind: 1.3, cd: 3.2, xp: 10, front: 0.7, mark: 'LOG',
                beam: { len: 720, w: 40, hold: 0.25 }, col: [0.6, 0.48, 1] },
     sdesk:   { name: 'Сервисдеск Пепси', kind: 'desk', hp: 1400, sp: 0, dmg: 0, r: 64, range: 0, wind: 1, cd: 99, xp: 30, poise: 99, mini: true,
-               desk: { every: 7, base: 2, grow: 40, max: 10, unit: 'orb', reach: 1700 }, col: [0.2, 0.45, 0.85] },
+               desk: { every: 7, base: 2, grow: 40, max: 10, unit: 'boar', reach: 1700 }, col: [0.2, 0.45, 0.85] },
     // the five component minibosses: big (r 78, drawn ×1.8), tough and quick inside their circle, each with a lunge
     bug:     { name: 'Баг импорта', kind: 'mortar', hp: 2200, sp: 120, dmg: 20, r: 78, range: 700, wind: 0.9, cd: 2.0, xp: 40, poise: 3, mini: true, mark: 'BUG',
                mortar: { radius: 130, delay: 1.1, count: 5, scatter: 220 }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.61, 0.59, 1] },
@@ -54,13 +55,13 @@
                summon: { every: 6, count: 3, max: 7, units: ['legion'] }, dash: { trigger: 560, wind: 0.6, speed: 760, time: 0.35, cd: 4 }, col: [0.96, 0.55, 0.33] },
     // ЦРПТ: a miniboss of the «Дата-центр» since stage 5 of docs/PLAN-FEEDBACK-27-10.md (it opened the boss queue before)
     crpt:    { name: 'ЦРПТ', kind: 'pulse', hp: 3000, sp: 100, dmg: 20, r: 90, range: 220, wind: 1.3, cd: 2.6, xp: 60, poise: 4, mini: true, mark: 'ЦРПТ',
-               shots: { count: 8, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 3, max: 9, units: ['legion', 'orb', 'mars'] }, col: [1, 0.84, 0],
+               shots: { count: 8, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 3, max: 9, units: ['legion', 'boar', 'pilum'] }, col: [1, 0.84, 0],
                intro: 'ЦРПТ: проверка партии, подключены клиенты' },
     batch:   { name: 'Партионный учёт', kind: 'pulse', hp: 6000, sp: 70, dmg: 20, r: 100, range: 300, wind: 1.2, cd: 2.4, xp: 80, poise: 4, boss: true,
-               shots: { count: 12, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 4, max: 8, units: ['orb'] }, ward: 0.7, col: [0.3, 0.6, 1],
+               shots: { count: 12, speed: 340, dmg: 0.5 }, summon: { every: 8, count: 4, max: 8, units: ['boar'] }, ward: 0.7, col: [0.3, 0.6, 1],
                intro: 'ПАРТИОННЫЙ УЧЁТ: щит держится, пока живы его клиенты' },
     boss:    { name: 'Критический инцидент', noChest: true, kind: 'pulse', hp: 9000, sp: 76, dmg: 22, r: 104, range: 330, wind: 1.2, cd: 2.6, xp: 100, poise: 4, boss: true,
-               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['orb', 'keg', 'baltika'] }, escalate: { every: 30, max: 4 },
+               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['boar', 'turtle', 'veteran'] }, escalate: { every: 30, max: 4 },
                slow: { amount: 0.35, dur: 2 }, col: [1, 0.36, 0.36], intro: 'КРИТИЧЕСКИЙ ИНЦИДЕНТ: уничтожьте его, чтобы закрыть смену' },
     // the «Дата-центр»'s own bosses (docs/PLAN-FEEDBACK-27-10.md, stage 5); the training centre keeps Партионный учёт and Критический инцидент.
     // split: at that share of its health a copy breaks away; tether: while both live, the line between them hurts the hero who crosses it
@@ -70,31 +71,40 @@
     // queue: a row of marks through where the hero is heading (lead: seconds ahead), each going off after the one before; the boss
     // is quicker while its marks are pending
     rstorm:  { name: 'Шторм ретраев', kind: 'queue', hp: 6200, sp: 85, dmg: 36, r: 96, range: 780, wind: 0.8, cd: 2.4, xp: 85, poise: 4, boss: true,
-               queue: { count: 7, gap: 140, delay: 1.0, step: 0.24, r: 115, haste: 0.12, lead: 0.7 }, summon: { every: 8, count: 4, max: 10, units: ['panel', 'multon'] }, col: [1, 0.6, 0.15],
+               queue: { count: 7, gap: 140, delay: 1.0, step: 0.24, r: 115, haste: 0.12, lead: 0.7 }, summon: { every: 8, count: 4, max: 10, units: ['aux', 'spear'] }, col: [1, 0.6, 0.15],
                intro: 'ШТОРМ РЕТРАЕВ: метки взрываются по очереди, и пока очередь не пуста, он быстрее' },
     // the final boss: the lights go out and a restored component goes down on arrival and on every escalation; every component down
     // cuts the damage it takes (restart one by standing in its circle)
     outage:  { name: 'Отказ дата-центра', kind: 'pulse', hp: 8500, sp: 72, dmg: 24, r: 108, range: 340, wind: 1.2, cd: 2.6, xp: 110, poise: 4, boss: true, final: true,
-               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['orb', 'keg', 'logq'] }, escalate: { every: 30, max: 4 },
+               shots: { count: 10, speed: 380, dmg: 0.5 }, summon: { every: 7, count: 3, max: 12, units: ['boar', 'turtle', 'logq'] }, escalate: { every: 30, max: 4 },
                outage: { dark: 9, ward: 0.15, minWard: 0.5 }, col: [0.9, 0.12, 0.1],
                intro: 'ОТКАЗ ДАТА-ЦЕНТРА: гасит свет и отключает компоненты — перезапускайте их, иначе урон по нему ниже' },
   };
+  // the Romans' commanders (gaul-survivors) on the mechanics of the bosses they replace; the old entries stay for the engine's QA frames and tests
+  Object.assign(FOE, {
+    caius: { ...FOE.crpt, name: 'Каюс Бонус', mark: undefined, intro: 'КАЮС БОНУС: центурион ведёт подкрепление' },
+    cavalry: { ...FOE.repl, name: 'Конница', intro: 'КОННИЦА: при половине здоровья делится надвое — не стойте на линии между всадниками' },
+    malosinus: { ...FOE.batch, name: 'Казначей Малосинус', intro: 'КАЗНАЧЕЙ МАЛОСИНУС: щит держится, пока живы его солдаты' },
+    centurion: { ...FOE.outage, name: 'Центурион Максимус', intro: 'ЦЕНТУРИОН МАКСИМУС: гасит свет и захватывает лагеря — отбивайте их, иначе урон по нему ниже' },
+  });
   // the enemy list's lines (the collection's «Враги» tab): what each one does, read from its mechanics above
   const FOE_DESC = {
-    node: 'Обычный узел: идёт к герою и бьёт вблизи', legion: 'Обычный легионер: идёт к герою и бьёт вблизи', panel: 'Слабый и быстрый, берёт числом', multon: 'Быстрый, бьёт вблизи короткими ударами',
-    orb: 'Издалека разгоняется и делает рывок к герою', keg: 'Медленный тяжеловес: бронированный перед, редкий сильный удар',
-    baltika: 'Медленный тяжеловес, почти не отлетает от ударов', mars: 'Стреляет издалека, попадание замедляет',
-    loreal: 'Стреляет залпом из восьми снарядов', ferrero: 'Миномёт: накрывает две точки возле героя',
-    vetis: 'Бьёт волной вокруг себя, волна замедляет', mond: 'Петляет зигзагом и оставляет липкий след, след замедляет',
-    prog: 'Бросает снаряды, которые отскакивают от пола', royal: 'Стреляет тремя снарядами веером, снаряды возвращаются',
-    cherk: 'Раскручивается и бьёт всех вокруг', pg: 'Аура: враги рядом с ним получают вдвое меньше урона',
+    node: 'Обычный узел: идёт к герою и бьёт вблизи', legion: 'Обычный легионер: идёт к герою и бьёт вблизи', aux: 'Слабый и быстрый, берёт числом', spear: 'Быстрый, бьёт вблизи короткими ударами',
+    boar: 'Издалека разгоняется и делает рывок к герою', turtle: 'Медленный тяжеловес: бронированный перед, редкий сильный удар',
+    veteran: 'Медленный тяжеловес, почти не отлетает от ударов', pilum: 'Стреляет издалека, попадание замедляет',
+    tower: 'Стреляет залпом из восьми снарядов', stonesq: 'Миномёт: накрывает две точки возле героя',
+    netter: 'Бьёт волной вокруг себя, волна замедляет', wine: 'Петляет зигзагом и оставляет липкий след, след замедляет',
+    merchant: 'Бросает снаряды, которые отскакивают от пола', royal: 'Стреляет тремя снарядами веером, снаряды возвращаются',
+    ram: 'Раскручивается и бьёт всех вокруг', pg: 'Аура: враги рядом с ним получают вдвое меньше урона',
     petfood: 'Стреляет веером из пяти снарядов', logq: 'Наводит длинный луч и бьёт им по линии',
-    sdesk: 'Неподвижный стол поддержки: раз в 7 с вызывает Пепси', bug: 'Баг компонента: миномёт по площади и рывки',
+    sdesk: 'Неподвижный стол поддержки: раз в 7 с вызывает кабанов', bug: 'Баг компонента: миномёт по площади и рывки',
     bugl: 'Баг компонента: волна, сильно замедляет, рывки', bugg: 'Баг компонента: оставляет жгучие лужи, рывки',
-    bugu: 'Баг компонента: стреляет кольцом из 14 снарядов, рывки', buga: 'Баг компонента: вызывает узлы L3, рывки',
+    bugu: 'Баг компонента: стреляет кольцом из 14 снарядов, рывки', buga: 'Баг компонента: вызывает легионеров, рывки',
     crpt: 'Мини-босс: стреляет кольцом и вызывает подкрепление', repl: 'Босс: делится надвое, линия между копиями обжигает',
     rstorm: 'Босс: очередь меток взрывается по одной, пока очередь не пуста — он быстрее', outage: 'Финальный босс: гасит свет и отключает компоненты', batch: 'Босс курса: пока живы его клиенты, урон по нему меньше',
     boss: 'Финальный босс: каждые 30 с злее, вызывает тяжеловесов, замедляет',
+    caius: 'Мини-босс: стреляет кольцом и вызывает подкрепление', cavalry: 'Босс: делится надвое, линия между всадниками обжигает',
+    malosinus: 'Босс: пока живы его солдаты, урон по нему меньше', centurion: 'Финальный босс: гасит свет и захватывает лагеря',
   };
 
   // weapon levels 1..6: base, then the project's five steps (data/weapons.js), distances ×2
@@ -199,7 +209,7 @@
                      training: { name: 'Оптимизация: QA', desc: '+4% к шансу крита', factor: 0.04 } },
   };
   // БА's key client: client brands only (no regulators, bugs or staff), as in the original's ba-specialization
-  const CLIENTS = ['orb', 'keg', 'baltika', 'mars', 'loreal', 'multon', 'ferrero', 'mond', 'prog', 'royal', 'cherk', 'pg', 'petfood'];
+  const CLIENTS = ['boar', 'turtle', 'veteran', 'pilum', 'tower', 'spear', 'stonesq', 'wine', 'merchant', 'royal', 'ram', 'pg', 'petfood'];
 
   // evolution recipes: weapon at max level + this passive (any level) → evolved weapon (Vampire Survivors style)
   const EVO = { trace: ['power', 'trace_x'], orbit: ['speed', 'orbit_x'], homing: ['haste', 'homing_x'], mine: ['area', 'mine_x'], ping: ['hp', 'ping_x'],
@@ -375,13 +385,13 @@
   // the swarms every 75 s (alternating), the attract demo, the training centre's hall bosses by the course's unit
   const RUN = {
     hero: 'asterix', map: 'dc',
-    bosses: [[150, 'crpt'], [270, 'repl'], [420, 'rstorm']], final: 'outage',
-    roster: [['legion', 1, 0, 0.08], ['panel', 0.6, 0], ['multon', 0.5, 0.3], ['mond', 0.4, 1.0], ['orb', 0.7, 1], ['mars', 0.45, 1.3], ['prog', 0.35, 2.0], ['petfood', 0.35, 2.2],
-      ['keg', 0.3, 2.3], ['loreal', 0.35, 2.6], ['royal', 0.3, 3.0], ['baltika', 0.3, 3.2], ['cherk', 0.25, 3.5], ['ferrero', 0.3, 3.8], ['pg', 0.18, 4.0], ['vetis', 0.18, 4.5], ['logq', 0.2, 4.8]],
-    swarms: [{ unit: 'panel', toast: 'ШТОРМ АЛЕРТОВ: фильтры Grafana со всех сторон' }, { unit: 'multon', toast: 'НАПЛЫВ КЛИЕНТОВ: Мултон спешит с заявками' }],
-    demo: { hero: 'asterix', wp: { trace: 2, homing: 2, orbit: 1 }, wcd: { trace: 0.2, homing: 0.6, orbit: 0 }, boss: 'boss',
-      kinds: ['legion', 'multon', 'orb', 'panel', 'mars', 'keg', 'loreal', 'legion', 'panel', 'baltika', 'orb', 'ferrero'] },
-    eduBoss: { batch_accounting: 'batch', critical_incident: 'boss', default: 'boss' },
+    bosses: [[150, 'caius'], [270, 'cavalry'], [420, 'rstorm']], final: 'centurion',
+    roster: [['legion', 1, 0, 0.08], ['aux', 0.6, 0], ['spear', 0.5, 0.3], ['wine', 0.4, 1.0], ['boar', 0.7, 1], ['pilum', 0.45, 1.3], ['merchant', 0.35, 2.0], ['petfood', 0.35, 2.2],
+      ['turtle', 0.3, 2.3], ['tower', 0.35, 2.6], ['royal', 0.3, 3.0], ['veteran', 0.3, 3.2], ['ram', 0.25, 3.5], ['stonesq', 0.3, 3.8], ['pg', 0.18, 4.0], ['netter', 0.18, 4.5], ['logq', 0.2, 4.8]],
+    swarms: [{ unit: 'aux', toast: 'ВЫЛАЗКА: ауксиларии со всех сторон' }, { unit: 'spear', toast: 'НАПЛЫВ КОПЕЙЩИКОВ: римляне спешат к деревне' }],
+    demo: { hero: 'asterix', wp: { trace: 2, homing: 2, orbit: 1 }, wcd: { trace: 0.2, homing: 0.6, orbit: 0 }, boss: 'centurion',
+      kinds: ['legion', 'spear', 'boar', 'aux', 'pilum', 'turtle', 'tower', 'legion', 'aux', 'veteran', 'boar', 'stonesq'] },
+    eduBoss: { batch_accounting: 'malosinus', critical_incident: 'boss', default: 'boss' },
   };
   // the hero rig shared by the sim and the scene: shoulder height and half-width (shX: the shoulder joint's centre on the body's side
   // outline, round 24), arm length, and the tool's tip from the hand (gun forward, gunUp up): the trace strike starts there
