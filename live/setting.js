@@ -1,6 +1,6 @@
 // live/setting.js — the game's setting: who fights, with what and where (NetSurvivors' «Дата-центр Utrace»). The engine (sim.js,
 // scene.js, meta.js, cloud.js) reads root.SETTING and the look from setting-look.js; another game on the same engine replaces these
-// two files and the art (docs/PLAN-GAUL.md, stage 1). Loaded before sim.js; in Node sim.js requires it.
+// two files and the art (as gaul-survivors does). Loaded before sim.js; in Node sim.js requires it.
 (function (root) {
   const SET = (root.SETTING = root.SETTING || {});
   const HINT = 'WASD — движение · мышь — направление автоатаки · M — звук · N — музыка · Пробел — пакетный сброс · 1–3 — улучшение · R — заново';
