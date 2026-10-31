@@ -13,6 +13,7 @@
   const SET = root.SETTING || require('./setting.js');
   const { HINT, FOE, FOE_DESC, WEAP, HEROES, CLIENTS, EVO, WSUM, PASS, SKINS, ABIL, FOOT, COMPONENTS, RECTS, PLAZA, RUN } = SET, ROSTER = RUN.roster;
   const DESK = Object.keys(FOE).find((k) => FOE[k].desk), AURA = Object.keys(FOE).find((k) => FOE[k].aura);   // the service desk, the aura unit
+  const TRAIL = Object.keys(FOE).find((k) => FOE[k].trail);                                                    // the unit leaving a sticky trail
   const SPAWN = [4000, 3000];                                      // hero start = the reference's composition (study/MATCH.md)
   const ORIGIN = [SPAWN[0] - 960, SPAWN[1] - 592];                 // camera origin of the match screen; ref px × 1.5 + ORIGIN = world
   const R = (rx, ry) => [ORIGIN[0] + rx * 1.5, ORIGIN[1] + ry * 1.5];
@@ -221,7 +222,7 @@
   const placeBugs = (S) => ZONES.forEach((z, i) => { const b = mkFoe(S, z.bug, z.nx, z.ny); b.node = i + 1; b.nextAtk = 1; S.nodes[i].bug = b.id; });
   // P&G shields: the live P&G list is rebuilt once per step (hurtFoe runs hundreds of times a step in a crowd)
   const pgNear = (S, e) => { if (S.pgAt !== S.steps) { S.pgAt = S.steps; S.pgL = S.E.filter((o) => FOE[o.k].aura && o.dieT < 0); }
-    for (const o of S.pgL) if (Math.hypot(o.x - e.x, o.y - e.y) < FOE.pg.aura.r) return true; return false; };
+    for (const o of S.pgL) if (Math.hypot(o.x - e.x, o.y - e.y) < FOE[AURA].aura.r) return true; return false; };
   const placeDesks = (S) => DESKS.forEach(([x, y]) => { const d = mkFoe(S, DESK, x, y); d.face = -1; d.sumT = 8; });
   const spawn = (worldT, mods, opt) => { const seed = 1000 + Math.floor(worldT * 977) % 100000, map = (opt && opt.map) || RUN.map; ensureLevel(map, seed);
     const S = base(worldT, seed); S.map = map; S.lseed = seed; S.mods = Object.assign({}, mods || {});
@@ -726,7 +727,7 @@
       if (j.z <= 0) { j.z = 0; push(S, { k: 'splash', t: S.t, x: j.x, y: j.y, r: j.r }); if (Math.hypot(S.x - j.x, (S.y - j.y) / 0.62) < j.r + K.R) hurtHero(S, j.dmg, j.x, j.y);
         if (j.b-- > 0) { j.vz = 420; j.vx *= 0.55; j.vy *= 0.55; } else S.LB.splice(i, 1); } }
     for (let i = S.TR.length - 1; i >= 0; i--) { const q = S.TR[i]; if (S.t - q.t0 > q.life) { S.TR.splice(i, 1); continue; }
-      if (Math.abs(S.x - q.x) < q.r && Math.abs(S.y - q.y) < q.r * 0.62 && !S.demo) { S.slowT = Math.max(S.slowT, S.t + FOE.mond.trail.slow.dur); S.slowA = Math.max(S.slowA * (S.t < S.slowT ? 1 : 0), FOE.mond.trail.slow.amount); } }
+      if (Math.abs(S.x - q.x) < q.r && Math.abs(S.y - q.y) < q.r * 0.62 && !S.demo) { S.slowT = Math.max(S.slowT, S.t + FOE[TRAIL].trail.slow.dur); S.slowA = Math.max(S.slowA * (S.t < S.slowT ? 1 : 0), FOE[TRAIL].trail.slow.amount); } }
     for (let i = S.BM.length - 1; i >= 0; i--) { const b = S.BM[i], a = S.t - b.t0; if (a > b.hold) { S.BM.splice(i, 1); continue; } if (b.hit) continue;
       const vx = b.x1 - b.x0, vy = b.y1 - b.y0, L2 = vx * vx + vy * vy, u = Math.max(0, Math.min(1, ((S.x - b.x0) * vx + (S.y - 40 - b.y0) * vy) / L2));
       if (Math.hypot(b.x0 + vx * u - S.x, b.y0 + vy * u - (S.y - 40)) < b.w / 2 + K.R) { b.hit = 1; hurtHero(S, b.dmg, b.x0, b.y0); } }
