@@ -1,0 +1,59 @@
+{
+ "refused": false,
+ "scale": 0.5249,
+ "standing": [
+  0.5249,
+  0.516
+ ],
+ "issues": [],
+ "frames": [
+  {
+   "name": "attack0",
+   "w": 246,
+   "h": 211,
+   "body": 199
+  },
+  {
+   "name": "attack1",
+   "w": 234,
+   "h": 273,
+   "body": 260
+  },
+  {
+   "name": "attack2",
+   "w": 290,
+   "h": 191,
+   "body": 180
+  },
+  {
+   "name": "attack3",
+   "w": 246,
+   "h": 202,
+   "body": 192
+  },
+  {
+   "name": "attack4",
+   "w": 250,
+   "h": 225,
+   "body": 214
+  },
+  {
+   "name": "attack5",
+   "w": 220,
+   "h": 260,
+   "body": 245
+  },
+  {
+   "name": "hurt0",
+   "w": 266,
+   "h": 256,
+   "body": 244
+  },
+  {
+   "name": "hurt1",
+   "w": 242,
+   "h": 206,
+   "body": 194
+  }
+ ]
+}

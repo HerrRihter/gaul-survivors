@@ -1,0 +1,61 @@
+{
+ "refused": false,
+ "scale": 0.7357,
+ "standing": [
+  0.7827,
+  0.7357
+ ],
+ "issues": [
+  "figure 6 cut by the canvas edge"
+ ],
+ "frames": [
+  {
+   "name": "attack0",
+   "w": 372,
+   "h": 246,
+   "body": 234
+  },
+  {
+   "name": "attack1",
+   "w": 382,
+   "h": 246,
+   "body": 236
+  },
+  {
+   "name": "attack2",
+   "w": 372,
+   "h": 251,
+   "body": 238
+  },
+  {
+   "name": "attack3",
+   "w": 404,
+   "h": 247,
+   "body": 236
+  },
+  {
+   "name": "attack4",
+   "w": 356,
+   "h": 254,
+   "body": 240
+  },
+  {
+   "name": "attack5",
+   "w": 378,
+   "h": 258,
+   "body": 245
+  },
+  {
+   "name": "hurt0",
+   "w": 378,
+   "h": 255,
+   "body": 242
+  },
+  {
+   "name": "hurt1",
+   "w": 374,
+   "h": 258,
+   "body": 245
+  }
+ ]
+}

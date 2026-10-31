@@ -1,0 +1,56 @@
+{
+ "refused": false,
+ "scale": 0.768,
+ "standing": [],
+ "issues": [],
+ "frames": [
+  {
+   "name": "walk0",
+   "w": 386,
+   "h": 257,
+   "body": 244
+  },
+  {
+   "name": "walk1",
+   "w": 390,
+   "h": 258,
+   "body": 243
+  },
+  {
+   "name": "walk2",
+   "w": 388,
+   "h": 261,
+   "body": 247
+  },
+  {
+   "name": "walk3",
+   "w": 394,
+   "h": 260,
+   "body": 246
+  },
+  {
+   "name": "walk4",
+   "w": 406,
+   "h": 257,
+   "body": 243
+  },
+  {
+   "name": "walk5",
+   "w": 390,
+   "h": 258,
+   "body": 243
+  },
+  {
+   "name": "walk6",
+   "w": 390,
+   "h": 263,
+   "body": 248
+  },
+  {
+   "name": "walk7",
+   "w": 412,
+   "h": 263,
+   "body": 250
+  }
+ ]
+}

@@ -1,0 +1,61 @@
+{
+ "refused": false,
+ "scale": 0.5778,
+ "standing": [
+  0.5904,
+  0.5778
+ ],
+ "issues": [
+  "a stray shape of 44739 px joined to figure 4"
+ ],
+ "frames": [
+  {
+   "name": "attack0",
+   "w": 258,
+   "h": 196,
+   "body": 187
+  },
+  {
+   "name": "attack1",
+   "w": 258,
+   "h": 293,
+   "body": 281
+  },
+  {
+   "name": "attack2",
+   "w": 404,
+   "h": 277,
+   "body": 264
+  },
+  {
+   "name": "attack3",
+   "w": 272,
+   "h": 199,
+   "body": 191
+  },
+  {
+   "name": "attack4",
+   "w": 280,
+   "h": 151,
+   "body": 145
+  },
+  {
+   "name": "attack5",
+   "w": 276,
+   "h": 257,
+   "body": 244
+  },
+  {
+   "name": "hurt0",
+   "w": 320,
+   "h": 174,
+   "body": 165
+  },
+  {
+   "name": "hurt1",
+   "w": 270,
+   "h": 165,
+   "body": 157
+  }
+ ]
+}
